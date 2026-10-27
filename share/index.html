@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>You've been challenged · Last Four In</title>
+<meta name="description" content="A friend shared their picks on Last Four In. Make yours and see who calls it better.">
+<meta property="og:title" content="You've been challenged · Last Four In">
+<meta property="og:description" content="A friend shared their picks. Think you can do better? Free to play.">
+<meta property="og:url" content="https://lastfourin.com/share/">
+<meta property="og:site_name" content="Last Four In">
+<meta name="theme-color" content="#0a1a33">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='8' fill='%23f2b33d'/%3E%3Cpath d='M8 8h5v5h4M8 22h5v-5M17 13v4h5' fill='none' stroke='%231b1204' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/assets/lfi.css">
+</head>
+<body>
+
+<header class="nav"></header>
+
+<main class="page" style="max-width:640px">
+  <div class="head">
+    <div>
+      <div class="kicker" id="k">You've been challenged</div>
+      <h1 class="disp" id="h">Think you can beat this?</h1>
+      <p id="p">A friend made their picks on Last Four In. Make yours, then send them back.</p>
+    </div>
+  </div>
+  <div id="entry"></div>
+  <div class="share-acts">
+    <a class="btn gold big" id="make" href="/">Make your own</a>
+    <a class="btn" href="/">See everything you can play</a>
+  </div>
+  <p class="empty" style="margin-top:14px">Free to play. No purchase necessary.</p>
+</main>
+<footer class="foot"></footer>
+
+<script src="/assets/lfi.js"></script>
+<script>
+(function () {
+  const { $, esc, readShare, renderEntry, KIND } = LFI;
+  try {
+    const e = readShare(new URLSearchParams(location.search).get("e") || "");
+    const k = KIND[e.kind] || {};
+    const who = e.by ? esc(e.by) : "A friend";
+    $("k").textContent = `${e.by || "A friend"} challenged you`;
+    $("h").textContent = e.kind === "bracket" ? "Think you can build a better bracket?" : e.kind === "ap" ? "Think you can call the AP poll better?" : e.kind === "trivia" ? "Think you can beat this score?" : "Think you can beat these picks?";
+    $("p").innerHTML = `${who} made ${e.kind === "bracket" ? "their playoff bracket" : e.kind === "ap" ? "their AP poll prediction" : e.kind === "trivia" ? "today's trivia" : "their picks"} on Last Four In. Make yours, then send it back.`;
+    $("entry").innerHTML = renderEntry(e, { full: true, by: e.by });
+    $("make").textContent = (k.make || "Make your own") + " →";
+    $("make").href = k.url || "/";
+    document.title = `${e.by || "A friend"} challenged you · Last Four In`;
+  } catch (err) {
+    $("entry").innerHTML = `<p class="empty">This share link looks broken, but you can still play.</p>`;
+  }
+})();
+</script>
+</body>
+</html>

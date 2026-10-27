@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CFP Bracket Builder · Last Four In</title>
+<meta name="description" content="Rank your college football Top 25 and watch the 12-team playoff bracket build itself under this season's real selection rules.">
+<meta property="og:title" content="CFP Bracket Builder · Last Four In">
+<meta property="og:description" content="Build your College Football Playoff field. Rank the Top 25, the bracket fills itself.">
+<meta property="og:url" content="https://lastfourin.com/bracket/">
+<meta property="og:site_name" content="Last Four In">
+<meta name="theme-color" content="#0a1a33">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='8' fill='%23f2b33d'/%3E%3Cpath d='M8 8h5v5h4M8 22h5v-5M17 13v4h5' fill='none' stroke='%231b1204' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/assets/lfi.css">
+</head>
+<body>
+<style>
+/* Bracket page pieces. Everything else comes from lfi.css. */
+.bk-top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px 24px; margin-bottom: 18px; }
+.bk-top h1 { font-size: clamp(40px, 6vw, 60px); margin: 4px 0 0; }
+.bk-top p { margin: 8px 0 0; color: var(--ink-2); max-width: 60ch; }
+.bk-clock small { display: block; font-family: var(--f-display); font-weight: 700; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.bubble { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.bub { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 8px 14px 8px 10px; }
+.bub img { width: 30px; height: 30px; object-fit: contain; }
+.bub small { display: block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.bub strong { font-family: var(--f-display); font-size: 19px; font-weight: 800; text-transform: uppercase; line-height: 1.05; }
+.bub.in { border-left: 4px solid var(--win); }
+.bub.out { border-left: 4px solid var(--loss); }
+.field { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; margin-bottom: 14px; }
+.fcard { position: relative; background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 18px 4px 8px; display: grid; justify-items: center; gap: 4px; overflow: hidden; }
+.fcard::before { content: ""; position: absolute; inset: 0 0 auto; height: 4px; background: var(--tc); }
+.fcard .sd { font-family: var(--f-display); font-weight: 800; font-size: 13px; color: var(--muted); position: absolute; top: 6px; left: 7px; }
+.fcard img { width: 40px; height: 40px; object-fit: contain; }
+.fcard .ab { font-family: var(--f-display); font-weight: 800; font-size: 15px; letter-spacing: .03em; }
+.fcard .tg { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.fcard.bye { background: var(--navy); border-color: var(--navy); color: #fff; }
+.fcard.bye .sd, .fcard.bye .tg { color: var(--gold); }
+.fcard .tg.auto { color: var(--win); }
+@media (max-width: 980px) { .field { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .field { grid-template-columns: repeat(4, minmax(0, 1fr)); } .fcard img { width: 34px; height: 34px; } }
+.rules { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-bottom: 20px; }
+.rule { background: #fff; padding: 12px 14px; display: grid; gap: 2px; }
+.rule .n { font-family: var(--f-display); font-weight: 800; font-style: italic; font-size: 26px; line-height: 1; color: var(--navy); }
+.rule span:last-child { color: var(--ink-2); font-size: 13px; }
+@media (max-width: 860px) { .rules { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.bk-main { display: grid; grid-template-columns: minmax(320px, 420px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 1040px) { .bk-main { grid-template-columns: minmax(0, 1fr); } }
+.card-h p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+
+.bscroll { overflow-x: auto; padding: 14px 14px 10px; }
+.bk { position: relative; display: grid; grid-template-columns: repeat(4, 180px) 196px; column-gap: 30px; min-width: 930px; }
+.bk svg.wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.wires path { fill: none; stroke: var(--line-2); stroke-width: 1.5; }
+.wires path.hot { stroke: var(--gold); stroke-width: 2.5; }
+.col { display: flex; flex-direction: column; position: relative; z-index: 1; }
+.col h3 { font-family: var(--f-display); font-weight: 800; font-style: italic; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin: 0 0 10px; }
+.bk-games { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 16px; min-height: 540px; }
+.game { background: #fff; border: 1px solid var(--line-2); border-radius: 6px; overflow: hidden; }
+.gnote { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--muted); padding: 4px 10px; background: #f5f7fa; border-bottom: 1px solid var(--line); }
+.slot { position: relative; width: 100%; display: grid; grid-template-columns: 18px 24px minmax(0, 1fr); gap: 8px; align-items: center; text-align: left; border: 0; background: #fff; padding: 7px 10px; min-height: 42px; }
+.slot::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--tc, transparent); }
+.slot + .slot { border-top: 1px solid var(--line); }
+.slot:hover:not(:disabled) { background: #f5f7fa; }
+.slot:disabled { cursor: default; }
+.slot .sd { font-family: var(--f-display); font-weight: 800; font-size: 14px; color: var(--muted); text-align: right; }
+.slot img { width: 24px; height: 24px; object-fit: contain; }
+.slot .n { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot.tbd .n { color: var(--muted); font-weight: 500; font-style: italic; }
+.slot.win { background: var(--tc); color: #fff; }
+.slot.win .sd { color: rgba(255,255,255,.8); }
+.slot.win::after { content: "✓"; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; border-radius: 50%; background: var(--gold); color: var(--gold-ink); font-size: 11px; font-weight: 800; display: grid; place-items: center; }
+.slot.lose { opacity: .45; }
+.champ { position: relative; border-radius: var(--r); padding: 22px 14px; text-align: center; display: grid; gap: 8px; justify-items: center; background: var(--navy); color: #fff; overflow: hidden; border-top: 5px solid var(--tc, var(--gold)); }
+.champ .lbl { font-family: var(--f-display); font-weight: 700; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); }
+.champ img { width: 84px; height: 84px; object-fit: contain; background: #fff; border-radius: 50%; padding: 8px; }
+.champ .big { font-family: var(--f-display); font-weight: 800; font-style: italic; font-size: 28px; text-transform: uppercase; line-height: 1; }
+.champ .ph-logo { width: 84px; height: 84px; border-radius: 50%; border: 2px dashed rgba(255,255,255,.35); display: grid; place-items: center; color: #c9d4e3; font-family: var(--f-display); font-size: 38px; font-weight: 800; }
+.champ .sub2 { font-size: 12px; color: #c9d4e3; }
+/* Phones: no sideways scrolling, rounds stack top to bottom. */
+@media (max-width: 760px) {
+  .bscroll { overflow: visible; }
+  .bk { display: block; min-width: 0; }
+  .bk svg.wires { display: none; }
+  .col { margin-bottom: 18px; }
+  .bk-games { display: grid; grid-template-columns: 1fr 1fr; min-height: 0; gap: 8px; }
+  .col:nth-child(4) .bk-games, .col:nth-child(5) .bk-games { grid-template-columns: 1fr; }
+  .slot { grid-template-columns: 14px 22px minmax(0, 1fr); gap: 6px; padding: 6px 8px; min-height: 44px; }
+  .slot .n { font-size: 14px; }
+  .slot.win::after { display: none; }
+}
+@media (max-width: 380px) { .bk-games { grid-template-columns: 1fr; } }
+
+.report { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); border-top: 1px solid var(--line); }
+.report > div { padding: 16px 18px 18px; min-width: 0; }
+.report > div + div { border-left: 1px solid var(--line); }
+@media (max-width: 600px) { .report > div + div { border-left: 0; border-top: 1px solid var(--line); } }
+.report h4 { margin: 0 0 10px; font-family: var(--f-display); font-weight: 800; font-style: italic; font-size: 16px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.list li { display: grid; grid-template-columns: 22px 22px minmax(0, 1fr); gap: 9px; align-items: center; font-size: 14px; }
+.list .s { font-family: var(--f-display); font-weight: 800; color: var(--muted); text-align: right; }
+.list img { width: 22px; height: 22px; object-fit: contain; }
+.list .why { color: var(--muted); font-size: 12.5px; }
+.flag { border-left: 4px solid var(--loss); background: #fdf1ef; padding: 10px 12px; border-radius: 4px; font-size: 13.5px; margin-bottom: 12px; color: var(--ink-2); }
+.flag b { color: var(--ink); }
+.champs-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.champs-grid label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--muted); display: grid; gap: 5px; }
+.champs-grid select { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 600; color: var(--ink); width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid var(--line-2); border-radius: 6px; background: #fff; }
+</style>
+
+<header class="nav" data-active="bracket"></header>
+
+<main class="page">
+  <div class="bk-top">
+    <div>
+      <div class="kicker">2026–27 College Football Playoff</div>
+      <h1 class="disp">Build the field</h1>
+      <p>Rank your Top 25. The 12-team bracket seeds itself under this season's selection rules, then you pick every game to a champion.</p>
+    </div>
+    <div class="bk-clock"><small id="clockLbl">CFP Selection Day · Sun, Dec 6</small><div class="count sm" id="clock"></div></div>
+  </div>
+
+  <div class="bubble" id="bubble"></div>
+  <div class="field" id="field" aria-label="Your projected playoff field"></div>
+
+  <div class="rules" aria-label="Selection rules">
+    <div class="rule"><span class="n">4</span><span>Auto bids for the ACC, Big Ten, Big 12 and SEC champions</span></div>
+    <div class="rule"><span class="n">1</span><span>Auto bid for the highest-ranked Group of 6 team</span></div>
+    <div class="rule"><span class="n">ND</span><span>Notre Dame is in if it finishes in the top 12</span></div>
+    <div class="rule"><span class="n">1–4</span><span>Straight seeding. Top four seeds get a bye</span></div>
+  </div>
+
+  <div class="bk-main">
+    <section class="card" id="rankings">
+      <div class="card-h"><div><h2 class="disp">Your Top 25</h2><p>Starts from this week's AP poll. Tap a team for its moves, or drag the dots. Tap a crown to name a conference champion.</p></div></div>
+      <div class="card-b"><div id="ranker"></div><p class="empty" style="margin-top:10px">Faded crown: projected champion, the top-ranked team in its conference. Gold crown: your pick.</p></div>
+    </section>
+
+    <div class="stack">
+      <section class="card" id="bracket">
+        <div class="card-h"><div><h2 class="disp">Bracket</h2><p>Tap a team to advance it. First-round games are at the higher seed. No reseeding.</p></div></div>
+        <div class="bscroll"><div class="bk" id="bracketGrid"></div></div>
+        <div class="report">
+          <div>
+            <h4>How the field was picked</h4>
+            <div id="flags"></div>
+            <ol class="list" id="seedlist"></ol>
+          </div>
+          <div>
+            <h4>Conference champions</h4>
+            <div class="champs-grid" id="champs"></div>
+            <h4 style="margin-top:20px">First four out</h4>
+            <ol class="list" id="firstout"></ol>
+          </div>
+        </div>
+      </section>
+      <a class="tile" href="/head-to-head/"><b>Two teams look close?</b><span>Line them up head-to-head the way the committee does, with real playoff-era precedents.</span></a>
+    </div>
+  </div>
+
+  <div class="dock">
+    <div class="card submitbar">
+      <span id="submitNote">Pick a champion, then save it.</span>
+      <span style="display:flex;gap:8px"><button class="btn" type="button" id="resetBtn">Reset</button><button class="btn gold" type="button" id="submitBtn">Save &amp; share my bracket</button></span>
+    </div>
+  </div>
+</main>
+<footer class="foot"></footer>
+
+<script src="/assets/lfi.js"></script>
+<script src="/assets/cfb-data.js"></script>
+<script src="/assets/cfp.js"></script>
+<script src="/assets/ranker.js"></script>
+<script>
+(function () {
+  const { $, esc, toast, entries, countdown, selectionDay } = LFI;
+  const { S, save, CONF, P4, GAMES, ROUNDS, ORDER_GAMES, TEAMS, conf, rec, rankOf, L, logo, champFor, computeField, resolve, cleanPicks, champion } = CFP;
+  const CROWN = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 5l3 2.5L8 3l3 4.5L14 5l-1.2 7H3.2z"/></svg>';
+  const img = (t, cls = "") => logo(t) ? `<img${cls ? ` class="${cls}"` : ""} src="${logo(t)}" alt="" loading="lazy">` : "";
+  const tc = (t) => `--tc:${L(t).acc}`;
+  let F;
+
+  function pill(t) {
+    const s = F.seeds.indexOf(t);
+    if (s >= 0) {
+      if (s < 4) return `<span class="pill bye">${s + 1} · Bye</span>`;
+      return F.reasons[t].kind === "auto" ? `<span class="pill auto">${s + 1} · Auto</span>` : `<span class="pill large">Seed ${s + 1}</span>`;
+    }
+    if (F.bumped.includes(t)) return `<span class="pill out">Bumped</span>`;
+    if (F.firstOut.includes(t)) return `<span class="pill dim">Out</span>`;
+    return "";
+  }
+
+  const ranker = LFI.Ranker($("ranker"), {
+    max: 25,
+    cut: { after: 12, label: "Playoff line" },
+    order: () => S.order,
+    setOrder: (ids) => { S.order = ids; render(); },
+    team: (t) => ({ name: t, logo: logo(t), color: L(t).acc, sub: [CONF[conf(t)], rec(t)].filter(Boolean).join(" · ") }),
+    pool: () => Object.keys(TEAMS).filter((t) => !S.order.includes(t)).sort((a, b) => a.localeCompare(b)),
+    poolTag: (t) => conf(t) === "IND" ? "IND" : conf(t),
+    right: (t) => {
+      const c = conf(t), isP4 = P4.includes(c), ch = isP4 ? champFor(c) : null;
+      const cls = ch && ch.t === t ? (ch.projected ? "proj" : "on") : "";
+      return pill(t) + (isP4 ? `<button class="crown ${cls}" type="button" data-act="crown" title="${CONF[c]} champion" aria-label="Make ${esc(t)} the ${CONF[c]} champion">${CROWN}</button>` : `<span style="width:30px"></span>`);
+    },
+    onAct: (act, i) => {
+      if (act !== "crown") return false;
+      const t = S.order[i], c = conf(t);
+      S.champs[c] = S.champs[c] === t ? "" : t;
+      render(); return true;
+    },
+  });
+
+  function render() {
+    F = computeField();
+    cleanPicks(F);
+    renderHero(); ranker.render(); renderBracket(); renderReport(); renderSubmit();
+    save();
+  }
+
+  function renderHero() {
+    $("field").innerHTML = F.seeds.map((t, i) => {
+      const auto = F.reasons[t].kind === "auto";
+      const tag = i < 4 ? "Bye" : auto ? "Auto" : "At-large";
+      return `<div class="fcard${i < 4 ? " bye" : ""}" style="${tc(t)}" title="${esc(t)}"><span class="sd">${i + 1}</span>${img(t)}<span class="ab">${esc(L(t).abbr)}</span><span class="tg${auto && i >= 4 ? " auto" : ""}">${tag}</span></div>`;
+    }).join("");
+    const lastIn = F.seeds.filter((t) => F.reasons[t].kind === "large").pop();
+    const firstOut = F.firstOut[0];
+    const b = (lbl, t, cls) => t ? `<div class="bub ${cls}">${img(t)}<div><small>${lbl}</small><strong>${esc(t)}</strong></div></div>` : "";
+    $("bubble").innerHTML = b("Last team in", lastIn, "in") + b("First team out", firstOut, "out");
+  }
+
+  function renderBracket() {
+    const seedOf = (t) => F.seeds.indexOf(t) + 1;
+    const slot = (id, side, t, other) => {
+      if (!t) return `<button class="slot tbd" disabled type="button" data-side="${id}-${side}"><span class="sd"></span><span></span><span class="n">Winner advances</span></button>`;
+      const p = S.picks[id], cls = p === t ? "win" : (p ? "lose" : "");
+      return `<button class="slot ${cls}" type="button" data-side="${id}-${side}" data-g="${id}" data-t="${esc(t)}" style="${tc(t)}" ${other ? "" : "disabled"} aria-label="Pick ${esc(t)}"><span class="sd">${seedOf(t)}</span>${img(t)}<span class="n">${esc(t)}</span></button>`;
+    };
+    let html = ROUNDS.map((r) => `<div class="col"><h3>${r.t}</h3><div class="bk-games">${r.ids.map((id) => {
+      const a = resolve(GAMES[id].a, F), b = resolve(GAMES[id].b, F);
+      const note = id[0] === "r" && a ? `<div class="gnote">At ${esc(L(a).abbr)}</div>` : id[0] === "q" ? `<div class="gnote">No. ${seedOf(a) || ""} seed · bye</div>` : "";
+      return `<div class="game" data-game="${id}">${note}${slot(id, "a", a, b)}${slot(id, "b", b, a)}</div>`;
+    }).join("")}</div></div>`).join("");
+    const champ = champion(F);
+    html += `<div class="col"><h3>Champion</h3><div class="bk-games"><div class="champ" data-game="champ" ${champ ? `style="${tc(champ)}"` : ""}>
+      <span class="lbl">National champion</span>
+      ${champ ? img(champ) : `<span class="ph-logo">?</span>`}
+      <span class="big">${champ ? esc(champ) : "Pick a winner"}</span>
+      <span class="sub2">${champ ? "No. " + seedOf(champ) + " seed" : "Advance a team through the title game"}</span></div></div></div>`;
+    html += `<svg class="wires" id="wires" aria-hidden="true"></svg>`;
+    $("bracketGrid").innerHTML = html;
+    drawWires();
+  }
+
+  function drawWires() {
+    const grid = $("bracketGrid"), svg = $("wires");
+    if (!grid || !svg || getComputedStyle(svg).display === "none") return;
+    const g = grid.getBoundingClientRect(), paths = [];
+    const link = (fromId, toEl, hot) => {
+      const from = grid.querySelector(`[data-game="${fromId}"]`);
+      if (!from || !toEl) return;
+      const a = from.getBoundingClientRect(), b = toEl.getBoundingClientRect();
+      const x1 = a.right - g.left, y1 = a.top + a.height / 2 - g.top, x2 = b.left - g.left, y2 = b.top + b.height / 2 - g.top, mx = x1 + (x2 - x1) / 2;
+      paths.push(`<path class="${hot ? "hot" : ""}" d="M${x1} ${y1}H${mx}V${y2}H${x2}"/>`);
+    };
+    for (const id of ORDER_GAMES) for (const side of ["a", "b"]) {
+      const src = GAMES[id][side];
+      if (src.win) link(src.win, grid.querySelector(`[data-side="${id}-${side}"]`), !!S.picks[src.win]);
+    }
+    link("f", grid.querySelector('[data-game="champ"]'), !!S.picks.f);
+    svg.setAttribute("viewBox", `0 0 ${g.width} ${g.height}`);
+    svg.innerHTML = paths.join("");
+  }
+
+  function renderReport() {
+    $("seedlist").innerHTML = F.seeds.map((t, i) => {
+      const r = F.reasons[t], rk = rankOf(t);
+      return `<li><span class="s">${i + 1}</span>${img(t)}<span><b>${esc(t)}</b> <span class="why">· No. ${rk >= 0 ? rk + 1 : "25+"} · ${r.why}${i < 4 ? " · bye" : ""}</span></span></li>`;
+    }).join("");
+    const flags = [];
+    if (F.bumped.length) flags.push(`<div class="flag"><b>${F.bumped.map(esc).join(" and ")}</b> ${F.bumped.length > 1 ? "are" : "is"} in your top 12 but out of the field, bumped by the automatic bid${F.bumpers.length > 1 ? "s" : ""} for ${F.bumpers.map(esc).join(" and ")}.</div>`);
+    const missing = P4.filter((c) => !champFor(c));
+    if (missing.length) flags.push(`<div class="flag">No ${missing.map((c) => CONF[c]).join(" or ")} team in your Top 25. Pick a champion so that bid counts.</div>`);
+    $("flags").innerHTML = flags.join("");
+    $("firstout").innerHTML = F.firstOut.map((t) => `<li><span class="s">${rankOf(t) + 1}</span>${img(t)}<span>${esc(t)} <span class="why">· ${CONF[conf(t)]}</span></span></li>`).join("") || `<li><span></span><span></span><span class="why">Add more teams to see who is next.</span></li>`;
+    const byRank = (a, b) => { const ra = rankOf(a), rb = rankOf(b); return (ra < 0 ? 99 : ra) - (rb < 0 ? 99 : rb) || a.localeCompare(b); };
+    $("champs").innerHTML = P4.map((c) => {
+      const opts = Object.keys(TEAMS).filter((t) => conf(t) === c).sort(byRank);
+      const cur = S.champs[c] || "";
+      return `<label>${CONF[c]}<select data-conf="${c}"><option value="">Projected · ${esc((champFor(c) && !S.champs[c]) ? champFor(c).t : "top-ranked")}</option>${opts.map((t) => `<option ${t === cur ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label>`;
+    }).join("");
+  }
+
+  const ENTRY_ID = "bracket-cfp-2026";
+  function renderSubmit() {
+    const champ = champion(F), saved = entries.get(ENTRY_ID);
+    $("submitBtn").textContent = saved ? "Update & share my bracket" : "Save & share my bracket";
+    const left = ORDER_GAMES.filter((id) => !S.picks[id]).length;
+    $("submitNote").textContent = champ ? (saved ? "Saved. Change anything, then update." : `${champ} wins it all. Save it to your account.`) : `${left} game${left === 1 ? "" : "s"} left to pick. You can save the field now.`;
+  }
+
+  // Events
+  $("bracketGrid").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-g]"); if (!b || b.disabled) return;
+    const g = b.dataset.g, t = b.dataset.t;
+    if (S.picks[g] === t) delete S.picks[g]; else S.picks[g] = t;
+    render();
+  });
+  $("champs").addEventListener("change", (e) => {
+    const s = e.target.closest("select[data-conf]"); if (!s) return;
+    S.champs[s.dataset.conf] = s.value; render();
+  });
+  $("resetBtn").addEventListener("click", () => { if (!confirm("Start over from this week's AP poll?")) return; CFP.reset(); render(); toast("Reset to this week's AP poll"); });
+  $("submitBtn").addEventListener("click", () => {
+    const champ = champion(F), had = !!entries.get(ENTRY_ID);
+    const lines = ["My 2026 College Football Playoff bracket", ""];
+    F.seeds.forEach((t, i) => lines.push(`${i + 1}. ${t}${i < 4 ? " (bye)" : ""}`));
+    lines.push("", "Champion: " + (champ || "not picked yet"));
+    const e = entries.put({
+      id: ENTRY_ID, kind: "bracket", title: "CFP Bracket", sub: champ ? `${champ} wins it all` : "Field only", url: "/bracket/",
+      data: { seeds: F.seeds, ids: F.seeds.map((t) => TEAMS[t].id), champ: champ || "", champId: champ ? TEAMS[champ].id : "" },
+      shareText: champ ? `I've got ${champ} winning the College Football Playoff. Build your bracket and prove me wrong.` : "Here's my 12-team College Football Playoff field. Build yours and prove me wrong.",
+      text: lines.join("\n"),
+    });
+    LFI.share(e, { updated: had });
+  });
+
+  const sd = selectionDay();
+  $("clockLbl").textContent = `${sd.label} · ${sd.when}`;
+  countdown($("clock"), sd.at);
+  if (window.ResizeObserver) new ResizeObserver(() => drawWires()).observe($("bracketGrid"));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawWires);
+  render();
+})();
+</script>
+</body>
+</html>

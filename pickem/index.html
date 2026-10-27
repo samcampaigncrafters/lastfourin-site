@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NFL Pick'em · Last Four In</title>
+<meta name="description" content="Free weekly NFL pick'em. Pick every game straight up, picks lock at kickoff, climb the weekly leaderboard.">
+<meta property="og:title" content="NFL Pick'em · Last Four In">
+<meta property="og:description" content="Pick every NFL game this week. Free to play. Picks lock at kickoff.">
+<meta property="og:url" content="https://lastfourin.com/pickem/">
+<meta property="og:site_name" content="Last Four In">
+<meta name="theme-color" content="#0a1a33">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='8' fill='%23f2b33d'/%3E%3Cpath d='M8 8h5v5h4M8 22h5v-5M17 13v4h5' fill='none' stroke='%231b1204' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/assets/lfi.css">
+</head>
+<body>
+
+<div class="strip" aria-label="This week's games">
+  <div class="strip-lbl"><b>NFL</b><span id="stripWeek">Week</span></div>
+  <div class="strip-games" id="strip"></div>
+</div>
+
+<header class="nav" data-active="nfl"></header>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <div class="kicker">Free weekly contest</div>
+      <h1 class="disp" id="title">NFL Pick'em</h1>
+      <p>Pick every game straight up. Each pick locks the moment that game kicks off.</p>
+    </div>
+    <div class="weekbar">
+      <select id="weekSel" aria-label="Week"></select>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <div class="progress">
+          <b class="num" id="progN">0 of 0 picked</b>
+          <div class="bar"><i id="progBar" style="width:0"></i></div>
+          <span class="chip" id="deadline"></span>
+        </div>
+      </div>
+      <div id="days"></div>
+      <div class="dock">
+        <div class="card submitbar">
+          <span id="submitNote">Tap a team to pick it.</span>
+          <button class="btn gold" type="button" id="submitBtn" disabled>Submit my picks</button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="side">
+      <section class="card">
+        <div class="card-h"><h2 class="disp">Your week</h2><span class="chip" id="wkChip"></span></div>
+        <div class="card-b" id="myWeek"></div>
+      </section>
+      <section class="card">
+        <div class="card-h"><h2 class="disp">How it works</h2></div>
+        <div class="card-b">
+          <ol class="steps">
+            <li>Tap the team you think wins each game.</li>
+            <li>Change your mind any time before that game kicks off.</li>
+            <li>One point per correct pick. Ties count for nobody.</li>
+            <li>Hit Submit to save the week to your account and challenge friends.</li></ol>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-h"><h2 class="disp">Leaderboard</h2></div>
+        <div class="card-b"><p class="empty">Weekly and season leaderboards switch on with sign-in. For now your record lives on <a class="lnk" href="/account/">My picks</a>.</p></div>
+      </section>
+    </aside>
+  </div>
+</main>
+<footer class="foot"></footer>
+
+<script src="/assets/lfi.js"></script>
+<script>window.PICKS = { league: "nfl", name: "NFL Pick'em", url: "/pickem/" };</script>
+<script src="/assets/picks.js"></script>
+</body>
+</html>

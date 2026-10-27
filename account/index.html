@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My picks · Last Four In</title>
+<meta name="description" content="Every prediction you've made on Last Four In, with results.">
+<meta property="og:title" content="My picks · Last Four In">
+<meta property="og:description" content="Every prediction you've made on Last Four In.">
+<meta property="og:url" content="https://lastfourin.com/account/">
+<meta property="og:site_name" content="Last Four In">
+<meta name="theme-color" content="#0a1a33">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='8' fill='%23f2b33d'/%3E%3Cpath d='M8 8h5v5h4M8 22h5v-5M17 13v4h5' fill='none' stroke='%231b1204' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/assets/lfi.css">
+<meta name="robots" content="noindex">
+</head>
+<body>
+
+<header class="nav" data-active="account"></header>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <div class="kicker">Your account</div>
+      <h1 class="disp">My picks</h1>
+      <p>Everything you've submitted, with results as games finish.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="stack">
+      <div class="acct-stats" id="stats"></div>
+      <div class="acct-list" id="list"></div>
+    </div>
+    <aside class="side">
+      <section class="card">
+        <div class="card-h"><h2 class="disp">Your name</h2></div>
+        <div class="card-b">
+          <p class="empty" style="margin-top:0">Shown on links you share, so friends know who challenged them.</p>
+          <form class="field-row" id="nameForm"><input id="name" maxlength="24" placeholder="e.g. Sam" autocomplete="nickname" aria-label="Your name"><button class="btn navy" type="submit">Save</button></form>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-h"><h2 class="disp">Sign in</h2><span class="chip">Coming soon</span></div>
+        <div class="card-b">
+          <p class="empty" style="margin-top:0;color:var(--ink-2)">Right now your picks are saved on this phone or computer only. Free sign-in is coming next: it keeps your picks on every device and puts you on the weekly and season leaderboards.</p>
+        </div>
+      </section>
+    </aside>
+  </div>
+</main>
+<footer class="foot"></footer>
+
+<script src="/assets/lfi.js"></script>
+<script>
+(function () {
+  const { $, esc, local, entries, renderEntry, share, KIND, toast } = LFI;
+
+  function render() {
+    const all = entries.all();
+    let w = 0, l = 0;
+    for (const e of all) { const m = /^(\d+)-(\d+)/.exec(e.result || ""); if (m) { w += +m[1]; l += +m[2]; } }
+    $("stats").innerHTML = `<div><b>${all.length}</b><span>Entries</span></div><div><b>${w}-${l}</b><span>Pick'em record</span></div><div><b>${w + l ? Math.round((w / (w + l)) * 100) + "%" : "–"}</b><span>Hit rate</span></div>`;
+    $("list").innerHTML = all.length ? all.map((e) => `<div class="acct-item card" data-id="${esc(e.id)}">
+        ${renderEntry(e).replace('class="entry"', 'class="entry" style="border:0"')}
+        <div class="entry-acts">
+          <span class="chip ${e.result ? "ok" : ""}">${esc((KIND[e.kind] || {}).label || "")}</span>
+          <span class="empty" style="padding:4px 0;margin-right:auto">Saved ${new Date(e.saved).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+          <a class="btn" href="${esc(e.url || "/")}">Open</a>
+          <button class="btn gold" type="button" data-share>Share</button>
+        </div></div>`).join("")
+      : `<section class="card"><div class="card-b"><p style="margin:0 0 12px;font-weight:600">Nothing here yet.</p><p class="empty" style="margin-top:0">Submit picks, a bracket or an AP poll and it lands here.</p><a class="btn gold" href="/">Find something to play</a></div></section>`;
+  }
+
+  $("list").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-share]"); if (!b) return;
+    const en = entries.get(b.closest("[data-id]").dataset.id);
+    share(en, { kicker: "Challenge your friends", note: "Send this to your friends and see who calls it better." });
+  });
+  $("name").value = local.get("lfi-name", "");
+  $("nameForm").addEventListener("submit", (e) => { e.preventDefault(); local.set("lfi-name", $("name").value.trim()); toast("Saved"); });
+  render();
+})();
+</script>
+</body>
+</html>

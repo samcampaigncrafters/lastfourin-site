@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Head-to-Head · Last Four In</title>
+<meta name="description" content="Line up two college football teams the way the playoff committee does, with real playoff-era head-to-head precedents.">
+<meta property="og:title" content="Head-to-Head · Last Four In">
+<meta property="og:description" content="Two teams look close? See how the committee has handled head-to-head before.">
+<meta property="og:url" content="https://lastfourin.com/head-to-head/">
+<meta property="og:site_name" content="Last Four In">
+<meta name="theme-color" content="#0a1a33">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='8' fill='%23f2b33d'/%3E%3Cpath d='M8 8h5v5h4M8 22h5v-5M17 13v4h5' fill='none' stroke='%231b1204' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/assets/lfi.css">
+</head>
+<body>
+<style>
+.tape { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 22px 18px; border-radius: var(--r) var(--r) 0 0; color: #fff;
+  background: linear-gradient(100deg, var(--ca) 0%, var(--navy) 46%, var(--navy) 54%, var(--cb) 100%); }
+.tside { display: grid; gap: 10px; justify-items: start; min-width: 0; }
+.tside.b { justify-items: end; text-align: right; }
+.tside img { width: 76px; height: 76px; object-fit: contain; background: #fff; border-radius: 50%; padding: 8px; }
+.tside select { max-width: 100%; appearance: none; -webkit-appearance: none; font-family: var(--f-display); font-weight: 800; font-style: italic; font-size: 22px; text-transform: uppercase; color: #fff; background: rgba(0,0,0,.28); border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 8px 12px; }
+.vs { font-family: var(--f-display); font-weight: 800; font-style: italic; font-size: 38px; color: var(--gold); }
+@media (max-width: 520px) { .tside img { width: 56px; height: 56px; } .tside select { font-size: 17px; padding: 7px 8px; } .vs { font-size: 28px; } }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { border: 1px solid var(--line-2); background: #fff; border-radius: 6px; padding: 9px 14px; font-size: 14px; font-weight: 700; color: var(--ink-2); min-height: 42px; }
+.seg button[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); color: #fff; }
+.stats { margin-top: 14px; }
+.stat { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.stat .l { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; text-align: center; white-space: nowrap; }
+.stat .va, .stat .vb { font-weight: 700; font-size: 15px; }
+.stat .vb { text-align: right; }
+.stat .edge { color: var(--win); }
+.stat .edge::before { content: "▲ "; font-size: 11px; }
+.verdict { margin-top: 16px; border-left: 4px solid var(--gold); background: #fff8e8; border-radius: 4px; padding: 14px 16px; display: grid; gap: 12px; }
+.verdict p { margin: 0; color: var(--ink-2); }
+.verdict b { color: var(--ink); }
+.tally { display: flex; align-items: baseline; gap: 12px; margin: 0 0 14px; }
+.tally .big { font-family: var(--f-display); font-weight: 800; font-style: italic; font-size: 52px; line-height: .9; color: var(--navy); }
+.tally span:last-child { color: var(--ink-2); font-size: 14px; }
+.prec { display: grid; gap: 10px; }
+.prec article { border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 6px; }
+.prec .top { display: flex; align-items: center; gap: 8px; }
+.prec .top img { width: 26px; height: 26px; object-fit: contain; }
+.prec .yr { font-family: var(--f-display); font-weight: 800; font-size: 20px; margin-right: 4px; }
+.prec .gt { color: var(--muted); font-size: 13px; }
+.prec .res { margin-left: auto; }
+.prec p { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+.prec .hd { font-weight: 700; font-size: 14px; }
+</style>
+
+<header class="nav" data-active="h2h"></header>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <div class="kicker">Free tool</div>
+      <h1 class="disp">Head-to-Head</h1>
+      <p>Line two teams up the way the committee does when they look close. Rankings come from <a class="lnk" href="/bracket/">your CFP bracket</a>.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <section class="card">
+      <div class="tape" id="tape"></div>
+      <div class="card-b">
+        <div class="seg" id="hRes" role="group" aria-label="Did they play this season?"></div>
+        <div class="stats" id="hStats"></div>
+        <div class="verdict" id="hVerdict"></div>
+      </div>
+    </section>
+    <aside class="side">
+      <section class="card">
+        <div class="card-h"><h2 class="disp">When the committee faced it</h2></div>
+        <div class="card-b">
+          <div class="tally"><span class="big">3 of 4</span><span>times the head-to-head winner finished ranked ahead in these playoff-era calls.</span></div>
+          <div class="prec" id="prec"></div>
+          <p class="empty" style="margin-top:10px">A starter set of precedents, not every case.</p>
+        </div>
+      </section>
+    </aside>
+  </div>
+</main>
+<footer class="foot"></footer>
+
+<script src="/assets/lfi.js"></script>
+<script src="/assets/cfb-data.js"></script>
+<script src="/assets/cfp.js"></script>
+<script>
+(function () {
+  const { $, esc, toast } = LFI;
+  const { S, save, CONF, P4, TEAMS, PRECEDENTS, conf, rec, rankOf, L, logo, champFor, computeField } = CFP;
+  const img = (t) => logo(t) ? `<img src="${logo(t)}" alt="">` : "";
+  let F;
+
+  function facts(t) {
+    const c = conf(t), rk = rankOf(t), ch = P4.includes(c) ? champFor(c) : null, seed = F.seeds.indexOf(t);
+    return {
+      rank: rk >= 0 ? "No. " + (rk + 1) : "Unranked", rankN: rk >= 0 ? rk : 99,
+      rec: rec(t) || "—", conf: CONF[c],
+      title: ch && ch.t === t ? (ch.projected ? "Projected" : "Yes") : (c === "IND" ? "Independent" : "No"),
+      hasTitle: !!(ch && ch.t === t),
+      bracket: seed >= 0 ? (seed < 4 ? "Seed " + (seed + 1) + " · bye" : "Seed " + (seed + 1)) : (F.bumped.includes(t) ? "Bumped" : "Out"),
+    };
+  }
+
+  function render() {
+    F = computeField();
+    const byRank = (a, b) => { const ra = rankOf(a), rb = rankOf(b); return (ra < 0 ? 99 : ra) - (rb < 0 ? 99 : rb) || a.localeCompare(b); };
+    const all = Object.keys(TEAMS).sort(byRank);
+    const opt = (sel) => all.map((t) => `<option ${t === sel ? "selected" : ""}>${esc(t)}</option>`).join("");
+    const { a, b, res } = S.h2h;
+    const tape = $("tape");
+    tape.style.setProperty("--ca", L(a).c);
+    tape.style.setProperty("--cb", L(b).c);
+    tape.innerHTML = `<div class="tside a">${img(a)}<select id="hA" aria-label="Team A">${opt(a)}</select></div>
+      <div class="vs">VS</div>
+      <div class="tside b">${img(b)}<select id="hB" aria-label="Team B">${opt(b)}</select></div>`;
+    const choices = [["none", "Haven't played"], ["a", a + " won"], ["b", b + " won"]];
+    $("hRes").innerHTML = choices.map(([v, l]) => `<button type="button" data-res="${v}" aria-pressed="${res === v}">${esc(l)}</button>`).join("");
+
+    const fa = facts(a), fb = facts(b);
+    const row = (lbl, va, vb, edge) => `<div class="stat"><span class="va ${edge === "a" ? "edge" : ""}">${va}</span><span class="l">${lbl}</span><span class="vb ${edge === "b" ? "edge" : ""}">${vb}</span></div>`;
+    const rankEdge = fa.rankN < fb.rankN ? "a" : fb.rankN < fa.rankN ? "b" : "";
+    const titleEdge = fa.hasTitle && !fb.hasTitle ? "a" : fb.hasTitle && !fa.hasTitle ? "b" : "";
+    const h2hEdge = res === "a" ? "a" : res === "b" ? "b" : "";
+    $("hStats").innerHTML =
+      row("Your ranking", fa.rank, fb.rank, rankEdge) +
+      row("Record", fa.rec, fb.rec, "") +
+      row("Conference", fa.conf, fb.conf, "") +
+      row("Conf. title", fa.title, fb.title, titleEdge) +
+      row("Head-to-head", res === "a" ? "Won" : res === "b" ? "Lost" : "—", res === "b" ? "Won" : res === "a" ? "Lost" : "—", h2hEdge) +
+      row("Your bracket", fa.bracket, fb.bracket, "");
+
+    let html;
+    if (a === b) html = `<p>Pick two different teams.</p>`;
+    else if (res === "none") html = `<p>No head-to-head result yet, so the committee moves to its other tests: <b>conference titles</b>, <b>strength of schedule</b> and <b>results against common opponents</b>.</p>`;
+    else {
+      const w = res === "a" ? a : b, l = res === "a" ? b : a, rw = rankOf(w), rl = rankOf(l);
+      if (rl >= 0 && (rw < 0 || rw > rl)) {
+        const gap = rw < 0 ? null : rw - rl;
+        html = `<p><b>${esc(w)} beat ${esc(l)}</b>, but you have ${esc(w)} ${gap ? gap + " spot" + (gap > 1 ? "s" : "") + " lower" : "unranked"}. ${gap && gap <= 3 ? "That's close enough that committee history says the winner usually moves ahead." : "With a gap that big, the committee usually goes on the whole resume, not one game."}</p>
+          <div><button class="btn gold" type="button" id="applyH2H">Move ${esc(w)} ahead of ${esc(l)}</button></div>`;
+      } else html = `<p><b>${esc(w)} beat ${esc(l)}</b> and you already have ${esc(w)} ahead. Your ranking agrees with the head-to-head.</p>`;
+    }
+    $("hVerdict").innerHTML = html;
+
+    $("prec").innerHTML = PRECEDENTS.map((p) => `<article>
+      <div class="top"><span class="yr">${p.yr}</span>${img(p.w)}<span class="gt">over</span>${img(p.l)}<span class="pill ${p.held ? "auto" : "out"} res">${p.held ? "Winner ahead" : "Loser ahead"}</span></div>
+      <span class="hd">${esc(p.w)} beat ${esc(p.l)}, ${esc(p.score)}</span>
+      <p>${esc(p.body)}</p></article>`).join("");
+    save();
+  }
+
+  $("tape").addEventListener("change", (e) => {
+    if (e.target.id === "hA") S.h2h.a = e.target.value;
+    if (e.target.id === "hB") S.h2h.b = e.target.value;
+    S.h2h.res = "none"; render();
+  });
+  $("hRes").addEventListener("click", (e) => { const b = e.target.closest("button[data-res]"); if (b) { S.h2h.res = b.dataset.res; render(); } });
+  $("hVerdict").addEventListener("click", (e) => {
+    if (!e.target.closest("#applyH2H")) return;
+    const { a, b, res } = S.h2h, w = res === "a" ? a : b, l = res === "a" ? b : a;
+    const wi = rankOf(w); if (wi >= 0) S.order.splice(wi, 1);
+    S.order.splice(rankOf(l), 0, w);
+    if (S.order.length > 25) S.order.length = 25;
+    render(); toast(`${w} moved ahead of ${l} in your bracket`);
+  });
+  render();
+})();
+</script>
+</body>
+</html>

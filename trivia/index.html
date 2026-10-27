@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daily Five Trivia · Last Four In</title>
+<meta name="description" content="Five football questions a day, easy to hard. Free. Keep your streak alive.">
+<meta property="og:title" content="Daily Five Trivia · Last Four In">
+<meta property="og:description" content="Five football questions a day, easy to hard. How long can you keep your streak?">
+<meta property="og:url" content="https://lastfourin.com/trivia/">
+<meta name="theme-color" content="#0a1a33">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='8' fill='%23f2b33d'/%3E%3Cpath d='M8 8h5v5h4M8 22h5v-5M17 13v4h5' fill='none' stroke='%231b1204' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../assets/lfi.css">
+<link rel="stylesheet" href="trivia.css">
+</head>
+<body>
+
+<div class="strip" aria-label="Latest finals">
+  <div class="strip-lbl"><b>NFL</b><span id="stripWeek">Finals</span></div>
+  <div class="strip-games" id="strip"></div>
+</div>
+
+<header class="nav" data-active="trivia"></header>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <div class="kicker" id="kicker">Free daily game</div>
+      <h1 class="disp">Daily Five</h1>
+      <p>Five football questions a day, easy to hard. One shot at each. Come back tomorrow to keep your streak alive.</p>
+    </div>
+    <div class="headr">
+      <nav class="tabs" aria-label="Daily games"><a href="./" class="on">Daily Five</a><a href="names.html">Name 'Em All</a></nav>
+      <div class="pips" id="pips" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <section class="card qcard" id="game" aria-live="polite"></section>
+
+    <aside class="side">
+      <section class="card">
+        <div class="card-h"><h2 class="disp">Your streak</h2><span class="chip" id="streakChip"></span></div>
+        <div class="card-b">
+          <div class="stats4" id="stats"></div>
+          <div class="dist" id="dist"></div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-h"><h2 class="disp">How it works</h2></div>
+        <div class="card-b">
+          <ol class="steps">
+            <li>A new set of five drops every night at midnight Eastern.</li>
+            <li>Questions run easy to hard: this season, stat leaders, playoffs, a number to nail, a deep cut.</li>
+            <li>One answer per question, no take-backs. Every answer comes with the real stat behind it.</li>
+            <li>Play every day to build your streak. Share your score without spoiling the answers.</li>
+          </ol>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-h"><h2 class="disp">Other days</h2><span class="chip lock">Prototype</span></div>
+        <div class="card-b"><ul class="days-list" id="daysList"></ul></div>
+      </section>
+      <p class="credit" id="credit"></p>
+    </aside>
+  </div>
+</main>
+
+<footer class="foot"></footer>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="/assets/lfi.js"></script>
+<script src="days.js"></script>
+<script>
+(function () {
+  const T = window.LFI_TRIVIA;
+  const KEY = "lfi-trivia-v1";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  // ---- dates (the set turns over at midnight US Eastern) ----
+  const etDate = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(d);
+  const addDays = (iso, n) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const pretty = (iso, opts) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", Object.assign({ timeZone: "UTC" }, opts || { weekday: "short", month: "short", day: "numeric" }));
+  const allDays = Object.keys(T.days).sort();
+  const today = etDate();
+  const asked = new URLSearchParams(location.search).get("date");
+  const date = T.days[asked] ? asked : T.days[today] ? today : allDays[0];
+  const setNo = allDays.indexOf(date) + 1;
+  const qs = T.days[date];
+
+  // ---- storage (prototype: this browser only; the real version saves to the account) ----
+  function load() { try { return JSON.parse(localStorage.getItem(KEY)) || { days: {} }; } catch (e) { return { days: {} }; } }
+  function save(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} }
+  let store = load();
+  const mine = () => store.days[date] || (store.days[date] = { picks: [] });
+  const isDone = (d) => d && d.picks.length === 5;
+
+  function scoreFor(iso) {
+    const d = store.days[iso];
+    if (!isDone(d) || !T.days[iso]) return null;
+    return d.picks.filter((p, i) => p === T.days[iso][i].a).length;
+  }
+
+  function streaks() {
+    const played = new Set(Object.keys(store.days).filter((k) => isDone(store.days[k])));
+    let cur = 0, d = played.has(today) ? today : addDays(today, -1);
+    while (played.has(d)) { cur++; d = addDays(d, -1); }
+    let best = 0, run = 0, prev = null;
+    [...played].sort().forEach((k) => { run = prev && addDays(prev, 1) === k ? run + 1 : 1; best = Math.max(best, run); prev = k; });
+    return { cur, best: Math.max(best, cur), played: played.size };
+  }
+
+  // ---- score strip: latest finals ----
+  function renderStrip() {
+    $("stripWeek").textContent = T.week ? `Week ${T.week}` : "Finals";
+    $("strip").innerHTML = T.strip.map((g) => {
+      const aw = g.as > g.hs, hw = g.hs > g.as;
+      const row = (t, s, win) => `<div class="sg-row${win ? "" : " lose"}"><span class="dot" style="background:${T.colors[t] || "#888"}"></span><span>${t}</span><span class="sc">${s}</span></div>`;
+      return `<div class="sg"><div class="sg-top"><span>${g.day}</span><span>Final${g.ot ? "/OT" : ""}</span></div>${row(g.a, g.as, aw)}${row(g.h, g.hs, hw)}</div>`;
+    }).join("");
+  }
+
+  // ---- game ----
+  let view = "intro";
+  function pips() {
+    const d = mine();
+    $("pips").innerHTML = qs.map((q, i) => {
+      if (i < d.picks.length) return `<i class="${d.picks[i] === q.a ? "ok" : "no"}"></i>`;
+      return `<i class="${i === d.picks.length && view === "q" ? "now" : ""}"></i>`;
+    }).join("");
+  }
+
+  function render() {
+    const d = mine();
+    if (isDone(d) && view !== "reveal") view = "done";
+    pips();
+    if (view === "intro") return renderIntro();
+    if (view === "done") return renderDone();
+    renderQuestion();
+  }
+
+  function renderIntro() {
+    const d = mine();
+    const started = d.picks.length > 0;
+    $("game").innerHTML = `
+      <div class="intro">
+        <div class="kicker">${esc(pretty(date, { weekday: "long", month: "long", day: "numeric" }))} · Set #${setNo}</div>
+        <h2 class="disp big">${started ? "Pick up where you left off" : "Today's five"}</h2>
+        <p>${started ? `You're ${d.picks.length} of 5 in. Answers you've given are locked.` : "Five questions, easy to hard. Pure football knowledge, every answer straight from the stat sheet. About two minutes."}</p>
+        <div class="rules"><span class="chip easy">1 Easy</span><span class="chip medium">2 Medium</span><span class="chip hard">2 Hard</span></div>
+        <button class="btn gold" id="start" style="font-size:17px;padding:13px 30px">${started ? "Keep going" : "Start"}</button>
+      </div>`;
+    $("start").onclick = () => { view = "q"; render(); };
+    $("start").focus({ preventScroll: true });
+  }
+
+  function renderQuestion() {
+    const d = mine();
+    const i = view === "reveal" ? d.picks.length - 1 : d.picks.length;
+    const q = qs[i];
+    const picked = view === "reveal" ? d.picks[i] : null;
+    const opts = q.choices.map((c, j) => {
+      let cls = "opt", mark = "";
+      if (picked !== null) {
+        if (j === q.a) { cls += " ok"; mark = "✓"; }
+        else if (j === picked) { cls += " no"; mark = "✕"; }
+        else cls += " dim";
+      }
+      return `<button class="${cls}" data-j="${j}" ${picked !== null ? "disabled" : ""}><span class="k">${"ABCD"[j]}</span><span>${esc(c)}</span><span class="mark">${mark}</span></button>`;
+    }).join("");
+    const right = picked === q.a;
+    const last = i === qs.length - 1;
+    $("game").innerHTML = `
+      <div class="card-b">
+        <div class="qmeta"><span class="qn">Question ${i + 1} of 5</span><span class="chip">${esc(q.cat)}</span><span class="chip ${q.diff.toLowerCase()}">${esc(q.diff)}</span></div>
+        <h2 class="qtext">${esc(q.q)}</h2>
+        <div class="opts">${opts}</div>
+        ${picked !== null ? `
+        <div class="reveal ${right ? "ok" : "no"}">
+          <div><b>${right ? "Correct" : "Not quite"}</b><p>${esc(q.fact)}</p></div>
+          <button class="btn navy" id="next">${last ? "See your score" : "Next question"}</button>
+        </div>` : ""}
+      </div>`;
+    $("game").querySelectorAll(".opt:not(:disabled)").forEach((b) => (b.onclick = () => answer(+b.dataset.j)));
+    if (picked !== null) { $("next").onclick = next; $("next").focus({ preventScroll: true }); }
+  }
+
+  function answer(j) {
+    const d = mine();
+    if (view !== "q" || isDone(d)) return;
+    d.picks.push(j);
+    save(store);
+    view = "reveal";
+    render();
+    renderSide();
+  }
+
+  function next() {
+    view = isDone(mine()) ? "done" : "q";
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (view === "done") share(); // the game just ended: save it to My picks and offer the share pop-up
+  }
+
+  function shareText() {
+    const d = mine(), s = streaks();
+    const grid = qs.map((q, i) => (d.picks[i] === q.a ? "🟩" : "🟥")).join("");
+    return `Last Four In · Daily Five #${setNo}\n${grid} ${scoreFor(date)}/5${s.cur > 1 ? `\n🔥 ${s.cur}-day streak` : ""}`;
+  }
+
+  function countdown() {
+    const el = $("cd");
+    if (!el) return;
+    const now = new Date();
+    const et = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+    const mins = 24 * 60 - (et.getHours() * 60 + et.getMinutes());
+    el.textContent = `${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, "0")}m`;
+  }
+
+  function renderDone() {
+    const d = mine(), sc = scoreFor(date);
+    const words = ["Tough one.", "On the board.", "Not bad.", "Solid day.", "So close to perfect.", "Perfect day."][sc];
+    const recap = qs.map((q, i) => {
+      const ok = d.picks[i] === q.a;
+      return `<li><span class="m ${ok ? "ok" : "no"}">${ok ? "✓" : "✕"}</span><div>${esc(q.q)}<div class="a">${ok ? "" : `You said ${esc(q.choices[d.picks[i]])}. `}Answer: ${esc(q.choices[q.a])}</div></div></li>`;
+    }).join("");
+    $("game").innerHTML = `
+      <div class="intro" style="padding-bottom:12px">
+        <div class="kicker">Set #${setNo} · ${esc(pretty(date))}</div>
+        <div class="disp done-score num">${sc}/5</div>
+        <h2 class="disp" style="font-size:28px;margin:0">${words}</h2>
+        <div class="grid5" aria-label="Your results">${qs.map((q, i) => (d.picks[i] === q.a ? "🟩" : "🟥")).join("")}</div>
+        <div class="btns">
+          <button class="btn gold" id="share">Share score</button>
+          <a class="btn" href="names.html">Play Name 'Em All</a>
+        </div>
+        ${date === today ? `<p style="margin:16px auto 0;font-size:14px;color:var(--muted)">Next set in <b class="num" id="cd"></b></p>` : ""}
+      </div>
+      <div class="card-b" style="padding-top:6px"><div class="banner" style="margin:0">
+        <div><b>Your score is saved</b><br><span>Every score and pick you make is on My picks. Free sign-in, so your streak follows you to any device, is coming soon.</span></div>
+        <a class="btn gold" href="/account/">My picks</a>
+      </div></div>
+      <div class="card-b" style="padding-top:0"><ul class="recap">${recap}</ul></div>`;
+    $("share").onclick = share;
+    countdown();
+  }
+
+  function share() {
+    const d = mine();
+    const entry = LFI.entries.put({
+      id: `trivia-daily5-${date}`, kind: "trivia", title: `Daily Five #${setNo}`, sub: pretty(date), url: `/trivia/?date=${date}`,
+      data: { score: `${scoreFor(date)}/5`, grid: qs.map((q, i) => (d.picks[i] === q.a ? "🟩" : "🟥")).join("") },
+      shareText: shareText(),
+    });
+    LFI.share(entry, { kicker: "Your score is in", note: "Send it to your friends. The link shows your score, not the answers." });
+  }
+
+  let toastT;
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2200); }
+
+  // ---- sidebar ----
+  function renderSide() {
+    const s = streaks();
+    const done = Object.keys(store.days).filter((k) => isDone(store.days[k]) && T.days[k]);
+    const scores = done.map(scoreFor);
+    const perfect = scores.filter((x) => x === 5).length;
+    $("streakChip").textContent = s.cur ? `🔥 ${s.cur} day${s.cur > 1 ? "s" : ""}` : "Start today";
+    $("stats").innerHTML = [[s.played, "Played"], [s.cur, "Streak"], [s.best, "Best"], [perfect, "Perfect"]]
+      .map(([n, l]) => `<div><b class="num">${n}</b><span>${l}</span></div>`).join("");
+    const counts = [0, 0, 0, 0, 0, 0];
+    scores.forEach((x) => counts[x]++);
+    const max = Math.max(1, ...counts);
+    const mineToday = scoreFor(date);
+    $("dist").innerHTML = [5, 4, 3, 2, 1, 0].map((n) =>
+      `<div><span>${n}</span><i class="${mineToday === n ? "today" : ""}" style="width:${Math.max(8, (counts[n] / max) * 100)}%">${counts[n]}</i></div>`).join("");
+
+    $("daysList").innerHTML = allDays.map((k) => {
+      const sc = scoreFor(k);
+      const tag = sc !== null ? `<span class="chip ${sc >= 4 ? "ok" : ""}">${sc}/5</span>` : k > today ? `<span class="chip lock">Preview</span>` : k === today ? `<span class="chip live">Today</span>` : `<span class="chip">Play</span>`;
+      return `<li><a href="?date=${k}" class="${k === date ? "on" : ""}"><span>#${allDays.indexOf(k) + 1} · ${esc(pretty(k))}</span>${tag}</a></li>`;
+    }).join("");
+  }
+
+  // keyboard: A-D or 1-4 to answer, Enter for next
+  document.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key.toLowerCase();
+    const idx = "abcd".indexOf(k) >= 0 ? "abcd".indexOf(k) : "1234".indexOf(k);
+    if (view === "q" && idx >= 0 && idx < qs[mine().picks.length].choices.length) answer(idx);
+    else if (view === "reveal" && e.key === "Enter" && document.activeElement?.id !== "next") next();
+  });
+
+  $("kicker").textContent = date === today ? "Free daily game" : date > today ? `Prototype preview · ${pretty(date)}` : `Past set · ${pretty(date)}`;
+  $("credit").innerHTML = `${esc(T.credit.replace(" (nflverse.com)", ""))} <a href="https://nflverse.com" rel="noopener">nflverse.com</a>. Built ${esc(T.generated)}.`;
+  if (mine().picks.length && !isDone(mine())) view = "intro";
+  renderStrip();
+  render();
+  renderSide();
+  setInterval(countdown, 30000);
+})();
+</script>
+</body>
+</html>

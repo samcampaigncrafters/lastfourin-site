@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Name 'Em All · Last Four In</title>
+<meta name="description" content="One football list a day. Name as many as you can before the clock runs out. Same list for everyone.">
+<meta property="og:title" content="Name 'Em All · Last Four In">
+<meta property="og:description" content="One football list a day. How many can you name before the clock runs out?">
+<meta property="og:url" content="https://lastfourin.com/trivia/names.html">
+<meta name="theme-color" content="#0a1a33">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='8' fill='%23f2b33d'/%3E%3Cpath d='M8 8h5v5h4M8 22h5v-5M17 13v4h5' fill='none' stroke='%231b1204' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../assets/lfi.css">
+<link rel="stylesheet" href="trivia.css">
+<style>
+.prompt { font-family: var(--f-display); font-weight: 800; font-size: clamp(26px, 3.6vw, 38px); line-height: 1.05; margin: 0 0 6px; }
+.note { color: var(--muted); font-size: 13.5px; margin: 0 0 18px; }
+.play { position: sticky; top: 60px; z-index: 5; background: #fff; padding: 12px 0; margin: -12px 0 6px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; }
+.play input { width: 100%; font-size: 18px; font-weight: 600; padding: 13px 14px; border: 2px solid var(--line-2); border-radius: var(--r); outline: none; background: #fff; }
+.play input:focus { border-color: var(--navy); }
+.play input.hit { border-color: var(--win); background: #f1fbf6; }
+.play input.miss { border-color: var(--loss); animation: shake .25s; }
+@keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+.clock { text-align: center; min-width: 74px; }
+.clock b { display: block; font-family: var(--f-display); font-weight: 800; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+.clock span { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.clock.low b { color: var(--loss); }
+@media (max-width: 560px) {
+  .play { grid-template-columns: 1fr 1fr; }
+  .play input { grid-column: 1 / -1; }
+}
+.found-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.found-bar .bar { flex: 1; height: 8px; border-radius: 99px; background: #e6ebf1; overflow: hidden; }
+.found-bar .bar i { display: block; height: 100%; background: var(--gold); border-radius: 99px; transition: width .2s; }
+.found-bar b { font-family: var(--f-display); font-weight: 800; font-size: 20px; white-space: nowrap; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+.slot { border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; min-height: 52px; background: #fafbfc; }
+.slot small { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot span { display: block; font-family: var(--f-display); font-weight: 800; font-size: 18px; line-height: 1.15; min-height: 20px; }
+.slot.got { background: #e3f6ee; border-color: #b9e6d1; }
+.slot.got.new { animation: pop .5s; }
+@keyframes pop { 0% { transform: scale(1.06); background: #c7f0dc; } 100% { transform: none; } }
+.slot.missed { background: #fff; }
+.slot.missed span { color: var(--loss); opacity: .8; }
+.lock-cover { text-align: center; padding: 30px 10px 34px; }
+.lock-cover .big { font-size: clamp(40px, 6vw, 60px); margin: 6px 0 10px; }
+.lock-cover p { color: var(--ink-2); margin: 0 auto 20px; max-width: 48ch; }
+.endline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-radius: var(--r); background: var(--navy); color: #fff; margin-bottom: 16px; }
+.endline .disp { font-size: 34px; }
+.endline span { color: #c9d4e3; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="strip" aria-label="Latest finals">
+  <div class="strip-lbl"><b>NFL</b><span id="stripWeek">Finals</span></div>
+  <div class="strip-games" id="strip"></div>
+</div>
+
+<header class="nav" data-active="names"></header>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <div class="kicker" id="kicker">Free daily game</div>
+      <h1 class="disp">Name 'Em All</h1>
+      <p>One list a day, the same for everyone. Name as many as you can before the clock hits zero. Spelling counts, capitals and punctuation don't.</p>
+    </div>
+    <div class="headr">
+      <nav class="tabs" aria-label="Daily games"><a href="./">Daily Five</a><a href="names.html" class="on">Name 'Em All</a></nav>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <section class="card"><div class="card-b" id="game"></div></section>
+
+    <aside class="side">
+      <section class="card">
+        <div class="card-h"><h2 class="disp">Your record</h2><span class="chip" id="recChip"></span></div>
+        <div class="card-b"><div class="stats4" id="stats"></div></div>
+      </section>
+      <section class="card">
+        <div class="card-h"><h2 class="disp">How it works</h2></div>
+        <div class="card-b">
+          <ol class="steps">
+            <li>The list is hidden until you press start. Then the clock runs, and it keeps running if you leave the page.</li>
+            <li>Type a full name. It locks in the moment it matches. Last name alone works too if you press Enter and nobody else on the list shares it.</li>
+            <li>Every empty slot shows a hint: the season, team or game it belongs to.</li>
+            <li>Ranked by how many you name, then by time left. Same list for everyone, so you can compare with friends.</li>
+          </ol>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-h"><h2 class="disp">Other days</h2><span class="chip lock">Prototype</span></div>
+        <div class="card-b"><ul class="days-list" id="daysList"></ul></div>
+      </section>
+      <p class="credit" id="credit"></p>
+    </aside>
+  </div>
+</main>
+
+<footer class="foot"></footer>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="/assets/lfi.js"></script>
+<script src="days.js"></script>
+<script>
+(function () {
+  const T = window.LFI_TRIVIA;
+  const KEY = "lfi-names-v1";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  // ---- dates (same day boundary as Daily Five: midnight US Eastern) ----
+  const etDate = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(d);
+  const pretty = (iso) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" });
+  const allDays = Object.keys(T.lists).sort();
+  const today = etDate();
+  const asked = new URLSearchParams(location.search).get("date");
+  const date = T.lists[asked] ? asked : T.lists[today] ? today : allDays[0];
+  const setNo = allDays.indexOf(date) + 1;
+  const L = T.lists[date];
+  const N = L.answers.length;
+
+  // ---- name matching ----
+  // "Odell Beckham Jr." -> "odell beckham", "D.K. Metcalf" -> "dk metcalf", "Ja'Marr" -> "jamarr"
+  const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+    .replace(/[.'’`]/g, "").replace(/[^a-z0-9]+/g, " ").replace(/\b(jr|sr|ii|iii|iv|v)\b/g, " ").replace(/\s+/g, " ").trim();
+  const full = new Map(), last = new Map();
+  L.answers.forEach((a, i) => {
+    const n = norm(a.name);
+    full.set(n, i);
+    full.set(n.replace(/ /g, ""), i); // "aj green" or "ajgreen"
+    const parts = n.split(" ");
+    const ln = parts.slice(1).join(" ") || n;
+    last.set(ln, last.has(ln) ? -1 : i); // -1 = shared surname, needs the full name
+  });
+
+  // ---- storage (prototype: this browser only) ----
+  function load() { try { return JSON.parse(localStorage.getItem(KEY)) || { days: {} }; } catch (e) { return { days: {} }; } }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} }
+  const store = load();
+  const run = store.days[date] || (store.days[date] = { found: [], startedAt: null, endedAt: null });
+  const isOver = () => !!run.endedAt;
+
+  const left = () => {
+    if (!run.startedAt) return L.seconds;
+    const end = run.endedAt || Date.now();
+    return Math.max(0, L.seconds - Math.floor((end - run.startedAt) / 1000));
+  };
+  const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+  // ---- score strip ----
+  $("stripWeek").textContent = T.week ? `Week ${T.week}` : "Finals";
+  $("strip").innerHTML = T.strip.map((g) => {
+    const row = (t, s, win) => `<div class="sg-row${win ? "" : " lose"}"><span class="dot" style="background:${T.colors[t] || "#888"}"></span><span>${t}</span><span class="sc">${s}</span></div>`;
+    return `<div class="sg"><div class="sg-top"><span>${g.day}</span><span>Final${g.ot ? "/OT" : ""}</span></div>${row(g.a, g.as, g.as > g.hs)}${row(g.h, g.hs, g.hs > g.as)}</div>`;
+  }).join("");
+
+  // ---- views ----
+  let tick = null, justFound = -1;
+
+  function slotsHtml() {
+    const got = new Set(run.found);
+    return L.answers.map((a, i) => {
+      const cls = got.has(i) ? `slot got${i === justFound ? " new" : ""}` : isOver() ? "slot missed" : "slot";
+      const nm = got.has(i) || isOver() ? esc(a.name) : "";
+      return `<div class="${cls}" id="s${i}"><small>${esc(a.hint)}</small><span>${nm}</span></div>`;
+    }).join("");
+  }
+
+  function render() {
+    if (!run.startedAt) return renderCover();
+    if (!isOver() && left() === 0) return finish();
+    const over = isOver();
+    $("game").innerHTML = `
+      ${over ? endline() : ""}
+      <div class="chip" style="margin-bottom:10px">${esc(L.cat)}</div>
+      <h2 class="prompt">${esc(L.prompt)}</h2>
+      <p class="note">${esc(L.note)}</p>
+      ${over ? "" : `
+      <div class="play">
+        <input id="guess" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Type a name" aria-label="Type a name">
+        <div class="clock" id="clock"><b></b><span>left</span></div>
+        <button class="btn" id="giveup">Give up</button>
+      </div>`}
+      <div class="found-bar"><b class="num" id="count"></b><div class="bar"><i id="bar"></i></div></div>
+      <div class="slots" id="slots">${slotsHtml()}</div>`;
+    updateCount();
+    if (!over) {
+      const inp = $("guess");
+      // keep the typing bar pinned just under the sticky nav (taller on phones, where the menu row shows)
+      document.querySelector(".play").style.top = document.querySelector(".nav").offsetHeight + "px";
+      inp.addEventListener("input", () => tryGuess(false));
+      inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); tryGuess(true); } });
+      $("giveup").onclick = () => { if (confirm("End now and see the full list?")) finish(); };
+      inp.focus({ preventScroll: true });
+      updateClock();
+      clearInterval(tick);
+      tick = setInterval(updateClock, 250);
+    } else {
+      $("share").onclick = share;
+    }
+  }
+
+  function renderCover() {
+    $("game").innerHTML = `
+      <div class="lock-cover">
+        <div class="kicker">${esc(pretty(date))} · List #${setNo}</div>
+        <h2 class="disp big">Today's list</h2>
+        <p>${N} names to find, ${mmss(L.seconds)} on the clock. The list stays hidden until you start, and the clock doesn't stop once it's going.</p>
+        <div class="rules" style="display:flex;justify-content:center;gap:8px;margin-bottom:22px"><span class="chip">${esc(L.cat)}</span><span class="chip">${N} answers</span><span class="chip">${mmss(L.seconds)}</span></div>
+        <button class="btn gold" id="start" style="font-size:17px;padding:13px 30px">Start the clock</button>
+      </div>`;
+    $("start").onclick = () => { run.startedAt = Date.now(); save(); render(); };
+  }
+
+  function endline() {
+    const n = run.found.length, used = L.seconds - left();
+    return `<div class="endline"><div><div class="disp num">${n} / ${N}</div><span>${n === N ? `All of them, with ${mmss(left())} to spare.` : `Time used ${mmss(used)}. The ones in red got away.`}</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn gold" id="share">Share score</button><a class="btn" href="./">Play Daily Five</a></div></div>`;
+  }
+
+  function updateClock() {
+    const s = left();
+    const c = $("clock");
+    if (!c) return;
+    c.querySelector("b").textContent = mmss(s);
+    c.classList.toggle("low", s <= 30);
+    if (s === 0) finish();
+  }
+
+  function updateCount() {
+    $("count").textContent = `${run.found.length} of ${N}`;
+    $("bar").style.width = `${(run.found.length / N) * 100}%`;
+  }
+
+  function tryGuess(enter) {
+    const inp = $("guess");
+    const g = norm(inp.value);
+    if (!g) return;
+    let i = full.has(g) ? full.get(g) : full.has(g.replace(/ /g, "")) ? full.get(g.replace(/ /g, "")) : undefined;
+    // last name alone only on Enter, so typing "Allen Robinson" never stops early at Josh "Allen"
+    if (i === undefined && enter && last.has(g)) {
+      if (last.get(g) === -1) { flash("miss"); toast("More than one on the list with that last name. Add the first name."); return; }
+      i = last.get(g);
+    }
+    if (i === undefined) { if (enter) flash("miss"); return; }
+    if (run.found.includes(i)) { inp.value = ""; toast(`Already got ${L.answers[i].name}.`); return; }
+    run.found.push(i);
+    save();
+    inp.value = "";
+    flash("hit");
+    justFound = i;
+    const el = $("s" + i);
+    el.className = "slot got new";
+    el.querySelector("span").textContent = L.answers[i].name;
+    updateCount();
+    renderSide();
+    if (run.found.length === N) finish();
+  }
+
+  function flash(cls) {
+    const inp = $("guess");
+    inp.classList.remove("hit", "miss");
+    void inp.offsetWidth;
+    inp.classList.add(cls);
+    setTimeout(() => inp.classList.remove(cls), 450);
+  }
+
+  function finish() {
+    const ended = !run.endedAt;
+    if (ended) {
+      // never record an end later than the clock allows (e.g. page reopened after time ran out)
+      run.endedAt = Math.min(Date.now(), run.startedAt + L.seconds * 1000);
+      save();
+    }
+    clearInterval(tick);
+    justFound = -1;
+    render();
+    renderSide();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (ended) share(); // the game just ended: save it to My picks and offer the share pop-up
+  }
+
+  function share() {
+    const n = run.found.length;
+    const entry = LFI.entries.put({
+      id: `trivia-names-${date}`, kind: "trivia", title: `Name 'Em All #${setNo}`, sub: L.prompt, url: `/trivia/names.html?date=${date}`,
+      data: { score: `${n}/${N}` },
+      shareText: `Last Four In · Name 'Em All #${setNo}\n${L.prompt}\n${n}/${N}${n === N ? ` with ${mmss(left())} left` : ""}`,
+    });
+    LFI.share(entry, { kicker: "Your score is in", note: "Send it to your friends. The link shows your score, not the names." });
+  }
+
+  let toastT;
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2200); }
+
+  function renderSide() {
+    const done = Object.entries(store.days).filter(([k, d]) => d.endedAt && T.lists[k]);
+    const pcts = done.map(([k, d]) => d.found.length / T.lists[k].answers.length);
+    const avg = pcts.length ? Math.round((pcts.reduce((a, b) => a + b, 0) / pcts.length) * 100) : 0;
+    const best = pcts.length ? Math.round(Math.max(...pcts) * 100) : 0;
+    const clean = pcts.filter((p) => p === 1).length;
+    $("recChip").textContent = done.length ? `${done.length} played` : "Start today";
+    $("stats").innerHTML = [[done.length, "Played"], [`${avg}%`, "Average"], [`${best}%`, "Best"], [clean, "Full lists"]]
+      .map(([n, l]) => `<div><b class="num">${n}</b><span>${l}</span></div>`).join("");
+    $("daysList").innerHTML = allDays.map((k) => {
+      const d = store.days[k];
+      const tag = d && d.endedAt ? `<span class="chip">${d.found.length}/${T.lists[k].answers.length}</span>`
+        : k > today ? `<span class="chip lock">Preview</span>` : k === today ? `<span class="chip live">Today</span>` : `<span class="chip">Play</span>`;
+      return `<li><a href="?date=${k}" class="${k === date ? "on" : ""}"><span>#${allDays.indexOf(k) + 1} · ${esc(pretty(k))}</span>${tag}</a></li>`;
+    }).join("");
+  }
+
+  $("kicker").textContent = date === today ? "Free daily game" : date > today ? `Prototype preview · ${pretty(date)}` : `Past list · ${pretty(date)}`;
+  $("credit").innerHTML = `${esc(T.credit.replace(" (nflverse.com)", ""))} <a href="https://nflverse.com" rel="noopener">nflverse.com</a>. Built ${esc(T.generated)}.`;
+  render();
+  renderSide();
+})();
+</script>
+</body>
+</html>
