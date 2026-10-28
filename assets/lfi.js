@@ -20,6 +20,7 @@
       ["cbb", "/ncaab/", "College Hoops Pick'em", "Every game with a Top 25 team"],
       ["mlb", "/mlb/", "MLB Pick'em", "Every MLB game, every day"],
       ["pools", "/pools/", "Pick'em Pools", "Play your friends in a private pool"],
+      ["money", "/money/", "$1,000 Challenge", "Pretend money on real games"],
       ["ap", "/ap-poll/", "Predict the AP Poll", "Call Sunday's Top 25"],
       ["bracket", "/bracket/", "CFP Bracket Builder", "Build and share your field"],
     ] },
@@ -45,6 +46,7 @@
       ["jerseys", "/drafts/?kind=jerseys", "Jersey Draft", "Best player to wear each number"],
       ["coaches", "/drafts/?kind=coaches", "Coaches' Draft", "Draft head coaches by wins"],
       ["redraft", "/drafts/classes.html", "Draft Classes", "Mock or redraft any class since 1999"],
+      ["money", "/money/", "$1,000 Challenge", "Pretend money on real games"],
     ] },
     { label: "NCAAF", items: [
       ["cfb", "/college/", "College Pick'em", "Every game with a Top 25 team"],
