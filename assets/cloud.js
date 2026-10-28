@@ -5,8 +5,8 @@
    decide what it can do. Never put the service_role key here. */
 (function () {
   if (!window.LFI || LFI.cloud) return;
-  const SUPABASE_URL = "";
-  const SUPABASE_KEY = "";
+  const SUPABASE_URL = "https://qojwjpdxxrbtuwcrfflh.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_3Zmtc_IUFi77Kcx8JjYOXw_4l3N2N_2";
   const SDK = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js";
 
   const { local, entries, esc, toast } = LFI;
