@@ -817,8 +817,7 @@ h1 .em, h2 .em, .disp .em { font-size: .8em; top: -.06em; }
 /* Light mode accent is the field purple, so accent text sitting ON a purple field goes white instead of vanishing. */
 [data-theme="light"] :is(.fh .kp b, .hero .kicker, .banner .kicker, .entry-h .kicker, .count b) { color: #fff; }
 
-/* ---------- Accessibility (2026-10-28 compliance pass
-, WCAG 2.1 AA; findings in work/compliance-REPORT.md) ----------
+/* ---------- Accessibility (2026-10-28 compliance pass, WCAG 2.1 AA; findings in work/compliance-REPORT.md) ----------
    Skip link, focus you can always see, form-field edges at 3:1, and a loss red dark enough for small text in light mode. */
 .skip { position: absolute; left: 12px; top: -60px; z-index: 100; background: var(--accent); color: var(--accent-ink); font-weight: 800;
   padding: 10px 14px; border-radius: var(--r); text-decoration: none; }
