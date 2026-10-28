@@ -250,6 +250,18 @@
     return (data || []).filter((p) => p.id !== cloud.user.id);
   };
 
+  // ---- Pools: private pick'em groups. Members' normal picks are what a pool ranks ----
+  const rpc = async (fn, args, fallback) => { const { data, error } = await cloud.sb.rpc(fn, args); fail(error, fallback); return data; };
+  cloud.myPools = async (league) => { need(); return (await rpc("my_pools", { p_league: league || null })) || []; };
+  cloud.poolCreate = async (league, name) => { need(); return rpc("pool_create", { p_league: league, p_name: name }, "Couldn't start that pool."); };
+  cloud.poolPeek = async (code) => rpc("pool_peek", { p_code: code });
+  cloud.poolJoin = async (code) => { need(); return rpc("pool_join", { p_code: code }, "Couldn't join that pool."); };
+  cloud.poolBoard = async (id, stype, period) => { need(); return rpc("pool_board", { p_id: id, p_season_type: stype ?? null, p_period: period ?? null }); };
+  cloud.poolLeave = async (id) => { need(); await rpc("pool_leave", { p_id: id }); };
+  cloud.poolRename = async (id, name) => { need(); await rpc("pool_rename", { p_id: id, p_name: name }); };
+  cloud.poolRemove = async (id, uid) => { need(); await rpc("pool_remove", { p_id: id, p_user: uid }); };
+  cloud.poolDelete = async (id) => { need(); await rpc("pool_delete", { p_id: id }); };
+
   // ---- Moderators ----
   cloud.isAdmin = async () => { if (!cloud.user) return false; const { data } = await cloud.sb.rpc("is_admin"); return !!data; };
   cloud.modQueue = async () => { const { data, error } = await cloud.sb.rpc("mod_queue"); fail(error); return data || []; };

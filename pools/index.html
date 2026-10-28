@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pick'em Pools · Last Four In</title>
+<meta name="description" content="Private pick'em pools for you and your friends. Start a pool, send the link, and see who's really calling it.">
+<meta property="og:title" content="Join my pick'em pool · Last Four In">
+<meta property="og:description" content="Free NFL and college football pick'em pools with your friends. Picks lock at kickoff.">
+<meta property="og:url" content="https://lastfourin.com/pools/">
+<meta property="og:site_name" content="Last Four In">
+<meta name="theme-color" content="#0d0820">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/assets/lfi.css">
+<script src="/assets/theme.js"></script>
+<link rel="stylesheet" href="/assets/social.css">
+<meta name="robots" content="noindex">
+<style>
+  .seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 999px; overflow: hidden; background: var(--card-2); }
+  .seg button { border: 0; background: none; padding: 8px 13px; font-weight: 800; font-size: 13.5px; color: var(--ink-2); white-space: nowrap; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--field, var(--navy)); color: #fff; }
+  .board-h { padding: 12px 18px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .board { list-style: none; margin: 0; padding: 8px 10px 12px; display: grid; gap: 4px; }
+  .board li { display: grid; grid-template-columns: 30px 38px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px; border-radius: 10px; }
+  .board li.me { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent-line); }
+  .board .rk { font-family: var(--f-display); font-size: 22px; text-align: center; color: var(--muted); }
+  .board li.top .rk { color: var(--accent); }
+  .board .avatar, .frow .avatar { width: 38px; height: 38px; font-size: 16px; border-width: 0; flex: none; }
+  .who-b { min-width: 0; }
+  .who-b a { display: block; font-weight: 800; text-decoration: none; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .who-b span { display: block; color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .board .val { text-align: right; }
+  .board .val b { display: block; font-family: var(--f-display); font-size: 22px; line-height: 1; }
+  .board .val span { font-size: 12px; color: var(--muted); font-weight: 700; }
+  .weeksel { margin-left: auto; padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--card); color: var(--ink); font-weight: 700; font-size: 14px; }
+  /* Picks: one row per game, who took each side underneath. */
+  .pg { padding: 12px 18px; border-top: 1px solid var(--line); }
+  .pg-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--muted); font-weight: 700; margin-bottom: 8px; }
+  .pg-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .pg-side { background: var(--card-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+  .pg-side.won { border-color: var(--win); box-shadow: inset 0 0 0 1px var(--win); }
+  .pg-team { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; font-weight: 800; }
+  .pg-team small { color: var(--muted); font-weight: 700; }
+  .pg-team .sc { font-family: var(--f-display); font-size: 20px; }
+  .pg-who { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .pg-who span { font-size: 12.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .pg-who span.me { border-color: var(--accent-line); background: var(--accent-soft); }
+  .pg-who span.ok { color: var(--win); }
+  .pg-who span.no { color: var(--loss); text-decoration: line-through; text-decoration-thickness: 1px; }
+  .pg-who em { font-style: normal; font-size: 12.5px; color: var(--muted); }
+  .pg-hidden { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .code-big { font-family: var(--f-display); font-size: 40px; letter-spacing: .14em; line-height: 1; margin: 4px 0 12px; }
+  .inv-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .invite-new { box-shadow: 0 0 0 2px var(--accent); }
+  /* One column (phones): the invite card moves up under the standings instead of below every game. */
+  .inv-top { display: none; }
+  @media (max-width: 980px) { .inv-top { display: block; } .side .inv-card { display: none; } }
+  .frow { display: flex; gap: 10px; align-items: center; padding: 8px 0; }
+  .frow + .frow { border-top: 1px solid var(--line); }
+  .frow .who-b { flex: 1; }
+  .sub-lbl { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 14px 0 2px; }
+  .sub-lbl:first-child { margin-top: 0; }
+  .lg-tag { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header class="nav" data-active="pools"></header>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <div class="kicker" id="kick">Play your friends</div>
+      <h1 class="disp" id="title">Pick'em Pools</h1>
+      <p id="lede">A private pool for you and your friends. Everyone's normal pick'em picks count, ranked by week and for the whole season.</p>
+    </div>
+  </div>
+  <div id="body"><p class="empty">Loading…</p></div>
+</main>
+<footer class="foot"></footer>
+
+<script src="/assets/lfi.js"></script>
+<script src="/assets/cloud.js"></script>
+<script>
+(function () {
+  const { $, esc, toast, copyText, cloud } = LFI;
+  const qs = new URLSearchParams(location.search);
+  const LEAGUE = { nfl: { name: "NFL Pick'em", url: "/pickem/" }, cfb: { name: "College Pick'em", url: "/college/" } };
+  let data = null, view = "season", me = null;
+
+  const initial = (p) => esc(((p.display_name || p.username || "?").trim()[0] || "?").toUpperCase());
+  const av = (p) => `<span class="avatar">${p.avatar_url ? `<img src="${esc(p.avatar_url)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : initial(p)}</span>`;
+  const short = (p) => p.display_name || p.username;
+  const ord = (n) => { const s = ["th", "st", "nd", "rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+  const inviteUrl = (code) => `${location.origin}/pools/?join=${code}`;
+  const msg = (html) => { $("body").innerHTML = `<section class="card" style="max-width:560px"><div class="card-b">${html}</div></section>`; };
+  const signInBox = (line, next) => msg(`<p style="margin:0 0 8px;font-weight:700">${line}</p>
+    <p class="empty" style="margin-top:0">It's free. Your normal pick'em picks count in every pool you're in.</p>
+    <a class="btn gold" href="/signin/?next=${encodeURIComponent(next)}">Sign in or create account</a>`);
+
+  async function invite(code, name) {
+    const url = inviteUrl(code), text = `Join my pick'em pool "${name}" on Last Four In. Code ${code}.`;
+    if (navigator.share) { try { await navigator.share({ title: "Join my pick'em pool", text, url }); return; } catch (e) { if (e.name === "AbortError") return; } }
+    toast((await copyText(url)) ? "Invite link copied. Paste it to your friends." : "Couldn't copy the link");
+  }
+
+  // ---- Invite link: /pools/?join=CODE ----
+  async function joinView(code) {
+    const p = await cloud.poolPeek(code).catch(() => null);
+    if (!p) return msg(`<p style="margin:0 0 8px;font-weight:700">That invite link doesn't match a pool.</p><p class="empty" style="margin-top:0">Ask your friend to send it again, or <a class="lnk" href="/pools/">start your own pool</a>.</p>`);
+    if (p.is_member) return location.replace(`/pools/?id=${p.id}`);
+    $("kick").textContent = "You're invited";
+    $("title").textContent = p.name;
+    $("lede").textContent = `${LEAGUE[p.league].name} pool, ${p.season} season. ${p.members} ${p.members === 1 ? "player" : "players"} so far${p.owner ? `, started by ${p.owner.display_name || "@" + p.owner.username}` : ""}.`;
+    if (!cloud.user || !cloud.profile || !cloud.profile.onboarded) return signInBox("Sign in to join this pool.", `/pools/?join=${p.code}`);
+    msg(`<p style="margin:0 0 12px;font-weight:700">Join ${esc(p.name)}?</p>
+      <p class="empty" style="margin-top:0">Your ${LEAGUE[p.league].name} picks count here automatically. Others see your picks only once each game kicks off.</p>
+      <button class="btn gold" type="button" id="joinBtn">Join the pool</button>`);
+    $("joinBtn").onclick = async (e) => {
+      e.target.disabled = true;
+      try { const id = await cloud.poolJoin(p.code); location.replace(`/pools/?id=${id}&joined=1`); }
+      catch (err) { toast(err.message); e.target.disabled = false; }
+    };
+  }
+
+  // ---- No pool picked: everything I'm in, plus start / join ----
+  async function listView() {
+    const pools = await cloud.myPools();
+    const row = (p) => `<div class="frow">
+        <div class="who-b"><a href="/pools/?id=${p.id}">${esc(p.name)}</a><span>${LEAGUE[p.league].name} · ${p.members} ${p.members === 1 ? "player" : "players"}</span></div>
+        <div style="text-align:right"><b class="disp" style="font-size:22px">${p.rank ? ord(p.rank) : "–"}</b><div class="lg-tag">${p.correct}-${p.wrong}</div></div></div>`;
+    $("body").innerHTML = `<div class="grid2">
+      <div class="stack"><section class="card"><div class="card-h"><h2 class="disp">Your pools</h2>${pools.length ? `<span class="chip">${pools.length}</span>` : ""}</div>
+        <div class="card-b">${pools.length ? pools.map(row).join("") : `<p class="empty" style="margin:0">You're not in a pool yet. Start one and send the link, or join a friend's with their code.</p>`}</div></section></div>
+      <aside class="side stack">
+        <section class="card"><div class="card-h"><h2 class="disp">Start a pool</h2></div><div class="card-b">
+          <form class="pool-form col" id="newF" autocomplete="off">
+            <div class="seg" role="group" aria-label="Which pick'em"><button type="button" data-lg="nfl" aria-pressed="true">NFL</button><button type="button" data-lg="cfb" aria-pressed="false">College</button></div>
+            <input name="name" maxlength="40" placeholder="Pool name, e.g. The Office" aria-label="Pool name" required>
+            <button class="btn gold block" type="submit">Start the pool</button></form></div></section>
+        <section class="card"><div class="card-h"><h2 class="disp">Join a pool</h2></div><div class="card-b">
+          <form class="pool-form" id="joinF" autocomplete="off"><input name="code" maxlength="8" placeholder="6-letter code" aria-label="Pool code" autocapitalize="characters" spellcheck="false" required>
+            <button class="btn gold" type="submit">Join</button></form></div></section>
+      </aside></div>`;
+    let lg = "nfl";
+    $("newF").addEventListener("click", (e) => { const b = e.target.closest("[data-lg]"); if (!b) return; lg = b.dataset.lg; $("newF").querySelectorAll("[data-lg]").forEach((x) => x.setAttribute("aria-pressed", x === b)); });
+    $("newF").onsubmit = async (e) => {
+      e.preventDefault(); const btn = e.target.querySelector("[type=submit]"); btn.disabled = true;
+      try { const r = await cloud.poolCreate(lg, e.target.name.value); location.href = `/pools/?id=${r.id}&new=1`; }
+      catch (err) { toast(err.message); btn.disabled = false; }
+    };
+    $("joinF").onsubmit = async (e) => {
+      e.preventDefault(); const btn = e.target.querySelector("button"); btn.disabled = true;
+      try { location.href = `/pools/?id=${await cloud.poolJoin(e.target.code.value)}`; }
+      catch (err) { toast(err.message); btn.disabled = false; }
+    };
+  }
+
+  // ---- One pool ----
+  function standings() {
+    const key = view === "week" ? "week" : "season";
+    const rows = data.members.slice().sort((a, b) => b[key].correct - a[key].correct || a[key].wrong - b[key].wrong
+      || (a.is_me ? -1 : b.is_me ? 1 : short(a).localeCompare(short(b))));
+    let rank = 0;
+    return rows.map((m, i) => {
+      if (!i || m[key].correct !== rows[i - 1][key].correct) rank = i + 1;
+      const s = m[key];
+      const line = view === "week" ? (s.picked ? `${s.picked} picked${s.pending ? ` · ${s.pending} still to play` : ""}` : "no picks yet")
+        : (s.weeks ? `${s.weeks} ${s.weeks === 1 ? "week" : "weeks"} played · best ${s.best_week}` : "no picks graded yet");
+      return `<li class="${m.is_me ? "me" : ""}${rank === 1 && s.correct ? " top" : ""}"><span class="rk">${rank}</span>${av(m)}
+        <div class="who-b"><a href="/u/?h=${encodeURIComponent(m.username)}">${esc(short(m))}${m.is_me ? " (you)" : ""}${m.is_owner ? ` <span class="lg-tag" style="display:inline">· owner</span>` : ""}</a><span>${esc(line)}</span></div>
+        <div class="val"><b>${s.correct}-${s.wrong}</b></div></li>`;
+    }).join("");
+  }
+
+  function pickRows() {
+    if (!data.games.length) return `<p class="empty" style="padding:0 18px 16px;margin:0">No games on the board for this week yet.</p>`;
+    const names = Object.fromEntries(data.members.map((m) => [m.user_id, m]));
+    return data.games.map((g) => {
+      const final = g.status === "post", when = new Date(g.kickoff);
+      const meta = g.status === "in" ? `● ${esc(g.detail || "Live")}` : final ? esc(g.detail || "Final")
+        : `${when.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · ${when.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
+      const side = (ha) => {
+        const t = g[ha], who = Object.entries(g.picks).filter(([, p]) => p === ha).map(([u]) => names[u]).filter(Boolean);
+        const cls = (m) => [m.is_me ? "me" : "", final && g.winner && g.winner !== "tie" ? (g.winner === ha ? "ok" : "no") : ""].join(" ").trim();
+        return `<div class="pg-side${final && g.winner === ha ? " won" : ""}">
+          <div class="pg-team"><span>${t.rank ? `<small>#${t.rank}</small> ` : ""}${esc(t.abbr)} <small>${esc(data.pool.league === "nfl" ? t.name : t.city || t.name)}</small></span>${g.status !== "pre" && t.score != null ? `<span class="sc">${t.score}</span>` : ""}</div>
+          ${g.locked ? `<div class="pg-who">${who.length ? who.map((m) => `<span class="${cls(m)}">${esc(short(m))}</span>`).join("") : "<em>nobody</em>"}</div>`
+            : who.length ? `<div class="pg-who">${who.map((m) => `<span class="${cls(m)}">${esc(short(m))}</span>`).join("")}</div>` : ""}
+        </div>`;
+      };
+      return `<div class="pg"><div class="pg-meta"><span>${meta}</span><span>${g.locked ? "" : "🔒 Picks show at kickoff"}</span></div>
+        <div class="pg-sides">${side("away")}${side("home")}</div>
+        ${g.locked ? "" : `<div class="pg-hidden">${g.picked} of ${data.members.length} picked so far.</div>`}</div>`;
+    }).join("");
+  }
+
+  function draw() {
+    const P = data.pool, L = LEAGUE[P.league], wk = data.week;
+    $("kick").textContent = `${L.name} pool · ${P.season} season`;
+    $("title").textContent = P.name;
+    $("lede").innerHTML = `${data.members.length} ${data.members.length === 1 ? "player" : "players"}. Everyone's normal ${esc(L.name)} picks count here. You see each other's picks once a game kicks off. <a class="lnk" href="${L.url}">Make your picks</a>`;
+    const weekOpts = data.weeks.map((w) => `<option value="${w.season_type}-${w.period}"${wk && w.season_type === wk.season_type && w.period === wk.period ? " selected" : ""}>${esc(w.label)}</option>`).join("");
+    const others = data.members.filter((m) => !m.is_me);
+    const inviteCard = `<section class="card inv-card${qs.has("new") ? " invite-new" : ""}"><div class="card-h"><h2 class="disp">Invite friends</h2></div><div class="card-b">
+          <p class="empty" style="margin:0">Pool code</p><div class="code-big">${esc(P.code)}</div>
+          <div class="inv-acts"><button class="btn gold" type="button" data-invite>Send invite</button><button class="btn" type="button" data-copy>Copy link</button></div>
+          <p class="hint-s">Friends sign in free, tap the link and they're in. Their picks count from the start of the season.</p></div></section>`;
+    $("body").innerHTML = `<div class="grid2">
+      <div class="stack">
+        <section class="card">
+          <div class="card-h"><h2 class="disp">Standings</h2><span class="chip">${data.members.length} ${data.members.length === 1 ? "player" : "players"}</span></div>
+          <div class="board-h"><div class="seg" role="group" aria-label="Standings for"><button type="button" data-view="season" aria-pressed="${view === "season"}">Season</button><button type="button" data-view="week" aria-pressed="${view === "week"}">${esc(wk ? wk.label : "This week")}</button></div></div>
+          <ol class="board">${standings()}</ol>
+          ${data.members.length < 2 ? `<p class="empty" style="margin:0;padding:0 18px 16px">Just you so far. Send the invite link and this turns into a race.</p>` : ""}
+        </section>
+        <div class="inv-top">${inviteCard}</div>
+        <section class="card">
+          <div class="card-h"><h2 class="disp">Everyone's picks</h2>${weekOpts ? `<select class="weeksel" id="weekSel" aria-label="Week">${weekOpts}</select>` : ""}</div>
+          ${pickRows()}
+        </section>
+      </div>
+      <aside class="side stack">
+        ${inviteCard}
+        <section class="card"><div class="card-h"><h2 class="disp">${P.is_owner ? "Manage pool" : "Pool"}</h2></div><div class="card-b">
+          ${P.is_owner ? `<form class="pool-form" id="renameF" autocomplete="off"><input name="name" maxlength="40" value="${esc(P.name)}" aria-label="Pool name"><button class="btn" type="submit">Rename</button></form>
+            ${others.length ? `<div class="sub-lbl" style="margin-top:14px">Players</div>${others.map((m) => `<div class="frow" data-u="${m.user_id}">${av(m)}<div class="who-b"><a href="/u/?h=${encodeURIComponent(m.username)}">${esc(short(m))}</a><span>@${esc(m.username)}</span></div><button class="linkish" type="button" data-remove>Remove</button></div>`).join("")}` : ""}` : ""}
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:${P.is_owner ? "14px" : "0"}">
+            <button class="btn" type="button" id="leaveBtn">Leave pool</button>
+            ${P.is_owner ? `<button class="btn" type="button" id="delBtn" style="color:var(--loss)">Delete pool</button>` : ""}
+          </div>
+          ${P.is_owner ? `<p class="hint-s">If you leave, the longest-standing player takes over the pool.</p>` : ""}
+        </div></section>
+        <a class="btn gold block" href="/pools/">All my pools</a>
+      </aside></div>`;
+  }
+
+  async function poolView(id, stype, period) {
+    try { data = await cloud.poolBoard(id, stype, period); }
+    catch (e) { return msg(`<p style="margin:0 0 8px;font-weight:700">${esc(e.message)}</p><p class="empty" style="margin-top:0"><a class="lnk" href="/pools/">See your pools</a></p>`); }
+    if (!data.week || !data.weeks.length) view = "season";
+    draw();
+    if (qs.has("new")) toast("Pool started. Send the invite to your friends.");
+    else if (qs.has("joined")) toast(`You're in ${data.pool.name}.`);
+    qs.delete("new"); qs.delete("joined");
+    history.replaceState(null, "", "?" + qs.toString());
+  }
+
+  $("body").addEventListener("click", async (e) => {
+    if (!data) return;
+    const t = e.target, P = data.pool;
+    const v = t.closest("[data-view]");
+    if (v) { view = v.dataset.view; return draw(); }
+    if (t.closest("[data-invite]")) return invite(P.code, P.name);
+    if (t.closest("[data-copy]")) return toast((await copyText(inviteUrl(P.code))) ? "Invite link copied" : "Couldn't copy the link");
+    try {
+      if (t.closest("#leaveBtn")) {
+        if (!confirm(`Leave ${P.name}?${data.members.length === 1 ? " You're the last player, so the pool will be deleted." : " You can rejoin with the code any time."}`)) return;
+        await cloud.poolLeave(P.id); location.href = "/pools/"; return;
+      }
+      if (t.closest("#delBtn")) {
+        if (!confirm(`Delete ${P.name} for everyone? This can't be undone. Everyone's picks stay on their own accounts.`)) return;
+        await cloud.poolDelete(P.id); location.href = "/pools/"; return;
+      }
+      if (t.closest("[data-remove]")) {
+        const m = data.members.find((x) => x.user_id === t.closest("[data-u]").dataset.u);
+        if (!confirm(`Remove ${short(m)} from ${P.name}? They won't be able to rejoin with the code.`)) return;
+        await cloud.poolRemove(P.id, m.user_id); toast(`Removed ${short(m)}`); return poolView(P.id, data.week && data.week.season_type, data.week && data.week.period);
+      }
+    } catch (err) { toast(err.message); }
+  });
+  $("body").addEventListener("change", (e) => {
+    if (e.target.id !== "weekSel") return;
+    const [st, pd] = e.target.value.split("-").map(Number);
+    qs.set("w", e.target.value); history.replaceState(null, "", "?" + qs.toString());
+    poolView(data.pool.id, st, pd);
+  });
+  $("body").addEventListener("submit", async (e) => {
+    if (e.target.id !== "renameF") return;
+    e.preventDefault();
+    try { await cloud.poolRename(data.pool.id, e.target.name.value); toast("Renamed"); poolView(data.pool.id, data.week && data.week.season_type, data.week && data.week.period); }
+    catch (err) { toast(err.message); }
+  });
+
+  async function route() {
+    if (!cloud || !cloud.on) return msg(`<p style="margin:0">Pools switch on with sign-in.</p>`);
+    const join = qs.get("join");
+    if (join) return joinView(join);
+    if (!cloud.user || !cloud.profile || !cloud.profile.onboarded) return signInBox("Sign in to see your pools.", location.pathname + location.search);
+    me = cloud.profile;
+    const id = qs.get("id");
+    if (!id) return listView();
+    const w = (qs.get("w") || "").split("-").map(Number);
+    return poolView(id, w[1] ? w[0] : null, w[1] || null);
+  }
+
+  cloud.ready.then(() => {
+    route().catch((e) => { console.error(e); msg(`<p style="margin:0">Couldn't load pools. Refresh to try again.</p>`); });
+    let uid = cloud.user && cloud.user.id;
+    cloud.onChange((c) => { if ((c.user && c.user.id) !== uid) { uid = c.user && c.user.id; route(); } });
+  });
+})();
+</script>
+</body>
+</html>

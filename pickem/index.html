@@ -61,6 +61,10 @@
         <div class="card-h"><h2 class="disp">Your week</h2><span class="chip" id="wkChip"></span></div>
         <div class="card-b" id="myWeek"></div>
       </section>
+      <section class="card" id="poolCard">
+        <div class="card-h"><h2 class="disp">Your pools</h2></div>
+        <div class="card-b" id="pools"><p class="empty">Loading…</p></div>
+      </section>
       <section class="card">
         <div class="card-h"><h2 class="disp">How it works</h2></div>
         <div class="card-b">
@@ -71,10 +75,6 @@
             <li>Hit Submit to save the week to your account and challenge friends.</li></ol>
         </div>
       </section>
-      <section class="card">
-        <div class="card-h"><h2 class="disp">Leaderboard</h2></div>
-        <div class="card-b"><p class="empty">Weekly and season leaderboards switch on with sign-in. For now your record lives on <a class="lnk" href="/account/">My picks</a>.</p></div>
-      </section>
     </aside>
   </div>
 </main>
@@ -82,6 +82,8 @@
 
 <script src="/assets/lfi.js"></script>
 <script>window.PICKS = { league: "nfl", name: "NFL Pick'em", url: "/pickem/" };</script>
+<script src="/assets/gameinfo.js"></script>
 <script src="/assets/picks.js"></script>
+<script src="/assets/poolcard.js"></script>
 </body>
 </html>

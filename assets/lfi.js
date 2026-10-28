@@ -2,11 +2,43 @@
    the saved-entries store behind the account page, and the share pop-up shown after every submit.
    Every page loads this file; a page marks its nav tab with <header class="nav" data-active="...">. */
 (function () {
-  // The menu, grouped by league. Each group is one dropdown on desktop and one section of the phone menu.
-  const MENU = [
+  // The menu. TOP is the main row: plain links and category dropdowns. LEAGUES sit on a slimmer row below it.
+  // On phones both become one list. An item marked soon shows in the menu but is not a link yet.
+  const TOP = [
+    { key: "home", label: "Home", href: "/", sub: "What to play this week" },
+    { label: "Trivia", items: [
+      ["trivia", "/trivia/", "Daily Five", "Five questions, same for everyone"],
+      ["names", "/trivia/names.html", "Name Them All", "How many can you name?"],
+      ["grid", "/grid/", "Grid Race", "Race a friend for 25 squares"],
+    ] },
+    { label: "Pick'em", items: [
+      ["nfl", "/pickem/", "NFL Pick'em", "Pick every game straight up"],
+      ["cfb", "/college/", "College Pick'em", "Every game with a Top 25 team"],
+      ["pools", "/pools/", "Pick'em Pools", "Play your friends in a private pool"],
+      ["ap", "/ap-poll/", "Predict the AP Poll", "Call Sunday's Top 25"],
+      ["bracket", "/bracket/", "CFP Bracket Builder", "Build and share your field"],
+    ] },
+    { label: "Multiplayer", items: [
+      ["challenges", "/challenges/", "Challenges", "Take on your friends"],
+      ["grid", "/grid/", "Grid Race", "Race a friend for 25 squares"],
+      ["race", "/trivia/race.html", "Name Them All Race", "Race friends live, first to name it claims it"],
+      ["drafts", "/drafts/", "Draft a Friend", "Snake-draft NFL history, live"],
+    ] },
+    { label: "Drafts", items: [
+      ["drafts", "/drafts/", "Drafts", "Draft any slice of NFL history"],
+      ["jerseys", "/drafts/?kind=jerseys", "Jersey Draft", "Best player to wear each number"],
+      ["coaches", "/drafts/?kind=coaches", "Coaches' Draft", "Draft head coaches by wins"],
+      ["redraft", "/drafts/classes.html", "Draft Classes", "Mock or redraft any class since 1999"],
+    ] },
+    { key: "fantasy", label: "Fantasy", href: "/fantasy/", sub: "Fantasy football tools", soon: true },
+    { key: "l4picks", label: "L4 Picks AI", href: "/l4picks/", sub: "AI picks with the stats behind them", soon: true },
+  ];
+  const LEAGUES = [
     { label: "NFL", items: [
       ["nfl", "/pickem/", "NFL Pick'em", "Pick every game straight up"],
       ["drafts", "/drafts/", "Drafts", "Draft any slice of NFL history"],
+      ["jerseys", "/drafts/?kind=jerseys", "Jersey Draft", "Best player to wear each number"],
+      ["coaches", "/drafts/?kind=coaches", "Coaches' Draft", "Draft head coaches by wins"],
       ["redraft", "/drafts/classes.html", "Draft Classes", "Mock or redraft any class since 1999"],
     ] },
     { label: "NCAAF", items: [
@@ -14,11 +46,6 @@
       ["ap", "/ap-poll/", "Predict the AP Poll", "Call Sunday's Top 25"],
       ["bracket", "/bracket/", "CFP Bracket Builder", "Build and share your field"],
       ["voters", "/ap-voters/", "AP Voter Tracker", "Every voter, Normal to Hot takes"],
-    ] },
-    { label: "Trivia", items: [
-      ["trivia", "/trivia/", "Daily Five", "Five questions, same for everyone"],
-      ["names", "/trivia/names.html", "Name Them All", "How many can you name?"],
-      ["grid", "/grid/", "Grid Race", "Race a friend for 25 squares"],
     ] },
   ];
   const CARET = '<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 4l4 4 4-4"/></svg>';
@@ -109,14 +136,20 @@
     const active = h.dataset.active || "";
     const name = myName();
     const item = ([k, href, label, sub]) => `<a href="${href}"${k === active ? ' class="on" aria-current="page"' : ""}><b>${label}</b><span>${sub}</span></a>`;
-    const groups = MENU.map((g, i) => {
+    const dd = (g, id) => {
       const on = g.items.some(([k]) => k === active);
-      return `<div class="dd${on ? " on" : ""}"><button type="button" class="dd-btn" aria-expanded="false" aria-controls="dd${i}">${g.label}${CARET}</button>
-        <div class="dd-panel" id="dd${i}" hidden>${g.items.map(item).join("")}</div></div>`;
-    }).join("");
+      return `<div class="dd${on ? " on" : ""}"><button type="button" class="dd-btn" aria-expanded="false" aria-controls="${id}">${g.label}${CARET}</button>
+        <div class="dd-panel" id="${id}" hidden>${g.items.map(item).join("")}</div></div>`;
+    };
+    const top = TOP.map((t, i) => t.items ? dd(t, `dd${i}`)
+      : t.soon ? `<span class="nav-home nav-soon" title="Coming soon">${t.label}<small>Soon</small></span>`
+      : `<a class="nav-home${t.key === active ? " on" : ""}" href="${t.href}">${t.label}</a>`).join("");
+    const mmTop = TOP.map((t) => t.items ? `<div class="mm-group"><div class="mm-lbl">${t.label}</div>${t.items.map(item).join("")}</div>`
+      : t.soon ? `<span class="mm-home mm-soon"><b>${t.label} <i class="mm-badge">Soon</i></b><span>${t.sub}</span></span>`
+      : `<a class="mm-home${t.key === active ? " on" : ""}" href="${t.href}"><b>${t.label}</b><span>${t.sub}</span></a>`).join("");
     h.innerHTML = `<div class="nav-in">
         <a class="brand" href="/" aria-label="Last Four In home">${LOGO}<b>Last Four In</b></a>
-        <nav class="nav-links" aria-label="Main"><a class="nav-home${active === "home" ? " on" : ""}" href="/">Home</a>${groups}</nav>
+        <nav class="nav-links" aria-label="Main">${top}</nav>
         <div class="nav-r">
           ${me && me.avatar_url ? `<a class="avatar" href="/account/" title="My account" aria-label="My account"><img src="${esc(me.avatar_url)}" alt="" referrerpolicy="no-referrer"></a>`
             : name ? `<a class="avatar" href="/account/" title="My predictions" aria-label="My predictions">${esc(name.trim()[0].toUpperCase())}</a>`
@@ -129,8 +162,8 @@
         </div>
       </div>
       <div class="mmenu" id="mmenu" hidden>
-          <a class="mm-home${active === "home" ? " on" : ""}" href="/"><b>Home</b><span>What to play this week</span></a>
-          ${MENU.map((g) => `<div class="mm-group"><div class="mm-lbl">${g.label}</div>${g.items.map(item).join("")}</div>`).join("")}
+          ${mmTop}
+          ${LEAGUES.map((g) => `<div class="mm-group"><div class="mm-lbl">${g.label}</div>${g.items.map(item).join("")}</div>`).join("")}
           <a class="mm-home${active === "account" ? " on" : ""}" href="/account/"><b>My picks</b><span>Everything you've submitted</span></a>
           ${me && me.onboarded ? `<a class="mm-home${active === "profile" ? " on" : ""}" href="/u/?h=${encodeURIComponent(me.username)}"><b>My profile</b><span>@${esc(me.username)}</span></a>`
             : window.LFI_CLOUD_ON ? `<a class="mm-home" href="/signin/"><b>Sign in</b><span>Keep your picks on every device</span></a>` : ""}
@@ -138,22 +171,27 @@
           ${me && me.onboarded ? `<a class="mm-home${active === "challenges" ? " on" : ""}" href="/challenges/"><b>Challenges${challengesWaiting ? ` <i class="mm-badge">${challengesWaiting}</i>` : ""}</b><span>${challengesWaiting ? `${challengesWaiting} waiting on you` : "Take on your friends"}</span></a>` : ""}
           <button type="button" class="mm-home mm-theme" data-theme-flip>${theme() === "light" ? MOON : SUN}<b>${themeLabel()}</b></button>
       </div>`;
+    let lg = $("navlg");
+    if (!lg) { lg = document.createElement("nav"); lg.id = "navlg"; lg.className = "nav-leagues"; lg.setAttribute("aria-label", "Leagues"); h.after(lg); }
+    lg.innerHTML = `<div class="nav-lg-in">${LEAGUES.map((g, i) => dd(g, `lg${i}`)).join("")}</div>`;
     if (h.dataset.bound) return;
     h.dataset.bound = "1";
 
     // Dropdown behaviour: one open at a time, click outside or Escape closes.
-    const closeAll = (except) => h.querySelectorAll("[aria-expanded]").forEach((b) => {
+    const closeAll = (except) => document.querySelectorAll("header.nav [aria-expanded], #navlg [aria-expanded]").forEach((b) => {
       if (b === except) return;
       b.setAttribute("aria-expanded", "false"); $(b.getAttribute("aria-controls")).hidden = true;
     });
-    h.addEventListener("click", (e) => {
+    const onClick = (e) => {
       if (e.target.closest("[data-theme-flip]")) { setTheme(theme() === "light" ? "dark" : "light"); return; }
       const b = e.target.closest("[aria-expanded]"); if (!b) return;
       const open = b.getAttribute("aria-expanded") !== "true";
       closeAll(b);
       b.setAttribute("aria-expanded", String(open)); $(b.getAttribute("aria-controls")).hidden = !open;
-    });
-    document.addEventListener("click", (e) => { if (!h.contains(e.target)) closeAll(); });
+    };
+    h.addEventListener("click", onClick);
+    $("navlg").addEventListener("click", onClick);
+    document.addEventListener("click", (e) => { if (!h.contains(e.target) && !$("navlg").contains(e.target)) closeAll(); });
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAll(); });
   }
 

@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>L4 Picks AI · Last Four In</title>
+<meta name="description" content="L4 Picks AI makes its own line on every NFL game: a spread, total and moneyline lean with a confidence level and the reason. Free, for fun, not betting advice.">
+<meta property="og:title" content="L4 Picks AI · Last Four In">
+<meta property="og:description" content="Our model's lean on every NFL game this week: spread, total and moneyline. For fun, not betting advice.">
+<meta property="og:url" content="https://lastfourin.com/l4picks/">
+<meta property="og:site_name" content="Last Four In">
+<meta name="theme-color" content="#0d0820">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/assets/lfi.css">
+<script src="/assets/theme.js"></script>
+<style>
+.fun { display: flex; gap: 12px; align-items: flex-start; background: var(--card); border: 1px solid var(--accent-line); border-left: 4px solid var(--accent); border-radius: 12px; padding: 12px 14px; margin: 0 0 20px; font-size: 14px; color: var(--ink-2); }
+.fun b { color: var(--ink); }
+.fun svg { flex: none; color: var(--accent); margin-top: 1px; }
+.modes { display: inline-flex; background: var(--card); border: 1px solid var(--line-2); border-radius: 8px; padding: 3px; gap: 3px; }
+.modes button { border: 0; background: none; padding: 7px 12px; border-radius: 6px; font-family: var(--f-display); text-transform: uppercase; font-size: 15px; letter-spacing: .03em; color: var(--ink-2); white-space: nowrap; }
+.modes button[aria-pressed="true"] { background: var(--field); color: #fff; }
+.bar-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin: 4px 0 12px; }
+.bar-row h2 { font-size: 30px; margin: 0; }
+
+/* Best Bets of the Day: the most likely hits on one game day, game picks and player props, on the purple field */
+.days { margin-bottom: 14px; flex-wrap: wrap; }
+.top .t-pct { display: flex; align-items: baseline; gap: 8px; margin: 2px 0 0; }
+.top .t-pct b { font-family: var(--f-display); font-weight: 400; font-size: 44px; line-height: 1; }
+.top .t-pct span { font-weight: 800; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; opacity: .9; }
+.top .t-rk { position: absolute; right: 14px; top: 12px; z-index: 2; font-family: var(--f-display); font-size: 22px; opacity: .55; }
+.bb-more { margin: -12px 0 26px; font-size: 13px; color: var(--muted); }
+.chance { display: block; margin-top: 3px; font-size: 12px; font-weight: 800; letter-spacing: .04em; color: var(--accent); white-space: nowrap; }
+.lean.weak + .res + .chance, .lean.weak + .chance { color: var(--muted); }
+
+/* Player props inside a game card */
+.gm-props { border-top: 1px solid var(--line); }
+.gm-props summary { cursor: pointer; padding: 11px 14px; font-family: var(--f-display); text-transform: uppercase; font-size: 15px; letter-spacing: .03em; color: var(--ink-2); list-style: none; display: flex; justify-content: space-between; gap: 8px; }
+.gm-props summary::-webkit-details-marker { display: none; }
+.gm-props summary::after { content: "+"; color: var(--accent); }
+.gm-props[open] summary::after { content: "−"; }
+.gm-props summary small { font-family: var(--f-body); font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--muted); text-transform: none; margin-left: auto; }
+.pp { list-style: none; margin: 0; padding: 0 14px 10px; }
+.pp li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; align-items: center; }
+.pp .who b { font-weight: 800; } .pp .who small { color: var(--muted); font-weight: 600; }
+.pp .pk { font-family: var(--f-display); font-size: 16px; text-transform: uppercase; letter-spacing: .02em; text-align: right; white-space: nowrap; }
+.pp .det { grid-column: 1 / -1; color: var(--muted); font-size: 12.5px; }
+.pp .pc { color: var(--accent); font-weight: 800; }
+
+.tops { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 26px; }
+@media (max-width: 860px) and (min-width: 561px) { .tops { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+@media (max-width: 560px) { .tops { grid-template-columns: 1fr; } }
+.top { position: relative; overflow: hidden; background: var(--field); color: #fff; border-radius: 14px; padding: 16px 16px 14px; box-shadow: 6px 6px 0 #000; }
+.top::after { content: ""; position: absolute; right: -40px; top: -20px; width: 120px; height: 200%; background: var(--slash); opacity: .35; transform: rotate(18deg); pointer-events: none; }
+.top > * { position: relative; z-index: 1; }
+.top .t-k { font-weight: 800; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; opacity: .85; }
+.top .t-pick { font-family: var(--f-display); font-size: 34px; line-height: 1; text-transform: uppercase; margin: 6px 0 2px; }
+.top .t-g { font-size: 13.5px; opacity: .9; }
+.top .t-why { font-size: 13.5px; margin: 10px 0 0; line-height: 1.4; opacity: .95; }
+.top .conf { margin-top: 10px; }
+.top .conf i { background: rgba(255,255,255,.28); }
+.top .conf i.on { background: #fff; }
+.top .conf span { color: #fff; }
+[data-theme="light"] .top { box-shadow: 6px 6px 0 #d8ccf5; }
+
+/* Confidence: five bars and a word */
+.conf { display: inline-flex; align-items: center; gap: 3px; }
+.conf i { width: 7px; height: 16px; border-radius: 2px; background: var(--card-2); }
+.conf i.on { background: var(--accent); }
+.conf span { margin-left: 6px; font-weight: 800; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
+
+/* One card per game */
+.games { display: grid; gap: 14px; }
+.gm { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.gm-top { display: flex; justify-content: space-between; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 12.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.gm-top .live { color: var(--loss); }
+.gm-top .tag { color: var(--accent); }
+.gm-teams { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; padding: 14px 14px 10px; }
+.gm-team { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.gm-team.h { flex-direction: row-reverse; text-align: right; }
+.gm-team .nm { min-width: 0; }
+.gm-team .nm b { display: block; font-family: var(--f-display); font-weight: 400; font-size: 20px; text-transform: uppercase; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gm-team .nm small { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.gm-team .sc { font-family: var(--f-display); font-size: 30px; }
+.gm-team.lose { opacity: .55; }
+.gm-at { font-family: var(--f-display); color: var(--muted); font-size: 18px; text-align: center; }
+.gm-at small { display: block; font-family: var(--f-body); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.gm-proj { text-align: center; font-size: 13px; color: var(--ink-2); padding: 0 14px 10px; }
+.gm-proj b { font-family: var(--f-display); font-weight: 400; font-size: 15px; letter-spacing: .02em; }
+
+.mk { width: 100%; border-collapse: collapse; font-size: 14px; }
+.mk th { text-align: left; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding: 6px 14px; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--card-2) 55%, var(--card)); }
+.mk td { padding: 10px 14px; border-top: 1px solid var(--line); vertical-align: middle; }
+.mk td.lbl { font-family: var(--f-display); font-size: 15px; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-2); width: 1%; white-space: nowrap; }
+.mk .ln { font-weight: 700; white-space: nowrap; }
+.mk .ln small { display: block; font-weight: 600; color: var(--muted); font-size: 12px; }
+.mk .lean { display: inline-block; font-family: var(--f-display); font-size: 17px; text-transform: uppercase; letter-spacing: .02em; padding: 3px 9px; border-radius: 6px; background: var(--accent-soft); border: 1px solid var(--accent-line); white-space: nowrap; }
+.mk .lean.weak { background: transparent; border-color: var(--line-2); color: var(--ink-2); }
+.mk .res { margin-left: 6px; font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; }
+.res.hit { background: var(--win-soft); color: var(--win); } .res.miss { background: var(--loss-soft); color: var(--loss); } .res.push { background: var(--card-2); color: var(--muted); }
+@media (max-width: 560px) {
+  .mk thead { display: none; }
+  .mk tr { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "lbl lean" "ln conf"; column-gap: 12px; row-gap: 4px; padding: 10px 14px; border-top: 1px solid var(--line); align-items: center; }
+  .mk td { padding: 0; border: 0; }
+  .mk td.lbl { grid-area: lbl; } .mk td.ln { grid-area: ln; } .mk td.le { grid-area: lean; text-align: right; } .mk td.cf { grid-area: conf; text-align: right; }
+  .gm-team .nm b { font-size: 17px; }
+  .gm-team .tmk b { font-size: 22px; }
+}
+.gm-why { padding: 12px 14px 14px; border-top: 1px solid var(--line); font-size: 14px; color: var(--ink-2); }
+.gm-why b { color: var(--ink); }
+.gm-why .warn { display: block; margin-top: 6px; color: var(--muted); font-size: 13px; }
+
+.pr { list-style: none; margin: 0; padding: 0; counter-reset: pr; }
+.pr li { display: grid; grid-template-columns: 26px 46px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.pr li:last-child { border-bottom: 0; }
+.pr .rk { font-family: var(--f-display); font-size: 17px; color: var(--muted); text-align: right; }
+.pr .ab { font-family: var(--f-display); font-size: 17px; }
+.pr .nm small { color: var(--muted); }
+.pr .rt { font-family: var(--f-display); font-size: 16px; text-align: right; }
+.steps li { margin-bottom: 6px; }
+.credit { margin-top: 22px; font-size: 12.5px; color: var(--muted); }
+.credit a { color: inherit; }
+.loading { padding: 40px 0; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="strip" aria-label="This week's games">
+  <div class="strip-lbl"><b>NFL</b><span id="stripWeek">Week</span></div>
+  <div class="strip-games" id="strip"></div>
+</div>
+
+<header class="nav" data-active="l4picks"></header>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <div class="kicker">Free · For fun</div>
+      <h1 class="disp">L4 Picks AI</h1>
+      <p>Our model makes its own line on every NFL game, then leans wherever it disagrees with the market: spread, total and moneyline, each with its chance to hit, a confidence level and the reason. Plus player props where our projection beats the line.</p>
+    </div>
+    <div class="modes" role="group" aria-label="Sort games">
+      <button type="button" data-sort="time" aria-pressed="true">By kickoff</button>
+      <button type="button" data-sort="conf" aria-pressed="false">By confidence</button>
+    </div>
+  </div>
+
+  <div class="fun" role="note">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 7.5v5.5M12 16.5v.1"/></svg>
+    <div><b>For fun, not betting advice.</b> L4 Picks is a free computer model we built for entertainment. We don't take bets, we don't link to sportsbooks, and nothing here is a tip to wager money. If gambling stops being fun, call or text 1-800-GAMBLER.</div>
+  </div>
+
+  <div id="tops"></div>
+
+  <div class="grid2">
+    <div>
+      <div class="bar-row"><h2 class="disp" id="wkTitle">This week</h2><span class="chip" id="wkChip"></span></div>
+      <div class="games" id="games"><p class="loading">Loading this week's games…</p></div>
+    </div>
+
+    <aside class="side">
+      <section class="card">
+        <div class="card-h"><h2 class="disp">Make your own call</h2></div>
+        <div class="card-b">
+          <p style="margin:0 0 12px;color:var(--ink-2)">Think the model's wrong? Pick every game straight up in our free weekly contest.</p>
+          <a class="btn gold" href="/pickem/">Play NFL Pick'em</a>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-h"><h2 class="disp">L4 Power ratings</h2><span class="chip" id="prChip"></span></div>
+        <div class="card-b"><ol class="pr" id="power"></ol></div>
+      </section>
+      <section class="card">
+        <div class="card-h"><h2 class="disp">How it works</h2></div>
+        <div class="card-b">
+          <ol class="steps">
+            <li>Every team gets an offense and a defense rating from this season's final scores, adjusted for who they played. Last season counts a little early on and fades out.</li>
+            <li>For each game the model projects both scores, adds home field, and docks a team starting a backup quarterback.</li>
+            <li>It compares its line with the market's. Where they disagree it leans one way, and the bigger the gap, the more bars it gets.</li>
+            <li>A very big gap caps the confidence: the market may know about an injury the model can't see.</li>
+            <li>The percent is the model's chance the bet hits: results spread about 13.5 points around its margin and 10 around its total.</li>
+            <li>Player props: each player's projection is 60% his season average and 40% his last three games, nudged for the defense he faces, then weighed against the posted line (the line gets a quarter of the say).</li>
+            <li>Best Bets of the Day lists the picks where the model's chance beats the market's by the most on one game day, leaving out capped gaps, players just back from a missed stretch and touchdown or interception props.</li></ol>
+        </div>
+      </section>
+    </aside>
+  </div>
+  <p class="credit">Team ratings from final scores in <a href="https://github.com/nflverse" rel="noopener">nflverse</a> data (CC BY 4.0), <span id="thru">updated weekly</span>. Market lines, player prop lines and schedule from ESPN's public feeds, shown for comparison only. Player projections from nflverse weekly stats. Not affiliated with any sportsbook.</p>
+</main>
+<footer class="foot"></footer>
+
+<script src="/assets/lfi.js"></script>
+<script>
+(function () {
+  const { $, esc, thisWeek, teamMark, fmtShort, stripHTML } = LFI;
+  let sortBy = "time", M = null, rows = [], wk = null;
+
+  // Normal curve: the chance a team wins by more than x when the model says m, results spread by sd.
+  const erf = (x) => { const t = 1 / (1 + .3275911 * Math.abs(x)), y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - .284496736) * t + .254829592) * t * Math.exp(-x * x); return x >= 0 ? y : -y; };
+  const cdf = (x) => .5 * (1 + erf(x / Math.SQRT2));
+  const f1 = (n) => (Math.round(n * 10) / 10).toFixed(1).replace(/\.0$/, "");
+  const sgn = (n) => (n > 0 ? "+" : n < 0 ? "−" : "") + f1(Math.abs(n));
+  const ml = (n) => (n > 0 ? "+" : "") + Math.round(n);
+  const pct = (p) => Math.round(p * 100) + "%";
+  const ord = (n) => n + (["th", "st", "nd", "rd"][(n % 100 - 20) % 10] || ["th", "st", "nd", "rd"][n % 100] || "th");
+  const nth = (n, word) => (n === 1 ? word : `${ord(n)}-${word}`);   // "best", "3rd-best"
+  const implied = (o) => (o < 0 ? -o / (-o + 100) : 100 / (o + 100));
+
+  // ESPN's market line for one event (home point of view), or null when none is posted.
+  function market(e) {
+    const c = e.competitions[0], o = (c.odds || [])[0];
+    if (!o) return null;
+    const home = c.competitors.find((x) => x.homeAway === "home").team.abbreviation;
+    let spread = typeof o.spread === "number" ? o.spread : null;
+    if (spread == null && o.details) {
+      if (/even|pk/i.test(o.details)) spread = 0;
+      else { const [fav, n] = o.details.split(" "); const v = Math.abs(parseFloat(n)); if (isFinite(v)) spread = fav === home ? -v : v; }
+    }
+    const price = (side) => {
+      const m = o.moneyline && o.moneyline[side], v = m && (m.close || m.current || m.open);
+      let s = v && v.odds; if (s == null) s = (o[side + "TeamOdds"] || {}).moneyLine;
+      if (s == null) return null;
+      if (/even/i.test(String(s))) return 100;
+      const n = parseFloat(String(s).replace("+", "")); return isFinite(n) && n !== 0 ? n : null;
+    };
+    const total = typeof o.overUnder === "number" ? o.overUnder : parseFloat(o.overUnder);
+    return { spread, total: isFinite(total) ? total : null, hML: price("home"), aML: price("away") };
+  }
+
+  // The model's projection for a game, with any quarterback note.
+  function project(g, e) {
+    const h = M.teams[g.home.abbr], a = M.teams[g.away.abbr];
+    if (!h || !a) return null;
+    const neutral = e && e.competitions[0].neutralSite, hfa = neutral ? 0 : M.hfa;
+    let hp = M.mu + h.o - a.d + hfa / 2, ap = M.mu + a.o - h.d - hfa / 2;
+    const notes = [], wkG = M.week && M.week[g.id];
+    for (const side of ["home", "away"]) {
+      const q = wkG && wkG[side + "QB"], t = side === "home" ? h : a, team = g[side];
+      if (!q || !q.name || !t.qb || q.name === t.qb) continue;
+      if (q.starts <= 1) {                     // a fresh backup: the ratings were earned with someone else
+        if (side === "home") hp -= 2.5; else ap -= 2.5;
+        notes.push({ team, text: `${q.name} is listed to start for the ${team.nick}${q.starts ? `, his second start` : `, his first start`} this season (${t.qb} has ${t.qbStarts})`, hit: true });
+      } else notes.push({ team, text: `${q.name} starts for the ${team.nick} (${q.starts} starts this season; ${t.qb} has ${t.qbStarts})`, hit: false });
+    }
+    const margin = hp - ap;
+    return { hp, ap, margin, total: hp + ap, pHome: cdf(margin / M.sd), notes, neutral };
+  }
+
+  const CONF = ["", "Lean", "Lean", "Solid", "Strong", "Best"];
+  const bars = (c) => `<span class="conf" aria-label="Confidence ${c} of 5">${[1, 2, 3, 4, 5].map((i) => `<i${i <= c ? ' class="on"' : ""}></i>`).join("")}<span>${CONF[c]}</span></span>`;
+  // Points of disagreement to confidence. Past the cap the market likely knows something the model doesn't.
+  const level = (edge, steps, cap) => Math.min(edge > cap ? 3 : 5, 1 + steps.filter((s) => edge >= s).length);
+
+  function leans(g, p, mk) {
+    const L = {};
+    const name = (ha) => g[ha].abbr;
+    if (mk && mk.spread != null) {
+      const mkt = -mk.spread, edge = Math.abs(p.margin - mkt), ha = p.margin > mkt ? "home" : "away";
+      const line = ha === "home" ? mk.spread : -mk.spread;
+      L.spread = { side: ha, label: `${name(ha)} ${line === 0 ? "PK" : sgn(line)}`, edge, conf: level(edge, [1.5, 3, 4.5, 6], 8), line,
+                   p: cdf(edge / M.sd), what: "to cover", capped: edge > 8 };
+    }
+    if (mk && mk.total != null) {
+      const edge = Math.abs(p.total - mk.total), over = p.total > mk.total;
+      L.total = { over, label: `${over ? "Over" : "Under"} ${f1(mk.total)}`, edge, conf: level(edge, [2, 3.5, 5, 6.5], 9),
+                  p: cdf(edge / (M.sdTotal || 10)), what: over ? "to go over" : "to stay under", capped: edge > 9 };
+    }
+    if (mk && mk.hML != null && mk.aML != null) {
+      const qh = implied(mk.hML), qa = implied(mk.aML), fair = qh / (qh + qa);   // the market's chance, house cut removed
+      const eh = p.pHome - fair, ha = eh >= 0 ? "home" : "away", edge = Math.abs(eh);
+      L.ml = { side: ha, label: `${name(ha)} ${ml(ha === "home" ? mk.hML : mk.aML)}`, edge, conf: level(edge * 100, [4, 8, 12, 16], 22),
+               model: ha === "home" ? p.pHome : 1 - p.pHome, fair: ha === "home" ? fair : 1 - fair, what: "to win", capped: edge > .22 };
+      L.ml.p = L.ml.model;
+    }
+    return L;
+  }
+
+  // Graded once a game is final (only when the line is still on the feed).
+  function grade(g, kind, l, mk) {
+    if (g.status !== "post" || !l) return "";
+    const hm = g.home.score - g.away.score, tot = g.home.score + g.away.score;
+    let r;
+    if (kind === "spread") { const v = (l.side === "home" ? hm : -hm) + l.line; r = v > 0 ? "hit" : v < 0 ? "miss" : "push"; }
+    else if (kind === "total") { const v = tot - mk.total; r = v === 0 ? "push" : (v > 0) === l.over ? "hit" : "miss"; }
+    else r = g.winner === "tie" ? "push" : g.winner === l.side ? "hit" : "miss";
+    return `<span class="res ${r}">${{ hit: "Hit", miss: "Miss", push: "Push" }[r]}</span>`;
+  }
+
+  // Two plain sentences: where the model has it against the market, then the biggest reason for the lean.
+  function reason(g, p, mk, L) {
+    const t = (ha) => `the ${g[ha].nick}`, R = (ha) => M.teams[g[ha].abbr], other = (ha) => (ha === "home" ? "away" : "home");
+    const favM = p.margin >= 0 ? "home" : "away", s = [];
+    const mkTxt = mk && mk.spread != null ? (mk.spread === 0 ? "the market has it a pick'em" : `the market has ${t(mk.spread < 0 ? "home" : "away")} by ${f1(Math.abs(mk.spread))}`) : "";
+    s.push(`L4 has ${t(favM)} by ${f1(Math.abs(p.margin))}${mkTxt ? `; ${mkTxt}` : ""}.`);
+    const side = L.spread ? L.spread.side : favM, me = R(side), op = R(other(side)), why = [];
+    const q = p.notes.find((n) => n.hit);
+    if (q) why.push(q.text);
+    if (me.oRank <= 8) why.push(`${t(side)} have the ${nth(me.oRank, "best")} offense by our numbers`);
+    if (me.dRank <= 8) why.push(`${t(side)} have the ${nth(me.dRank, "best")} defense by our numbers`);
+    if (op.dRank >= 25) why.push(`${t(other(side))} have the ${nth(33 - op.dRank, "worst")} defense by our numbers`);
+    if (op.oRank >= 25) why.push(`${t(other(side))} have the ${nth(33 - op.oRank, "worst")} offense by our numbers`);
+    const form = (x) => x.last.reduce((a, b) => a + b, 0);
+    if (form(me) >= 25) why.push(`${t(side)} have won their last ${me.last.length} by a combined ${form(me)}`);
+    if (form(op) <= -25) why.push(`${t(other(side))} have been outscored by ${-form(op)} over their last ${op.last.length}`);
+    if (!why.length) why.push(`${t(side)} rate ${ord(me.rank)} overall to ${t(other(side))}'s ${ord(op.rank)}${p.neutral ? "" : side === "home" ? ", with home field" : ""}`);
+    s.push(why.slice(0, 2).join(", and ") + ".");
+    const out = s.map((x) => x.charAt(0).toUpperCase() + x.slice(1)).join(" ");
+    const big = (L.spread && L.spread.edge > 8) || (L.total && L.total.edge > 9);
+    return { text: out, warn: big ? "Big gap from the market, so confidence is capped. Check the injury report: the line may know something the model can't." : "",
+             qbs: p.notes.filter((n) => !n.hit).map((n) => n.text) };
+  }
+
+  function teamSide(g, ha) {
+    const tm = g[ha], lose = g.winner && g.winner !== ha && g.winner !== "tie", r = M.teams[tm.abbr];
+    return `<div class="gm-team ${ha === "home" ? "h" : "a"}${lose ? " lose" : ""}">
+      ${teamMark(tm.abbr, "", ha === "home" ? "r s" : "s")}
+      <div class="nm"><b>${esc(tm.nick)}</b><small>${esc(tm.rec)}${r ? ` · L4 #${r.rank}` : ""}</small></div>
+      ${g.status !== "pre" && tm.score != null ? `<span class="sc">${tm.score}</span>` : ""}
+    </div>`;
+  }
+
+  function card(x) {
+    const { g, p, mk, L, why } = x;
+    const top = g.status === "in" ? `<span class="live">● ${esc(g.detail)}</span>` : g.status === "pre" ? esc(fmtShort(g.kickoff)) : esc(g.detail);
+    const div = M.week && M.week[g.id] && M.week[g.id].div;
+    const proj = p ? `L4 projects <b>${esc(g.away.abbr)} ${Math.round(p.ap)}</b>, <b>${esc(g.home.abbr)} ${Math.round(p.hp)}</b> · ${esc(g[p.margin >= 0 ? "home" : "away"].abbr)} wins ${pct(Math.max(p.pHome, 1 - p.pHome))} of the time` : "";
+    const row = (kind, lbl, ln, l) => `<tr><td class="lbl">${lbl}</td><td class="ln">${ln}</td>
+      <td class="le">${l ? `<span class="lean${l.conf <= 2 ? " weak" : ""}">${esc(l.label)}</span>${grade(g, kind, l, mk)}<span class="chance">${pct(l.p)} ${l.what}</span>` : `<span class="muted">No line yet</span>`}</td>
+      <td class="cf">${l ? bars(l.conf) : ""}</td></tr>`;
+    const spreadLn = mk && mk.spread != null ? `${esc(g.home.abbr)} ${mk.spread === 0 ? "PK" : sgn(mk.spread)}<small>L4 line: ${esc(g.home.abbr)} ${sgn(-p.margin)}</small>` : `<small>L4 line: ${esc(g.home.abbr)} ${sgn(-p.margin)}</small>`;
+    const totalLn = mk && mk.total != null ? `O/U ${f1(mk.total)}<small>L4 total: ${f1(p.total)}</small>` : `<small>L4 total: ${f1(p.total)}</small>`;
+    const mlLn = mk && mk.hML != null ? `${esc(g.away.abbr)} ${ml(mk.aML)} · ${esc(g.home.abbr)} ${ml(mk.hML)}<small>L4 win chance: ${esc(g[L.ml.side].abbr)} ${pct(L.ml.model)} (market ${pct(L.ml.fair)})</small>` : `<small>L4 win chance: ${esc(g.home.abbr)} ${pct(p.pHome)}</small>`;
+    return `<article class="gm" id="g${g.id}">
+      <div class="gm-top"><span>${top}</span><span>${div ? '<span class="tag">Division</span> · ' : ""}${esc(g.tv)}</span></div>
+      <div class="gm-teams">${teamSide(g, "away")}<div class="gm-at">@</div>${teamSide(g, "home")}</div>
+      ${proj ? `<div class="gm-proj">${proj}</div>` : ""}
+      ${p ? `<table class="mk"><thead><tr><th>Bet</th><th>Market</th><th>L4 lean</th><th>Confidence</th></tr></thead><tbody>
+        ${row("spread", "Spread", spreadLn, L.spread)}${row("total", "Total", totalLn, L.total)}${row("ml", "Moneyline", mlLn, L.ml)}
+      </tbody></table>
+      ${propsBlock(x)}
+      <div class="gm-why"><b>Why:</b> ${esc(why.text)}${why.qbs.length ? ` ${esc(why.qbs.join(". "))}.` : ""}${why.warn ? `<span class="warn">${esc(why.warn)}</span>` : ""}</div>`
+      : `<div class="gm-why">The model doesn't have this matchup yet.</div>`}
+    </article>`;
+  }
+
+  // ---- Player props: ESPN's posted lines against our per-stat projections ----
+  const STAT = { "passing yards": ["py", "pass yds"], "passing touchdowns": ["ptd", "pass TDs"], "passing attempts": ["patt", "pass att"],
+    "passing interceptions": ["int", "INTs"], "rushing yards": ["ry", "rush yds"], "carries": ["car", "carries"],
+    "receiving yards": ["rey", "rec yds"], "receptions": ["rec", "catches"], "rushing plus receiving yards": ["rry", "rush+rec yds"] };
+  const COUNT = { ptd: 1, int: 1 };
+  const MIN_LINE = { py: 100, patt: 15, ry: 15, car: 5, rey: 15, rec: 1.5, rry: 20, ptd: .5, int: .5 };
+  let P = null;                                   // props.json
+  const poissonOver = (lam, line) => { let k = 0, t = Math.exp(-lam), c = 0; for (; k <= Math.floor(line); k++) { c += t; t *= lam / (k + 1); } return 1 - c; };
+
+  async function loadProps(e) {
+    const c = e.competitions[0], prov = (c.odds || [])[0] && c.odds[0].provider && c.odds[0].provider.id;
+    if (!prov) return [];
+    const r = await fetch(`https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/${e.id}/competitions/${e.id}/odds/${prov}/propBets?limit=1000`);
+    if (!r.ok) return [];
+    const seen = {};
+    for (const it of (await r.json()).items || []) {
+      const m = /^Total (.+?)(?: \(incl\. overtime\))?$/i.exec(it.type && it.type.name || ""), st = m && STAT[m[1].toLowerCase()];
+      const line = it.current && it.current.target && it.current.target.value, aid = it.athlete && (/athletes\/(\d+)/.exec(it.athlete.$ref) || [])[1];
+      if (!st || !aid || typeof line !== "number") continue;
+      const key = aid + st[0];
+      if (!seen[key] || it.lastUpdated > seen[key].lastUpdated) seen[key] = { aid, k: st[0], word: st[1], line, lastUpdated: it.lastUpdated };
+    }
+    return Object.values(seen);
+  }
+
+  // One prop lean: the model's chance on the likelier side, with the line given a quarter of the say.
+  function propLean(o) {
+    const pl = P && P.p[o.aid], s = pl && pl.s[o.k];
+    if (!s) return null;
+    const mean = .75 * s[0] + .25 * o.line, over = mean > o.line;
+    const pOver = COUNT[o.k] ? poissonOver(mean, o.line) : 1 - cdf((o.line - mean) / s[1]);
+    const gap = Math.abs(s[0] - o.line) / Math.max(o.line, 1);
+    return { ...o, pl, proj: s[0], avg: s[2], over, p: over ? pOver : 1 - pOver, what: over ? "to go over" : "to stay under",
+             label: `${over ? "Over" : "Under"} ${f1(o.line)} ${o.word}`,
+             // Best Bets skip: tiny lines, gaps so big the line likely knows something, players just back from a
+             // missed stretch or with under four games, and 0.5-type count props (books price those well off even).
+             ok: o.line >= (MIN_LINE[o.k] || 0) && gap <= .35 && !pl.miss && pl.g >= 4 && !COUNT[o.k] };
+  }
+
+  const fmtStat = (k, v) => (COUNT[k] || k === "rec" ? f1(v) : String(Math.round(v)));
+  function propWhy(l) {
+    const pl = l.pl, last = pl.miss ? ` Back after missing ${pl.miss} game${pl.miss > 1 ? "s" : ""}, so he's left out of Best Bets.` : "";
+    return `L4 projects ${fmtStat(l.k, l.proj)} vs a line of ${f1(l.line)}; he averages ${fmtStat(l.k, l.avg)} in ${pl.g} game${pl.g > 1 ? "s" : ""} this season.${last}`;
+  }
+
+  function propsBlock(x) {
+    if (!x.props || !x.props.length) return "";
+    const list = x.props.slice().sort((a, b) => b.p - a.p).slice(0, 6);
+    return `<details class="gm-props"><summary>Player props <small>${x.props.length} lines · best ${pct(list[0].p)}</small></summary><ul class="pp">${list.map((l) => `
+      <li><span class="who"><b>${esc(l.pl.n)}</b> <small>${esc(l.pl.pos)} · ${esc(l.pl.tm)}</small></span><span class="pk">${esc(l.label)}</span>
+      <span class="det"><span class="pc">${pct(l.p)} ${l.what}.</span> ${esc(propWhy(l))}</span></li>`).join("")}</ul></details>`;
+  }
+
+  // ---- Best Bets of the Day ----
+  let day = null;
+  const dayKey = (d) => d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  function bestBets() {
+    const pre = rows.filter((x) => x.g.status === "pre" && x.p);
+    const days = [...new Set(pre.slice().sort((a, b) => a.g.kickoff - b.g.kickoff).map((x) => dayKey(x.g.kickoff)))];
+    if (!days.length) return "";
+    if (!days.includes(day)) day = days[0];
+    const all = [];
+    const KIND = { spread: "Spread", total: "Total", ml: "Moneyline" };
+    for (const x of pre) {
+      if (dayKey(x.g.kickoff) !== day) continue;
+      for (const [kind, l] of Object.entries(x.L)) if (!l.capped && l.p > .5) all.push({ x, p: l.p, edge: l.p - (kind === "ml" ? l.fair : .5), kind: KIND[kind], pick: l.label, sub: `${pct(l.p)} ${l.what}`, bars: bars(l.conf), why: x.why.text });
+      for (const l of x.props || []) if (l.ok && l.p > .5) all.push({ x, p: l.p, edge: l.p - .5, kind: "Player prop", pick: `${l.pl.n.replace(/ (Jr\.?|Sr\.?|II|III|IV|V)$/, "").split(" ").slice(-1)[0]} ${l.label}`, sub: `${pct(l.p)} ${l.what}`, why: `${l.pl.n} (${l.pl.pos}, ${l.pl.tm}). ${propWhy(l)}` });
+    }
+    // Ranked by how far the chance beats the market's own: a coin flip for spreads, totals and props (no prices
+    // on the prop feed), the vig-free implied chance for a moneyline, so heavy favorites don't top the list.
+    all.sort((a, b) => b.edge - a.edge);
+    // Keep game picks in the mix: up to two that beat the market by 4 points of chance or more get a seat.
+    const games = all.filter((o) => o.kind !== "Player prop" && o.edge >= .04).slice(0, 2);
+    const rest = all.filter((o) => !games.includes(o));
+    all.length = 0; all.push(...games, ...rest);
+    const nGames = pre.filter((x) => dayKey(x.g.kickoff) === day).length;
+    // At most two from one game (three on a one- or two-game day), so one matchup can't fill the list.
+    const cap = nGames <= 2 ? 3 : 2, per = {}, pick = [];
+    for (const o of all) { per[o.x.g.id] = (per[o.x.g.id] || 0) + 1; if (per[o.x.g.id] <= cap) pick.push(o); if (pick.length === 6) break; }
+    pick.sort((a, b) => b.edge - a.edge);
+    const tabs = days.length > 1 ? `<div class="modes days" role="group" aria-label="Game day">${days.map((d) => `<button type="button" data-day="${esc(d)}" aria-pressed="${d === day}">${esc(d)}</button>`).join("")}</div>` : "";
+    return `<div class="bar-row"><h2 class="disp">Best Bets of the Day</h2><span class="chip">${esc(day)} · ${nGames} game${nGames > 1 ? "s" : ""}</span></div>${tabs}
+      ${pick.length ? `<div class="tops">${pick.map((o, i) => `
+      <a class="top" href="#g${o.x.g.id}" style="text-decoration:none">
+        <span class="t-rk">${i + 1}</span>
+        <div class="t-k">${esc(o.kind)} · ${esc(o.x.g.away.abbr)} @ ${esc(o.x.g.home.abbr)}</div>
+        <div class="t-pick">${esc(o.pick)}</div>
+        <div class="t-pct"><b>${pct(o.p)}</b><span>${esc(o.sub.replace(/^\d+% /, ""))}</span></div>
+        <div class="t-g">${esc(fmtShort(o.x.g.kickoff))}</div>
+        ${o.bars || ""}
+        <p class="t-why">${esc(o.why)}</p>
+      </a>`).join("")}</div>
+      <p class="bb-more">Ranked by how far the model's chance beats the market's. ${propsReady ? "Player props come from lines posted for these games." : "Player prop lines are still loading or not posted yet."} For fun, not betting advice.</p>`
+      : `<p class="bb-more">No picks for this day yet.</p>`}`;
+  }
+  let propsReady = false;
+
+  function render() {
+    const list = rows.slice();
+    if (sortBy === "conf") list.sort((a, b) => best(b) - best(a) || a.g.kickoff - b.g.kickoff);
+    $("games").innerHTML = list.length ? list.map(card).join("") : `<p class="empty">No games this week.</p>`;
+    $("tops").innerHTML = bestBets();
+  }
+  const best = (x) => Math.max(0, ...Object.values(x.L || {}).map((l) => l.conf));
+
+  function power() {
+    const T = Object.entries(M.teams).sort((a, b) => a[1].rank - b[1].rank);
+    $("power").innerHTML = T.map(([ab, t]) => `<li><span class="rk">${t.rank}</span><span class="ab">${esc(ab)}</span>
+      <span class="nm">${t.w}-${t.l}${t.t ? `-${t.t}` : ""} <small>· O ${ord(t.oRank)} · D ${ord(t.dRank)}</small></span><span class="rt">${sgn(t.o + t.d)}</span></li>`).join("");
+    $("prChip").textContent = `Thru wk ${M.thru}`;
+  }
+
+  async function load() {
+    try {
+      const [model, sb] = await Promise.all([fetch("/l4picks/data/model.json").then((r) => r.json()), thisWeek("nfl")]);
+      M = model; wk = sb.week;
+      const raw = Object.fromEntries(sb.raw.events.map((e) => [e.id, e]));
+      rows = sb.games.map((g) => {
+        const e = raw[g.id], p = project(g, e), mk = e ? market(e) : null, L = p ? leans(g, p, mk) : {};
+        return { g, p, mk, L, why: p ? reason(g, p, mk, L) : null };
+      });
+      $("stripWeek").textContent = `Week ${wk}`;
+      $("strip").innerHTML = stripHTML(sb.games.map((g) => ({ ...g, href: "#g" + g.id })));
+      $("wkTitle").textContent = `Week ${wk} picks`;
+      $("wkChip").textContent = `${rows.length} games`;
+      $("thru").textContent = `through week ${M.thru} of ${M.season}`;
+      power();
+      render();
+      if (location.hash) { const el = document.querySelector(location.hash); if (el) el.scrollIntoView(); }
+      // Props after the game lines are on screen: the projections file, then each upcoming game's posted lines.
+      try {
+        P = await fetch("/l4picks/data/props.json").then((r) => r.json());
+        await Promise.all(rows.map(async (x) => {
+          const e = raw[x.g.id];
+          if (!e || x.g.status !== "pre") return;
+          try { x.props = (await loadProps(e)).map(propLean).filter(Boolean); } catch (_) { x.props = []; }
+        }));
+      } catch (_) { /* props are a bonus; the game picks stand on their own */ }
+      propsReady = true;
+      render();
+    } catch (err) {
+      $("games").innerHTML = `<p class="empty">Couldn't load this week's games. Refresh to try again.</p>`;
+    }
+  }
+
+  $("tops").addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-day]");
+    if (b) { day = b.dataset.day; $("tops").innerHTML = bestBets(); }
+  });
+  document.querySelectorAll("[data-sort]").forEach((b) => b.addEventListener("click", () => {
+    sortBy = b.dataset.sort;
+    document.querySelectorAll("[data-sort]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    if (M) render();
+  }));
+  load();
+})();
+</script>
+</body>
+</html>

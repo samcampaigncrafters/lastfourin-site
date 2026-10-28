@@ -1,4 +1,4 @@
-/* Last Four In — head-to-head games between friends (live drafts, the grid race) and challenges, on the accounts
+/* Last Four In — head-to-head games between friends (live drafts, the grid race, Name Them All races) and challenges, on the accounts
    backend (supabase/50_games.sql). Pages that offer friend play load this after lfi.js; it waits for cloud.js.
    A live game is followed by polling game_get every second or so (no Realtime needed); the server is the referee. */
 (function () {
@@ -28,11 +28,12 @@
     // Signed in with a finished profile (a handle): what every friend game needs.
     async me() { const c = await cloud(); return c && c.user && c.profile && c.profile.onboarded ? c.profile : null; },
     signInUrl: (next = location.pathname + location.search) => `/signin/?next=${encodeURIComponent(next)}`,
-    link: (kind, code) => `${location.origin}/${kind === "draft" ? "drafts" : "grid"}/?g=${code}`,
+    link: (kind, code) => `${location.origin}${kind === "draft" ? "/drafts/" : kind === "names" ? "/trivia/race.html" : "/grid/"}?g=${code}`,
 
     create: (kind, o) => rpc("game_create", { p_kind: kind, p_settings: o.settings || {}, p_secret: o.secret || {}, p_total: o.total,
       p_seconds: o.seconds || null, p_host_first: o.hostFirst !== false, p_invite: o.invite || null, p_title: o.title || null }),
     join: (code) => rpc("game_join", { p_code: code }),
+    start: (id, countdown) => rpc("game_start", { p_id: id, p_countdown: countdown ?? 5 }), // names races: the host says go
     get: (id) => rpc("game_get", { p_id: id }),
     move: (id, item, payload, answer) => rpc("game_move", { p_id: id, p_item: String(item), p_payload: payload || {}, p_answer: answer ?? null }),
     finish: (id, result) => rpc("game_finish", { p_id: id, p_result: result }),
@@ -57,7 +58,7 @@
         if (stopped) return;
         try {
           const g = await G.get(id);
-          const sig = `${g.status}|${g.moves.length}|${g.guest && g.guest.id}|${!!g.result}`;
+          const sig = `${g.status}|${g.moves.length}|${g.guest && g.guest.id}|${!!g.result}|${(g.players || []).map((p) => p.id + p.left).join()}`;
           if (sig !== last) { last = sig; onUpdate(g); }
           if (g.status === "done" || g.status === "cancelled") return;
         } catch (e) { /* network blip: try again */ }

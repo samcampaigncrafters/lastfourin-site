@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Name Them All Race · Last Four In</title>
+<meta name="description" content="Race up to seven friends through the same football list. First to type a name claims it. Most names wins.">
+<meta property="og:title" content="Name Them All Race · Last Four In">
+<meta property="og:description" content="Same list, same clock, up to 8 players. First to type a name claims it.">
+<meta property="og:url" content="https://lastfourin.com/trivia/race.html">
+<meta name="theme-color" content="#0d0820">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/lfi.css">
+<script src="/assets/theme.js"></script>
+<link rel="stylesheet" href="trivia.css">
+<style>
+.prompt { font-family: var(--f-display); font-weight: 800; font-size: clamp(26px, 3.6vw, 38px); line-height: 1.05; margin: 0 0 6px; }
+.note { color: var(--muted); font-size: 13.5px; margin: 0 0 18px; }
+.set { display: grid; gap: 16px; }
+.pick { border: 1px solid var(--line-2); border-radius: var(--r); padding: 16px; background: var(--card-2); }
+.pick .prompt { margin: 10px 0 6px; }
+.go-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.lobby-link { width: 100%; padding: 12px 13px; border: 1px dashed var(--line-2); border-radius: 8px; font: 700 15px var(--f-body); background: var(--card-2); color: var(--ink); }
+.set-lbl { font-family: var(--f-display); font-size: 14px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 6px; }
+.friend-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.friend-pick button { border: 1px solid var(--line-2); background: var(--card-2); border-radius: 999px; padding: 7px 13px; font: 700 14px var(--f-body); color: var(--ink); cursor: pointer; }
+.roster { display: flex; flex-wrap: wrap; gap: 8px; }
+.roster span { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px 7px 9px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--card); font-weight: 800; font-size: 14px; }
+.roster i, .board i { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.roster small { color: var(--muted); font-weight: 700; }
+.play { position: sticky; top: 60px; z-index: 5; background: var(--card); padding: 12px 0; margin: -12px 0 6px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; }
+.play input { width: 100%; font-size: 18px; font-weight: 600; padding: 13px 14px; border: 2px solid var(--line-2); border-radius: var(--r); outline: none; background: var(--card); color: var(--ink); }
+.play input:focus { border-color: var(--navy); }
+.play input.hit { border-color: var(--win); background: var(--win-soft); }
+.play input.miss { border-color: var(--loss); animation: shake .25s; }
+.play input:disabled { opacity: .6; }
+@keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+.clock { text-align: center; min-width: 74px; }
+.clock b { display: block; font-family: var(--f-display); font-weight: 800; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+.clock span { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.clock.low b { color: var(--loss); }
+@media (max-width: 560px) { .play { grid-template-columns: 1fr 1fr; } .play input { grid-column: 1 / -1; } }
+.board { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.board div { display: flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 8px; background: var(--card-2); border: 1px solid var(--line); font-weight: 800; font-size: 14px; min-width: 0; }
+.board div.me { border-color: var(--line-2); }
+.board div.gone { opacity: .5; }
+.board b { font-family: var(--f-display); font-size: 20px; line-height: 1; }
+.board span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 12ch; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+.slot { border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; min-height: 52px; background: var(--card-2); }
+.slot small { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot span { display: block; font-family: var(--f-display); font-weight: 800; font-size: 18px; line-height: 1.15; min-height: 20px; }
+.slot em { display: block; font-style: normal; font-size: 11.5px; font-weight: 700; opacity: .85; }
+.slot.got { color: #fff; border-color: transparent; }
+.slot.got small { color: rgba(255, 255, 255, .78); }
+.slot.new { animation: pop .5s; }
+@keyframes pop { 0% { transform: scale(1.06); } 100% { transform: none; } }
+.slot.missed { background: var(--card); }
+.slot.missed span { color: var(--loss); opacity: .8; }
+.cdown { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(13, 8, 32, .82); color: #fff; text-align: center; }
+.cdown b { display: block; font-family: var(--f-display); font-size: clamp(110px, 24vw, 200px); line-height: 1; }
+.cdown span { font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.endline { padding: 18px; border-radius: var(--r); background: var(--navy); color: #fff; margin-bottom: 16px; }
+.endline .disp { font-size: clamp(30px, 5vw, 44px); }
+.endline p { margin: 6px 0 0; color: var(--on-brand-2); }
+.standings { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 6px; }
+.standings li { display: grid; grid-template-columns: 26px 14px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 8px; background: rgba(255, 255, 255, .08); font-weight: 800; }
+.standings li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.standings li b { font-family: var(--f-display); font-size: 22px; }
+.standings i { width: 12px; height: 12px; border-radius: 3px; box-shadow: 0 0 0 2px rgba(255, 255, 255, .75); }
+.endline .go-row { margin-top: 14px; }
+.lock-cover { text-align: center; padding: 30px 10px 34px; }
+.lock-cover p { color: var(--ink-2); margin: 0 auto 20px; max-width: 50ch; }
+/* two slots a row on phones, so more of the list (and who's claiming it) stays in view */
+@media (max-width: 560px) { .slots { grid-template-columns: 1fr 1fr; gap: 5px; } .slot { padding: 6px 8px; min-height: 48px; } .slot span { font-size: 15.5px; } .slot small { font-size: 10.5px; } }
+</style>
+</head>
+<body>
+
+<header class="nav" data-active="race"></header>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <div class="kicker">Live multiplayer</div>
+      <h1 class="disp">Name Them All Race</h1>
+      <p>One list, one clock, up to 8 players. The first person to type a name claims it for good, and nobody else can score it. Most names wins.</p>
+    </div>
+    <div class="headr">
+      <nav class="tabs" aria-label="Daily games"><a href="./">Daily Five</a><a href="names.html">Name Them All</a><a href="race.html" class="on">Race</a></nav>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <section class="card"><div class="card-b" id="view"><p class="note">Loading…</p></div></section>
+    <aside class="side">
+      <section class="card">
+        <div class="card-h"><h2 class="disp">How it works</h2></div>
+        <div class="card-b">
+          <ol class="steps">
+            <li>Open a race room and send the link. Up to 7 friends can join.</li>
+            <li>When everyone's in, the host presses start. A short countdown, then the same list and the same clock for everyone.</li>
+            <li>Type a full name, or a last name once only one open name has it. Get there first and the name is yours, in your colour on every screen.</li>
+            <li>Most names wins. A tie goes to whoever got their last one first. Lists come from the sandbox, so races never touch your daily record or streak.</li>
+          </ol>
+        </div>
+      </section>
+      <p class="credit">Lists built from <a href="https://nflverse.com" rel="noopener">nflverse.com</a> data (CC BY 4.0).</p>
+    </aside>
+  </div>
+</main>
+
+<footer class="foot"></footer>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="/assets/lfi.js"></script>
+<script src="/assets/games.js"></script>
+<script>
+(function () {
+  const { $, esc, toast } = LFI;
+  const qs = new URLSearchParams(location.search);
+  const COLORS = ["#5b17ff", "#ff3dbb", "#e11d48", "#a855f7", "#be185d", "#c026d3", "#7e22ce", "#f472b6"]; // join order
+  const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const view = (html) => { $("view").innerHTML = html; };
+  let ME = null, POOL = null, PICK = null, watcher = null, R = null, tick = null, friendsP = null;
+
+  // ---- name matching, the same rules as Name Them All ----
+  const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+    .replace(/[.'’`]/g, "").replace(/[^a-z0-9]+/g, " ").replace(/\b(jr|sr|ii|iii|iv|v)\b/g, " ").replace(/\s+/g, " ").trim();
+  // Per answer: its full name and the last names that can stand in for it.
+  function keysFor(name) {
+    const n = norm(name), parts = n.split(" ");
+    const ln = new Set([parts.slice(1).join(" ") || n, parts[parts.length - 1]]);
+    if (parts.length > 2) ln.add(parts.slice(-2).join(" ")); // "amon ra st brown" -> "brown" and "st brown"
+    return { n, ln: [...ln] };
+  }
+  // The server checks every claim against this, so a slot can only be taken with a right answer.
+  const secretFor = (list) => Object.fromEntries(list.a.map(([name], i) => { const k = keysFor(name); return [i, [name, k.n, ...k.ln]]; }));
+
+  // ---- setup: pick a sandbox list, open a room ----
+  function loadPool() {
+    if (POOL) return Promise.resolve(POOL);
+    return new Promise((ok, no) => {
+      const s = document.createElement("script");
+      s.src = "pool.js";
+      s.onload = () => { POOL = window.LFI_TRIVIA_POOL.lists.filter((l) => l.a.length <= 60); ok(POOL); };
+      s.onerror = no;
+      document.head.appendChild(s);
+    });
+  }
+  async function setup() {
+    R = null;
+    if (watcher) { watcher.stop(); watcher = null; }
+    if (!ME) {
+      return view(`<div class="lock-cover"><div class="kicker">Race your friends</div><h2 class="disp" style="font-size:clamp(34px,5vw,48px);margin:8px 0 12px">Sign in to race</h2>
+        <p>The site referees every race so the first name typed is the one that counts. That needs an account. It's free.</p>
+        <div class="btns"><a class="btn gold big" href="${LFI.games.signInUrl()}">Sign in free</a><a class="btn" href="names.html?mode=infinite">Play on your own</a></div></div>`);
+    }
+    try { await loadPool(); } catch (e) { return view(`<p class="note">Couldn't load the lists. Refresh to try again.</p>`); }
+    if (!PICK) PICK = POOL[Math.floor(Math.random() * POOL.length)];
+    view(`<div class="set">
+      <div class="pick">
+        <div class="chip">${esc(PICK.cat)}</div>
+        <h2 class="prompt">${esc(PICK.prompt)}</h2>
+        <p class="note" style="margin:0">${PICK.a.length} names · ${mmss(PICK.seconds)} on the clock${PICK.note ? ` · ${esc(PICK.note)}` : ""}</p>
+      </div>
+      <div class="go-row"><button class="btn gold big" type="button" id="open">Open a race room</button><button class="btn" type="button" id="other">Different list</button></div>
+      <p class="note" style="margin:0">You get a link to send. Up to 7 friends can join, then you start it when everyone's in.</p>
+    </div>`);
+    $("other").onclick = () => { PICK = POOL[Math.floor(Math.random() * POOL.length)]; setup(); };
+    $("open").onclick = async () => {
+      $("open").disabled = true;
+      const l = PICK;
+      try {
+        const r = await LFI.games.create("names", {
+          settings: { title: `Name Them All: ${l.prompt}`.slice(0, 120), key: l.key, cat: l.cat, prompt: l.prompt, note: l.note, a: l.a, max: 8 },
+          secret: secretFor(l), total: l.a.length, seconds: l.seconds,
+        });
+        history.replaceState(null, "", `?g=${r.code}`);
+        PICK = null;
+        openGame(r.code);
+      } catch (err) { toast(err.message); $("open").disabled = false; }
+    };
+  }
+
+  // ---- the room ----
+  async function openGame(code) {
+    view(`<p class="note">Opening the race room…</p>`);
+    if (!ME) {
+      return view(`<div class="lock-cover"><div class="kicker">You're invited</div><h2 class="disp" style="font-size:clamp(34px,5vw,48px);margin:8px 0 12px">Join the race</h2>
+        <p>A friend opened a Name Them All race on Last Four In. Sign in free to join. You'll come right back here.</p>
+        <div class="btns"><a class="btn gold big" href="${LFI.games.signInUrl()}">Sign in to join</a></div></div>`);
+    }
+    let g;
+    try { g = await LFI.games.get(await LFI.games.join(code)); LFI.countChallenges(); } // joining answers any invite to it
+    catch (err) { return view(`<p>${esc(err.message)}</p><div class="go-row"><a class="btn gold" href="race.html">Open your own race</a></div>`); }
+    onGame(g);
+    watcher = LFI.games.watch(g.id, onGame, 900);
+  }
+
+  const players = (g) => (g.players || []).map((p, i) => ({ ...p, color: COLORS[i % COLORS.length], me: p.id === g.uid }));
+  const firstName = (p) => (p && p.name ? p.name.split(" ")[0] : "Someone");
+
+  function lobby(g) {
+    const host = g.me === "host", ps = players(g), url = LFI.games.link("names", g.code), s = g.settings;
+    view(`<div class="set">
+      <div class="pick" style="background:transparent">
+        <div class="kicker">Race room · ${ps.length} of ${s.max || 8}</div>
+        <div class="chip" style="margin-top:8px">${esc(s.cat || "")}</div>
+        <h2 class="prompt">${esc(s.prompt || "")}</h2>
+        <p class="note" style="margin:0">${g.total} names · ${mmss(g.seconds)} on the clock</p>
+      </div>
+      <div><div class="set-lbl">In the room</div><div class="roster">${ps.map((p) => `<span><i style="background:${p.color}"></i>${esc(p.name)}${p.me ? " <small>you</small>" : ""}${p.id === g.host.id ? " <small>host</small>" : ""}</span>`).join("")}</div></div>
+      ${host ? `
+      <div><div class="set-lbl">Invite people</div><input class="lobby-link" readonly value="${esc(url)}" aria-label="Race link"></div>
+      <div class="go-row"><button class="btn" type="button" id="lbShare">Send the link</button><button class="btn" type="button" id="lbCopy">Copy link</button></div>
+      <div id="lbFr" hidden><div class="set-lbl">Or invite a friend on Last Four In</div><div class="friend-pick" id="lbFrList"></div></div>
+      <div class="go-row"><button class="btn gold big" type="button" id="lbGo"${ps.length < 2 ? " disabled" : ""}>Start the race</button><button class="btn" type="button" id="lbCancel">Call it off</button></div>
+      <p class="note" style="margin:0">${ps.length < 2 ? "Waiting for someone to join. This page updates by itself." : "Start whenever everyone's in. Late arrivals can't join once it's going."}</p>`
+      : `<div class="go-row"><span class="note" style="margin:0">Waiting for ${esc(firstName(g.host))} to start the race. This page updates by itself.</span><button class="btn" type="button" id="lbLeave">Leave</button></div>`}
+    </div>`);
+    if (!host) { $("lbLeave").onclick = async () => { try { await LFI.games.leave(g.id); } catch (e) {} location.href = "race.html"; }; return; }
+    $("lbShare").onclick = () => LFI.games.shareLink(url, `Race me in Name Them All on Last Four In: ${s.prompt}`);
+    $("lbCopy").onclick = async () => toast((await LFI.copyText(url)) ? "Link copied" : "Couldn't copy the link here");
+    $("lbCancel").onclick = async () => { try { await LFI.games.leave(g.id); } catch (e) {} history.replaceState(null, "", "race.html"); setup(); };
+    $("lbGo").onclick = async () => {
+      $("lbGo").disabled = true;
+      try { onGame(await LFI.games.start(g.id, 5)); watcher.poke(); } catch (err) { toast(err.message); $("lbGo").disabled = false; }
+    };
+    (friendsP || (friendsP = LFI.games.friends())).then((fr) => {
+      const inRoom = new Set(ps.map((p) => p.handle));
+      fr = fr.filter((f) => !inRoom.has(f.username));
+      if (!fr.length || !$("lbFrList")) return;
+      $("lbFr").hidden = false;
+      $("lbFrList").innerHTML = fr.map((f) => `<button type="button" data-h="${esc(f.username)}">${esc(f.display_name || f.username)}</button>`).join("");
+      $("lbFrList").onclick = async (e) => {
+        const b = e.target.closest("button[data-h]"); if (!b) return;
+        b.disabled = true;
+        try { await LFI.games.challenge(b.dataset.h, "names", "Name Them All race", `/trivia/race.html?g=${g.code}`, s.prompt); b.textContent = "✓ " + b.textContent; toast("Invite sent"); }
+        catch (err) { toast(err.message); b.disabled = false; }
+      };
+    });
+  }
+
+  function onGame(g) {
+    if (g.status === "open") return g.me ? lobby(g) : view(`<p>You're not in this race.</p>`);
+    if (g.status === "cancelled") {
+      if (!R) view(`<p>This race was called off.</p><div class="go-row"><a class="btn gold" href="race.html">Open your own race</a></div>`);
+      return;
+    }
+    if (!g.me) return view(`<p>That race has already started.</p><div class="go-row"><a class="btn gold" href="race.html">Open your own race</a></div>`);
+    if (!R || R.id !== g.id) begin(g);
+    R.g = g;
+    R.ps = players(g);
+    for (const m of g.moves) if (R.own[+m.item] == null) claim(+m.item, m.uid, (m.payload && m.payload.a) || "");
+    paintBoard();
+    if (g.status === "done") end(g);
+  }
+
+  // ---- the race ----
+  function begin(g) {
+    const s = g.settings;
+    R = { id: g.id, g, list: s, N: g.total, own: s.a.map(() => null), ans: s.a.map(() => ""), pending: new Set(), done: false,
+          skew: new Date(g.now) - Date.now(), startAt: new Date(g.started_at).getTime(), ps: players(g) };
+    R.endAt = R.startAt + g.seconds * 1000;
+    R.full = new Map(); R.last = new Map(); R.keys = [];
+    s.a.forEach(([name], i) => {
+      const k = keysFor(name);
+      R.full.set(k.n, i); R.full.set(k.n.replace(/ /g, ""), i);
+      k.ln.forEach((x) => R.last.set(x, [...(R.last.get(x) || []), i]));
+      R.keys[i] = [k.n, ...k.ln];
+    });
+    view(`
+      <div class="chip" style="margin-bottom:10px">${esc(s.cat || "")}</div>
+      <h2 class="prompt">${esc(s.prompt)}</h2>
+      <p class="note">${esc(s.note || "")}</p>
+      <div class="play">
+        <input id="guess" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Type a name" aria-label="Type a name">
+        <div class="clock" id="clock"><b></b><span>left</span></div>
+        <button class="btn" id="leave">Leave</button>
+      </div>
+      <div class="board" id="board"></div>
+      <div class="slots" id="slots">${s.a.map(([, hint], i) => `<div class="slot" id="s${i}"><small>${esc(hint)}</small><span></span><em></em></div>`).join("")}</div>
+      <div class="cdown" id="count" hidden><div><span>Get ready</span><b id="countN"></b><span id="countP">${esc(s.prompt)}</span></div></div>`);
+    document.querySelector(".play").style.top = document.querySelector(".nav").offsetHeight + "px";
+    const inp = $("guess");
+    inp.addEventListener("input", () => tryGuess(false));
+    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); tryGuess(true); } });
+    $("leave").onclick = async () => {
+      if (!confirm("Leave the race? You keep the names you've claimed, but you can't come back in.")) return;
+      try { await LFI.games.leave(R.id); } catch (e) {}
+      location.href = "race.html";
+    };
+    clearInterval(tick);
+    tick = setInterval(clock, 200);
+    clock();
+  }
+
+  const now = () => Date.now() + (R ? R.skew : 0);
+  let lastPoke = 0;
+  function clock() {
+    if (!R || R.done) return;
+    const t = now();
+    const pre = R.startAt - t;
+    $("count").hidden = pre <= 0;
+    $("guess").disabled = pre > 0;
+    if (pre > 0) { $("countN").textContent = Math.ceil(pre / 1000); $("clock").querySelector("b").textContent = mmss(R.g.seconds); return; }
+    if (document.activeElement !== $("guess") && !R.focused) { R.focused = true; $("guess").focus({ preventScroll: true }); }
+    const s = Math.max(0, Math.ceil((R.endAt - t) / 1000));
+    $("clock").querySelector("b").textContent = mmss(s);
+    $("clock").classList.toggle("low", s <= 30);
+    if (s === 0 && t - lastPoke > 1000 && watcher) { lastPoke = t; watcher.poke(); } // the server calls time
+  }
+
+  function paintBoard() {
+    const n = (uid) => R.own.filter((o) => o === uid).length;
+    $("board").innerHTML = R.ps.map((p) => `<div class="${p.me ? "me" : ""}${p.left ? " gone" : ""}"><i style="background:${p.color}"></i><span>${p.me ? "You" : esc(firstName(p))}</span><b>${n(p.id)}</b></div>`).join("");
+  }
+
+  function claim(i, uid, answer, fresh) {
+    if (R.own[i] != null) return;
+    R.own[i] = uid; R.ans[i] = answer || R.list.a[i][0];
+    const p = R.ps.find((x) => x.id === uid) || { color: "#6b6386", name: "Someone" };
+    const el = $("s" + i);
+    el.className = `slot got${fresh ? " new" : ""}`;
+    el.style.background = p.color;
+    el.querySelector("span").textContent = R.ans[i];
+    el.querySelector("em").textContent = p.me ? "You" : firstName(p);
+    if (!fresh && !R.done) el.classList.add("new");
+  }
+
+  function tryGuess(enter) {
+    const inp = $("guess");
+    const g = norm(inp.value);
+    if (!g || now() < R.startAt) return;
+    const taken = (j) => R.own[j] != null || R.pending.has(j);
+    let i = R.full.has(g) ? R.full.get(g) : R.full.has(g.replace(/ /g, "")) ? R.full.get(g.replace(/ /g, "")) : undefined;
+    if (i === undefined && R.last.has(g)) {
+      const open = R.last.get(g).filter((j) => !taken(j));
+      const coming = () => R.keys.some((k, j) => !taken(j) && j !== open[0] && k.some((x) => x !== g && x.startsWith(g)));
+      if (open.length === 1 && (enter || !coming())) i = open[0];
+      else if (enter && open.length > 1) { flash("miss"); toast("More than one still open with that last name. Add the first name."); return; }
+      else if (enter && !open.length) { inp.value = ""; toast("Everyone with that last name is already claimed."); return; }
+    }
+    if (i === undefined) { if (enter) flash("miss"); return; }
+    if (R.own[i] != null) {
+      inp.value = "";
+      const p = R.ps.find((x) => x.id === R.own[i]);
+      toast(p && p.me ? `You already have ${R.list.a[i][0]}.` : `${firstName(p)} already has ${R.list.a[i][0]}.`);
+      return;
+    }
+    if (R.pending.has(i)) { inp.value = ""; return; }
+    inp.value = "";
+    send(i, g);
+  }
+
+  async function send(i, typed) {
+    R.pending.add(i);
+    flash("hit");
+    try {
+      const res = await LFI.games.move(R.id, i, {}, typed);
+      if (res.ok) { claim(i, R.g.uid, res.a, true); paintBoard(); }
+      else if (res.why === "taken") toast(`Too slow: someone got ${R.list.a[i][0]} first.`);
+      else if (res.why === "early") toast("Wait for the countdown.");
+      else if (res.why === "wrong") flash("miss");
+    } catch (err) { toast(err.message); }
+    R.pending.delete(i);
+    if (watcher) watcher.poke();
+  }
+
+  function flash(cls) {
+    const inp = $("guess");
+    if (!inp) return;
+    inp.classList.remove("hit", "miss");
+    void inp.offsetWidth;
+    inp.classList.add(cls);
+    setTimeout(() => inp.classList.remove(cls), 450);
+  }
+
+  // ---- the end ----
+  // Most names wins; a tie goes to whoever reached their total first.
+  function standings() {
+    const at = {}, n = {};
+    R.g.moves.forEach((m) => { n[m.uid] = (n[m.uid] || 0) + 1; at[m.uid] = new Date(m.at).getTime(); });
+    return R.ps.map((p) => ({ ...p, n: n[p.id] || 0, at: at[p.id] || Infinity }))
+      .sort((a, b) => b.n - a.n || a.at - b.at);
+  }
+  function end(g) {
+    if (R.done) return;
+    R.done = true;
+    clearInterval(tick);
+    $("count").hidden = true;
+    const answers = g.answers || {};
+    R.list.a.forEach((a, i) => {
+      if (R.own[i] != null) return;
+      const el = $("s" + i);
+      el.className = "slot missed";
+      el.querySelector("span").textContent = (answers[i] && answers[i][0]) || a[0];
+    });
+    const st = standings(), win = st[0], mine = st.find((p) => p.me) || { n: 0 }, place = st.indexOf(mine) + 1;
+    const claimed = R.own.filter((o) => o != null).length;
+    const ord = (k) => k + (["th", "st", "nd", "rd"][(k % 100 > 10 && k % 100 < 14) ? 0 : k % 10] || "th");
+    const head = !win.n ? "Nobody scored" : win.me ? "You won!" : `${esc(firstName(win))} won`;
+    document.querySelector(".play").outerHTML = `<div class="endline">
+      <div class="kicker" style="color:#fff;opacity:.8">Race over</div>
+      <div class="disp">${head}</div>
+      <p>${claimed} of ${R.N} named between you. You got ${mine.n}, ${ord(place)} of ${st.length}.${claimed < R.N ? " The ones in red got away." : ""}</p>
+      <ol class="standings">${st.map((p, k) => `<li><b>${k + 1}</b><i style="background:${p.color}"></i><span>${p.me ? "You" : esc(p.name)}${p.left ? " (left)" : ""}</span><b>${p.n}</b></li>`).join("")}</ol>
+      <div class="go-row"><button class="btn gold" id="shareR">Share result</button><a class="btn" href="race.html">New race</a></div>
+    </div>`;
+    if (!g.result && g.me === "host") LFI.games.finish(g.id, { winner: win.n ? win.name : null, scores: st.map((p) => [p.handle, p.n]) }).catch(() => {});
+    const e = LFI.entries.put({
+      id: `trivia-race-${g.code}`, kind: "trivia", title: "Name Them All Race", sub: R.list.prompt, url: "/trivia/race.html",
+      result: `${ord(place)} of ${st.length}`, data: { score: `${mine.n}/${R.N}` },
+      shareText: `Last Four In · Name Them All Race\n${R.list.prompt}\n${ord(place)} of ${st.length} with ${mine.n}/${R.N}`,
+    });
+    $("shareR").onclick = () => LFI.share(e, {
+      kicker: "Race result", note: "Send it around. Or challenge a friend to play the same list on their own clock.",
+      challenge: { kind: "names", title: `Name Them All: ${R.list.prompt}`.slice(0, 120), url: challengeUrl(R.list.key, mine.n) },
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  // A link that hands a friend the same list on their own clock, with the score to beat.
+  function challengeUrl(key, n) {
+    const me = LFI.me && LFI.me();
+    const who = ((me && (me.display_name || me.username)) || "A friend").slice(0, 40);
+    return `/trivia/names.html?mode=infinite&list=${encodeURIComponent(key)}&vs=${encodeURIComponent(who)}&vn=${n}`;
+  }
+
+  LFI.games.me().then((m) => {
+    ME = m;
+    if (qs.get("g")) openGame(qs.get("g")); else setup();
+  });
+})();
+</script>
+</body>
+</html>

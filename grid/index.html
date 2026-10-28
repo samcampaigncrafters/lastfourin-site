@@ -25,6 +25,9 @@
 .seg button[aria-pressed="true"] { background: var(--field); border-color: var(--field); color: #fff; }
 .seg button small { display: block; font-weight: 600; font-size: 11.5px; opacity: .8; }
 .note { font-size: 14px; color: var(--ink-2); }
+.yrs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 700; color: var(--ink-2); }
+.yrs select { min-height: 42px; }
+.note.bad { color: var(--loss); font-weight: 700; }
 .go-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .lobby-link { width: 100%; padding: 12px 13px; border: 1px dashed var(--line-2); border-radius: 8px; font: 700 15px var(--f-body); background: var(--card-2); color: var(--ink); }
 .friend-pick { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -113,6 +116,12 @@ body.playing .head { display: none; }
         </div>
       </div>
       <div class="set-row">
+        <div class="set-lbl">Years</div>
+        <div class="seg" id="yrQuick"></div>
+        <div class="weekbar yrs"><select id="yrFrom" aria-label="First season"></select><span>to</span><select id="yrTo" aria-label="Last season"></select></div>
+        <div class="note" id="yrNote"></div>
+      </div>
+      <div class="set-row">
         <div class="set-lbl">Clock</div>
         <div class="seg" id="time">
           <button type="button" data-v="300" aria-pressed="true">5 minutes</button>
@@ -173,7 +182,7 @@ body.playing .head { display: none; }
   const { $, esc, entries, toast } = LFI;
   const qs = new URLSearchParams(location.search);
   const key = (s) => String(s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const S = { opp: "cpu", cpu: "medium", time: "300" };
+  const S = { opp: "cpu", cpu: "medium", time: "300", from: +qs.get("from") || 0, to: +qs.get("to") || 0 };
   const CPU_MS = { easy: 30000, medium: 18000, hard: 10000 };
   let BANK = null, ME = null, GAME = null, watcher = null;
 
@@ -192,8 +201,39 @@ body.playing .head { display: none; }
     $("friendNote").innerHTML = ME ? "You get a link to send. You both see the same grid and race live."
       : `Friend races need an account so the site can referee. <a href="${LFI.games.signInUrl()}">Sign in free</a>, then come back.`;
     $("startBtn").textContent = friend ? "Create the race room" : "Start the race";
-    $("startBtn").disabled = !BANK || (friend && !ME);
+    $("startBtn").disabled = !BANK || (friend && !ME) || !fits();
   }
+
+  // ---------- years ----------
+  // Every clue label starts with its season ("2012 NFL rush yds leader"). Default is every season in the bank.
+  const yearOf = (c) => +c[0].slice(0, 4);
+  let FIRST = 1999, LAST = 1999;
+  const allYears = (f, t) => f === FIRST && t === LAST;
+  const span = (f, t) => f === t ? String(f) : `${f}–${t}`;
+  const rangeName = (f, t) => allYears(f, t) ? "" : span(f, t);   // "" = all years, so the old labels stay as they were
+  const rangeQuery = () => allYears(S.from, S.to) ? "" : `?from=${S.from}&to=${S.to}`;
+  const inRange = () => BANK.clues.filter((c) => { const y = yearOf(c); return y >= S.from && y <= S.to; });
+  const players = () => new Set(inRange().map((c) => key(c[2][0]))).size;
+  const fits = () => !!BANK && players() >= 25;
+  const quicks = () => [["All years", FIRST, LAST], ["Last 10", LAST - 9, LAST], ["2010s", 2010, 2019], ["2000s", 2000, 2009]]
+    .filter(([, f, t]) => f >= FIRST && t <= LAST);
+  function years() {
+    S.from = Math.min(Math.max(S.from || FIRST, FIRST), LAST);
+    S.to = Math.min(Math.max(S.to || LAST, FIRST), LAST);
+    if (S.from > S.to) [S.from, S.to] = [S.to, S.from];
+    const opts = (sel) => Array.from({ length: LAST - FIRST + 1 }, (_, i) => FIRST + i).map((y) => `<option${y === sel ? " selected" : ""}>${y}</option>`).join("");
+    $("yrFrom").innerHTML = opts(S.from); $("yrTo").innerHTML = opts(S.to);
+    $("yrQuick").innerHTML = quicks().map(([n, f, t]) => `<button type="button" data-f="${f}" data-t="${t}" aria-pressed="${f === S.from && t === S.to}">${n}<small>${span(f, t)}</small></button>`).join("");
+    const short = !fits();
+    $("yrNote").className = "note" + (short ? " bad" : "");
+    $("yrNote").textContent = short ? "Not enough clues in those years for a full grid. Pick a wider range."
+      : S.from === S.to ? `Every square is from the ${S.from} season.` : `Every square is from ${span(S.from, S.to)}.`;
+    if (!R && !GAME) history.replaceState(null, "", location.pathname + rangeQuery());
+    setup();
+  }
+  $("yrQuick").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.from = +b.dataset.f; S.to = +b.dataset.t; years(); });
+  $("yrFrom").addEventListener("change", (e) => { S.from = +e.target.value; if (S.from > S.to) S.to = S.from; years(); });
+  $("yrTo").addEventListener("change", (e) => { S.to = +e.target.value; if (S.to < S.from) S.from = S.to; years(); });
 
   // Deal 25 clues: a handful of league leaders, the rest team leaders, no player twice.
   function deal() {
@@ -208,8 +248,12 @@ body.playing .head { display: none; }
       }
       return out;
     };
-    const used = new Set();
-    const cells = [...pick(BANK.clues.filter((c) => c[3] === 1), 6, used), ...pick(BANK.clues.filter((c) => c[3] === 2), 19, used)];
+    // A narrow range can run short of a kind: league leaders take up to 6, team leaders fill the rest, and any
+    // league leaders left over top it up.
+    const used = new Set(), pool = inRange();
+    const lead = pick(pool.filter((c) => c[3] === 1), 6, used);
+    const cells = [...lead, ...pick(pool.filter((c) => c[3] === 2), 25 - lead.length, used)];
+    if (cells.length < 25) cells.push(...pick(pool.filter((c) => c[3] === 1 && !lead.includes(c)), 25 - cells.length, used));
     for (let i = cells.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [cells[i], cells[j]] = [cells[j], cells[i]]; }
     return cells.map((c) => ({ l: c[0], q: c[1], a: c[2] }));
   }
@@ -220,7 +264,8 @@ body.playing .head { display: none; }
 
   function begin(cells, opts = {}) {
     R = { cells, own: cells.map(() => null), ans: cells.map(() => ""), endAt: opts.endAt || null, game: opts.game || null,
-          them: opts.them || (S.opp === "solo" ? null : `Computer (${S.cpu[0].toUpperCase() + S.cpu.slice(1)})`), meName: opts.meName || "You", done: false, skew: opts.skew || 0 };
+          them: opts.them || (S.opp === "solo" ? null : `Computer (${S.cpu[0].toUpperCase() + S.cpu.slice(1)})`), meName: opts.meName || "You", done: false, skew: opts.skew || 0,
+          range: opts.range !== undefined ? opts.range : rangeName(S.from, S.to), rq: opts.rq !== undefined ? opts.rq : rangeQuery() };
     $("setup").hidden = true; $("lobby").hidden = true; $("result").hidden = true; $("play").hidden = false;
     document.body.classList.add("playing");
     $("meName").textContent = R.meName;
@@ -264,7 +309,8 @@ body.playing .head { display: none; }
   function draw(flash) {
     const n = (w) => R.own.filter((x) => x === w).length;
     $("meN").textContent = n("me"); $("themN").textContent = n("them");
-    $("playNote").textContent = `${R.own.filter((x) => !x).length} squares open`;
+    const open = R.own.filter((x) => !x).length;
+    $("playNote").textContent = `${open} square${open === 1 ? "" : "s"} open${R.range ? ` · ${R.range}` : ""}`;
     $("grid").innerHTML = R.cells.map((c, i) => square(c, i, R.own[i], R.ans[i], i === flash)).join("");
   }
   function square(c, i, own, ans, flash, reveal) {
@@ -326,12 +372,13 @@ body.playing .head { display: none; }
       result = a === b ? `Tied ${a}-${b}` : `${a > b ? "Won" : "Lost"} ${a}-${b}`;
     }
     $("resH").textContent = h; $("resP").textContent = p;
-    $("resKick").textContent = R.them ? `Grid Race · vs ${R.them}` : "Grid Race · solo";
+    const title = R.range ? `Grid Race · ${R.range}` : "Grid Race", yrs = R.range ? ` (${R.range})` : "";
+    $("resKick").textContent = `${title} · ${R.them ? `vs ${R.them}` : "solo"}`;
     $("resGrid").innerHTML = R.cells.map((c, i) => square(c, i, R.own[i], R.ans[i] || (answers && answers[i] ? answers[i][0] : c.a ? c.a[0] : ""), false, true)).join("");
     const grid = [0, 1, 2, 3, 4].map((r) => R.own.slice(r * 5, r * 5 + 5).map((o) => o === "me" ? "🟪" : o === "them" ? "🟥" : "⬜").join("")).join("\n");
-    lastEntry = entries.put({ id: R.game ? `grid-g-${R.game.id}` : `grid-${Date.now()}`, kind: "trivia", title: "Grid Race", url: "/grid/", sub: R.them ? `vs ${R.them}` : "Solo", result,
+    lastEntry = entries.put({ id: R.game ? `grid-g-${R.game.id}` : `grid-${Date.now()}`, kind: "trivia", title, url: "/grid/" + R.rq, sub: R.them ? `vs ${R.them}` : "Solo", result,
       data: { score: R.them ? `${a}-${b}` : `${a}/25`, grid },
-      shareText: R.them ? `Grid Race on Last Four In: ${result}. Think you can take more squares?` : `I claimed ${a} of 25 squares in the Grid Race on Last Four In. Beat that.` });
+      shareText: R.them ? `Grid Race${yrs} on Last Four In: ${result}. Think you can take more squares?` : `I claimed ${a} of 25 squares in the Grid Race${yrs} on Last Four In. Beat that.` });
     scrollTo({ top: 0, behavior: "smooth" });
     setTimeout(() => LFI.share(lastEntry, { kicker: "Race saved", note: "Send it to a friend and race them next." }), 900);
   }
@@ -340,7 +387,7 @@ body.playing .head { display: none; }
     if (watcher) watcher.stop();
     clearInterval(tick); clearTimeout(cpuT); R = null; GAME = null;
     $("play").hidden = true; $("result").hidden = true; $("lobby").hidden = true; $("setup").hidden = false;
-    document.body.classList.remove("playing"); history.replaceState(null, "", location.pathname); setup(); scrollTo({ top: 0 });
+    document.body.classList.remove("playing"); history.replaceState(null, "", location.pathname + rangeQuery()); setup(); scrollTo({ top: 0 });
   };
   $("againBtn").addEventListener("click", toSetup);
   $("quitBtn").addEventListener("click", async () => {
@@ -356,10 +403,10 @@ body.playing .head { display: none; }
     }
     const btn = $("startBtn"); btn.disabled = true;
     try {
-      const cells = deal();
+      const cells = deal(), range = rangeName(S.from, S.to), title = range ? `Grid Race · ${range}` : "Grid Race";
       const r = await LFI.games.create("grid", {
-        settings: { title: "Grid Race", cells: cells.map((c) => ({ l: c.l, q: c.q })) },
-        secret: Object.fromEntries(cells.map((c, i) => [i, c.a])), total: 25, seconds: +S.time || null, title: "Grid Race" });
+        settings: { title, from: S.from, to: S.to, range, cells: cells.map((c) => ({ l: c.l, q: c.q })) },
+        secret: Object.fromEntries(cells.map((c, i) => [i, c.a])), total: 25, seconds: +S.time || null, title });
       history.replaceState(null, "", "?g=" + r.code);
       openGame(r.code);
     } catch (err) { toast(err.message); btn.disabled = false; }
@@ -384,12 +431,13 @@ body.playing .head { display: none; }
   }
   function waiting(g) {
     const url = LFI.games.link("grid", g.code);
-    lobby(`<p style="margin:0">Send this link to the friend you want to race. The clock starts the moment they join${g.seconds ? ` and runs ${Math.round(g.seconds / 60)} minutes` : ""}.</p>
+    const range = g.settings.range || "";
+    lobby(`<p style="margin:0">Send this link to the friend you want to race.${range ? ` Every square comes from ${range}.` : ""} The clock starts the moment they join${g.seconds ? ` and runs ${Math.round(g.seconds / 60)} minutes` : ""}.</p>
       <input class="lobby-link" readonly value="${esc(url)}" aria-label="Race link">
       <div class="go-row"><button class="btn gold big" type="button" id="lbShare">Send the link</button><button class="btn" type="button" id="lbCopy">Copy link</button></div>
       <div class="set-row" id="lbFr" hidden><div class="set-lbl">Or challenge a friend on Last Four In</div><div class="friend-pick" id="lbFrList"></div></div>
-      <div class="go-row"><span class="note">Waiting for your friend… this page updates by itself.</span><button class="btn" type="button" id="lbCancel">Call it off</button></div>`, "Race room", "Waiting");
-    $("lbShare").onclick = () => LFI.games.shareLink(url, "Race me in the Grid Race on Last Four In.");
+      <div class="go-row"><span class="note">Waiting for your friend… this page updates by itself.</span><button class="btn" type="button" id="lbCancel">Call it off</button></div>`, "Race room", range ? `${range} · Waiting` : "Waiting");
+    $("lbShare").onclick = () => LFI.games.shareLink(url, `Race me in the Grid Race${range ? ` (${range})` : ""} on Last Four In.`);
     $("lbCopy").onclick = async () => toast((await LFI.copyText(url)) ? "Link copied" : "Couldn't copy the link here");
     $("lbCancel").onclick = async () => { try { await LFI.games.leave(g.id); } catch (err) {} toSetup(); };
     LFI.games.friends().then((fr) => {
@@ -399,7 +447,7 @@ body.playing .head { display: none; }
       $("lbFrList").onclick = async (e) => {
         const b = e.target.closest("button[data-h]"); if (!b) return;
         b.disabled = true;
-        try { await LFI.games.challenge(b.dataset.h, "grid", "Grid Race", `/grid/?g=${g.code}`); b.textContent = "✓ " + b.textContent; toast("Challenge sent"); }
+        try { await LFI.games.challenge(b.dataset.h, "grid", g.settings.title || "Grid Race", `/grid/?g=${g.code}`); b.textContent = "✓ " + b.textContent; toast("Challenge sent"); }
         catch (err) { toast(err.message); b.disabled = false; }
       };
     });
@@ -410,9 +458,10 @@ body.playing .head { display: none; }
     const mine = g.me, them = g[mine === "host" ? "guest" : "host"];
     if (!R || !R.game || R.game.id !== g.id) {
       const skew = new Date(g.now) - Date.now();
-      begin(g.settings.cells, { game: { id: g.id }, them: them ? them.name : "Your friend", meName: (g[mine] || {}).name || "You", skew,
+      const s = g.settings, rq = s.range ? `?from=${s.from}&to=${s.to}` : "";
+      begin(s.cells, { game: { id: g.id }, them: them ? them.name : "Your friend", meName: (g[mine] || {}).name || "You", skew, range: s.range || "", rq,
                                 endAt: g.seconds ? new Date(g.started_at).getTime() + g.seconds * 1000 : null });
-      if (g.moves.length === 0) toast(`${them ? them.name : "Your friend"} is in. Go!`);
+      if (g.moves.length === 0) toast(`${them ? them.name : "Your friend"} is in. Go!${s.range ? ` Squares from ${s.range}.` : ""}`);
     }
     for (const m of g.moves) if (!R.own[+m.item]) claim(+m.item, m.by === mine ? "me" : "them", (m.payload && m.payload.a) || "");
     // Ended early = someone left (the server's own clock says so, not this browser's).
@@ -421,7 +470,8 @@ body.playing .head { display: none; }
 
   // ---------- start ----------
   fetch("clues.json").then((r) => r.json()).then((d) => {
-    BANK = d; $("thru").textContent = d.thru; $("dataChip").textContent = `${d.clues.length.toLocaleString()} clues`; setup();
+    BANK = d; $("thru").textContent = d.thru; $("dataChip").textContent = `${d.clues.length.toLocaleString()} clues`;
+    FIRST = Math.min(...d.clues.map(yearOf)); LAST = Math.max(...d.clues.map(yearOf)); years();
   });
   LFI.games.me().then((m) => { ME = m; setup(); });
   if (qs.get("g")) openGame(qs.get("g"));

@@ -9,6 +9,7 @@
   let games = [], week = null, season = null, stype = 2, calendar = [];
   const storeKey = league === "nfl" ? "lfi-preview-picks" : `lfi-picks-${league}`;
   let picks = local.get(storeKey, {});
+  const infoOpen = new Set();   // game ids whose "Injuries, preview & news" panel is open, kept across redraws
   const entryId = () => `${league}-${season}-${stype}-${week}`;
 
   const isOpen = (g) => g.status === "pre" && g.kickoff > now();
@@ -93,9 +94,12 @@
       if (d !== day) { if (day) html += "</div>"; html += `<div class="day">${esc(d)}</div><div class="games">`; day = d; }
       html += `<article class="g${isOpen(g) ? "" : " locked"}" id="g${g.id}">
         <div class="g-meta"><span class="when">${esc(fmtTime(g.kickoff))}${g.tv ? " · " + esc(g.tv) : ""}</span>${chipFor(g)}</div>
-        <div class="g-teams">${teamBtn(g, "away")}<span class="at">@</span>${teamBtn(g, "home")}</div></article>`;
+        <div class="g-teams">${teamBtn(g, "away")}<span class="at">@</span>${teamBtn(g, "home")}</div>
+        <button class="g-more" type="button" data-info="${g.id}" aria-expanded="${infoOpen.has(g.id)}">${g.status === "post" ? "Recap, injuries & news" : "Injuries, preview & news"}</button>
+        <div class="gi" id="gi${g.id}"${infoOpen.has(g.id) ? "" : " hidden"}></div></article>`;
     }
     $("days").innerHTML = html + "</div>";
+    for (const id of infoOpen) { const g = games.find((x) => x.id === id); if (g) LFI.gameInfo(league, g, $("gi" + id)); }
   }
 
   function record() {
@@ -142,6 +146,14 @@
   }
 
   $("days").addEventListener("click", (e) => {
+    const more = e.target.closest(".g-more");
+    if (more) {
+      const panel = $("gi" + more.dataset.info), open = panel.hidden;
+      panel.hidden = !open; more.setAttribute("aria-expanded", open);
+      if (open) infoOpen.add(more.dataset.info); else infoOpen.delete(more.dataset.info);
+      if (open) LFI.gameInfo(league, games.find((x) => x.id === more.dataset.info), panel);
+      return;
+    }
     const b = e.target.closest(".tm"); if (!b || b.disabled) return;
     const g = games.find((x) => x.id === b.dataset.g);
     if (!isOpen(g)) { toast("That game has kicked off. Picks are locked."); return; }
