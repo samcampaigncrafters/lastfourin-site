@@ -8,13 +8,13 @@
   --brand-rgb: 13, 8, 32;   /* same colour as numbers, for shadows and overlays */
   --on-brand: #ffffff;       /* main text on the brand surface */
   --on-brand-2: #d0c8f2;     /* quiet text on the brand surface */
-  --accent: #ff3dbb;         /* the one loud brand colour: logo chip, main buttons, highlights */
+  --accent: #b794ff;         /* the one loud brand colour (lavender; pink dropped 2026-10-28, Sam: purple, black and white): logo chip, main buttons, highlights */
   --accent-ink: #14001f;     /* text on the accent */
-  --accent-soft: rgba(255, 61, 187, .12);    /* pale accent wash on white */
-  --accent-line: rgba(255, 61, 187, .45);    /* border for the pale wash */
-  --accent-deep: #ff7ad0;    /* accent dark enough for text/icons on white */
-  --accent-pale: #8a3a78;    /* faint accent (projected marks) */
-  --link: #ff6fcf;           /* links, kickers, focus ring */
+  --accent-soft: rgba(183, 148, 255, .14);    /* pale accent wash on white */
+  --accent-line: rgba(183, 148, 255, .45);    /* border for the pale wash */
+  --accent-deep: #cdb6ff;    /* accent dark enough for text/icons on white */
+  --accent-pale: #5a46a0;    /* faint accent (projected marks) */
+  --link: #c4a8ff;           /* links, kickers, focus ring */
   --bg: #0d0820;
   --card: #1a1140;
   --line: #2e2163;
@@ -391,7 +391,7 @@ body:has(.dock) .toast { bottom: calc(110px + env(safe-area-inset-bottom, 0px));
 
 /* ---------- Purple sportsbook (approved 2026-10-27) ----------
    Dark purple page, Anton all-caps headlines, Barlow body, saturated purple field heroes with diagonal slashes,
-   hard black offset shadows on buttons and feature cards, tracked-caps kickers, one pink accent.
+   hard black offset shadows on buttons and feature cards, tracked-caps kickers, one lavender accent.
    No green, orange, blue or yellow anywhere. */
 :root {
   --field: #5b17ff;       /* saturated purple field: heroes, featured tiles, selected states */
@@ -616,11 +616,12 @@ body { font-weight: 500; }
   --ink-2: #2e2457;
   --muted: #51467e;
   --quiet: #4a3f78;
-  --accent: #cc0f80;
-  --accent-deep: #b00d72;
-  --accent-soft: rgba(225, 29, 143, .08);
-  --accent-line: rgba(225, 29, 143, .35);
-  --link: #b00d72;
+  --accent: #5b17ff;
+  --accent-ink: #ffffff;
+  --accent-deep: #4a0fd6;
+  --accent-soft: rgba(91, 23, 255, .08);
+  --accent-line: rgba(91, 23, 255, .35);
+  --link: #4a0fd6;
   --win: #5b17ff;
   --loss: #d81b4f;
   --win-soft: rgba(91, 23, 255, .10);
@@ -774,3 +775,22 @@ html.theme-flip::view-transition-new(root) { animation-name: lfi-fade-in; }
   letter-spacing: 0; text-transform: none; text-shadow: none; -webkit-text-stroke: 0; -webkit-text-fill-color: initial; color: initial;
   line-height: 0; vertical-align: 0; position: relative; top: -.04em; } /* zero line-height: the emoji never makes a line taller */
 h1 .em, h2 .em, .disp .em { font-size: .8em; top: -.06em; }
+
+/* ---------- bubble brand (2026-10-28) ----------
+   White jersey-script "bubble" wordmark + bracket mark (lfi.js LOGO / WORDMARK), with the same hard black shadow as
+   the headlines. The header stays the dark brand band in light mode too (Sam: a purple pill "seems cheap"), so the
+   logo is always white on near-black. */
+.brand { gap: 10px; color: #fff; }
+.brand svg.mark, .brand svg.wm { flex: none; display: block; filter: drop-shadow(1.5px 1.5px 0 #000) drop-shadow(1px 1px 0 #000); }
+.brand svg.mark { width: 28px; height: 28px; }
+.brand svg.wm { width: 117px; height: 34px; transform: rotate(-4deg); }
+@media (max-width: 820px) { .brand svg.mark { width: 25px; height: 25px; } .brand svg.wm { width: 103px; height: 30px; } }
+@media (max-width: 370px) { .brand svg.wm { width: 89px; height: 26px; } }
+[data-theme="light"] .nav { --bg: #0d0820; --card: #1a1140; --card-2: #241857; --line: #2e2163; --line-2: #45348c; --ink: #ffffff;
+  --ink-2: #e6e0fa; --muted: #bdb4e6; --accent: #b794ff; --accent-ink: #14001f; --accent-soft: rgba(183, 148, 255, .14);
+  --link: #c4a8ff; background: #0d0820; border-bottom-color: #2e2163; color-scheme: dark; }
+[data-theme="light"] .nav .nav-leagues { background: #0d0820; }
+[data-theme="light"] .nav .btn.si:hover, [data-theme="light"] .mbtn[aria-expanded="true"] { color: #0d0820; }
+[data-theme="light"] .dd-panel, [data-theme="light"] .mmenu { box-shadow: 8px 8px 0 #000; }
+/* Light mode accent is the field purple, so accent text sitting ON a purple field goes white instead of vanishing. */
+[data-theme="light"] :is(.fh .kp b, .hero .kicker, .banner .kicker, .entry-h .kicker, .count b) { color: #fff; }

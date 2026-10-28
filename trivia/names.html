@@ -3,13 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Name Them All · Last Four In</title>
+<title>Name Them All · PlayBubble</title>
 <meta name="description" content="One football list a day. Name as many as you can before the clock runs out. Same list for everyone.">
-<meta property="og:title" content="Name Them All · Last Four In">
+<meta property="og:title" content="Name Them All · PlayBubble">
+<meta property="og:image" content="https://lastfourin.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:description" content="One football list a day. How many can you name before the clock runs out?">
 <meta property="og:url" content="https://lastfourin.com/trivia/names.html">
 <meta name="theme-color" content="#0d0820">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Crect width='34' height='34' rx='8' fill='%230d0820'/%3E%3Cpath d='M5 9h7v16H5M12 17h5' fill='none' stroke='%23fff' stroke-width='3.6'/%3E%3Ccircle cx='23.5' cy='17' r='6.8' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
@@ -365,7 +368,7 @@
     const entry = LFI.entries.put({
       id: `trivia-names-${date}`, kind: "trivia", title: `Name Them All #${setNo}`, sub: L.prompt, url: `/trivia/names.html?date=${date}`,
       data: { score: `${n}/${N}` },
-      shareText: `📝 Last Four In · Name Them All #${setNo}\n${L.prompt}\n${n}/${N}${n === N ? ` with ${mmss(left())} left` : ""}`,
+      shareText: `📝 PlayBubble · Name Them All #${setNo}\n${L.prompt}\n${n}/${N}${n === N ? ` with ${mmss(left())} left` : ""}`,
     });
     LFI.share(entry, { kicker: "🎉 Your score is in", note: "Send it to your friends. The link shows your score, not the names." });
   }
@@ -378,7 +381,7 @@
     const url = `/trivia/names.html?mode=infinite&list=${encodeURIComponent(L.key)}&vs=${encodeURIComponent(who)}&vn=${n}`;
     LFI.share({
       id: `trivia-names-inf-${L.key}`, kind: "trivia", title: "Name Them All", sub: L.prompt, url, data: { score: `${n}/${N}` },
-      shareText: `⚔️ I named ${n} of ${N} on Last Four In: ${L.prompt} Beat that: ${location.origin}${url}`,
+      shareText: `⚔️ I named ${n} of ${N} on PlayBubble: ${L.prompt} Beat that: ${location.origin}${url}`,
     }, { kicker: vsHere() ? "⚔️ Your score back" : "⚔️ Challenge a friend", note: "Your friend gets the same list and the same clock, with your score to beat.",
          challenge: { kind: "names", title: `Name Them All: ${L.prompt}`.slice(0, 120), url } });
   }
@@ -427,7 +430,7 @@
     return;
   }
 
-  document.title = "Name Them All: Infinite · Last Four In";
+  document.title = "Name Them All: Infinite · PlayBubble";
   $("kicker").textContent = "♾️ Infinite sandbox";
   $("intro").textContent = "Today's list is the one that counts. Once it's done, keep going here as long as you like. Nothing in the sandbox is scored, and it never touches your record or streak.";
   $("steps").innerHTML = `

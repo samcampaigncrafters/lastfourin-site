@@ -205,8 +205,8 @@
     return {
       id: entryId(), kind: league, title: `${CFG.name} · ${weekTitle()}`, sub: `${list.length} of ${games.length} picked`,
       result: r.graded ? `${r.right}-${r.wrong}` : "", url: CFG.url, data: { picks: list },
-      shareText: CFG.share ? `${CFG.share} for the week of ${fmtYmd(week)} are in on Last Four In. Think you can beat me?`
-        : league === "nfl" ? `🏈 My NFL picks for Week ${week} are in on Last Four In. Think you can beat me?` : `🎓 My college football picks for Week ${week} are in on Last Four In. Think you can beat me?`,
+      shareText: CFG.share ? `${CFG.share} for the week of ${fmtYmd(week)} are in on PlayBubble. Think you can beat me?`
+        : league === "nfl" ? `🏈 My NFL picks for Week ${week} are in on PlayBubble. Think you can beat me?` : `🎓 My college football picks for Week ${week} are in on PlayBubble. Think you can beat me?`,
     };
   }
 

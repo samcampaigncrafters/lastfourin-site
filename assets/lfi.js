@@ -95,7 +95,10 @@
   const themeLabel = () => theme() === "light" ? "Dark mode" : "Light mode";
   const FRIENDS = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.4"/><path d="M2.8 20c.6-3.6 3.1-5.6 6.2-5.6s5.6 2 6.2 5.6"/><path d="M15.5 4.9a3.3 3.3 0 0 1 0 6.3M18 14.7c1.9.7 3 2.5 3.3 5.3"/></svg>';
   const SWORDS = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M14.5 6.5 18 3h3v3l-3.5 3.5M5 14l4 4M7 17l-3 3M3 19l2 2"/></svg>';
-  const LOGO = '<svg width="26" height="26" viewBox="0 0 30 30" aria-hidden="true"><rect x="2" y="2" width="11.5" height="11.5" rx="2" fill="currentColor"/><rect x="16.5" y="2" width="11.5" height="11.5" rx="2" fill="currentColor"/><rect x="2" y="16.5" width="11.5" height="11.5" rx="2" fill="currentColor"/><rect x="16.5" y="16.5" width="11.5" height="11.5" rx="2" fill="#ff3dbb"/></svg>';
+  // bubble mark: a bracket line feeding into the ball, i.e. the team "on the bubble".
+  const LOGO = '<svg class="mark" width="30" height="30" viewBox="0 0 34 34" aria-hidden="true"><path d="M2 7h8v20H2M10 17h7" fill="none" stroke="currentColor" stroke-width="3.4"/><circle cx="25" cy="17" r="8" fill="currentColor"/></svg>';
+  // "bubble" wordmark: Mr Dafoe jersey script turned into a path, so it never waits on a font.
+  const WORDMARK = '<svg class="wm" viewBox="0 0 171.9 50" aria-hidden="true"><path fill="currentColor" d="M35.3 0Q39 0 39 2Q39 4.9 33.4 10.8Q27.8 16.7 22.2 21.2L16.6 25.6Q16.2 26.1 16.2 26.4Q16.2 26.7 16.5 26.7Q22.2 23.1 26.6 22.9Q27.5 22.9 28.2 23.4Q30.6 25.4 30.6 28.1Q30.6 30.7 25.2 37Q27.5 36.4 31.4 34Q35.4 31.6 38.2 29.5L41 27.4Q41.6 27.8 41.6 28.6Q41.6 29.3 41 29.8Q29.2 40.7 23.1 40.7Q22.7 40.7 21.9 40.6L22 40.4Q17.8 44.5 13.6 47.3Q9.4 50 6.7 50Q0 50 0 45.4Q0 43.2 1.5 40.1Q2.9 37 5 34.2Q7.1 31.3 9.2 28.8Q11.3 26.4 12.7 24.9Q14.2 23.4 14.2 23.4Q19.2 17.6 23 12.6Q26.7 7.7 27.9 5.6Q29.1 3.5 30.3 2Q31.6 0.5 32.4 0.2Q33.2 0 35.3 0ZM6.6 46Q9.5 46 14.2 41.9Q18.9 37.7 22.2 33.3Q25.5 28.8 25.5 27.4Q25.5 27.2 25.3 27.2Q21.6 27.2 16.9 31.2Q12.2 35.2 9.2 39.5Q6.1 43.9 6.1 45.5Q6.1 46 6.6 46ZM46.4 42.2Q57.1 36.5 69.8 27Q70.4 27.5 70.4 28.2Q70.4 28.9 69.7 29.6Q69 30.2 67.7 31.4Q66.4 32.6 62.7 35.8Q59 38.9 55.8 41.5Q47.4 48.2 43.4 49.4Q42.1 49.8 40.6 49.8Q38.2 49.8 38.2 46Q38.2 45.2 38.9 43.7Q39.5 42.1 39.6 41.8Q39.7 41.6 39.8 41.5Q39.9 41.3 40 41.2Q40 41.1 40 41Q40 40.8 39.6 40.8Q39.2 40.8 37.3 42.7Q35.3 44.6 33.9 45.7Q32.6 46.9 30.9 47.9Q29.3 48.9 28.2 48.9Q25.4 48.9 25.4 46.2Q25.4 44.7 26.4 42.4Q28.9 37.1 33.9 31.8Q38.9 26.6 41 26.5Q41.8 26.5 42.5 27.1Q43.1 27.6 43.1 28.3Q43.1 29.1 41.7 30.5Q40.2 31.9 38.1 34.2Q35.9 36.4 35 37.9Q34.1 39.4 34.1 39.9Q34.1 40.4 34.7 40.4Q35.3 40.4 36.8 39.5Q40.8 36.7 46 32.6Q51.3 28.6 52.8 26.7Q53.1 25.4 54.9 25.4Q58.3 25.4 58.3 26.6Q58.3 27.1 55 30.3Q44.9 40 44.9 42.2Q44.9 42.6 45.3 42.6Q45.6 42.6 46.4 42.2ZM89.2 0Q92.9 0 92.9 2Q92.9 4.9 87.3 10.8Q81.7 16.7 76.1 21.2L70.5 25.6Q70.1 26.1 70.1 26.4Q70.1 26.7 70.4 26.7Q76.1 23.1 80.6 22.9Q81.4 22.9 82.1 23.4Q84.5 25.4 84.5 28.1Q84.5 30.7 79.1 37Q81.4 36.4 85.4 34Q89.3 31.6 92.1 29.5L94.9 27.4Q95.5 27.8 95.5 28.6Q95.5 29.3 94.9 29.8Q83.1 40.7 77.1 40.7Q76.6 40.7 75.8 40.6L75.9 40.4Q71.7 44.5 67.5 47.3Q63.3 50 60.6 50Q53.9 50 53.9 45.4Q53.9 43.2 55.4 40.1Q56.8 37 58.9 34.2Q61 31.3 63.1 28.8Q65.2 26.4 66.6 24.9Q68.1 23.4 68.1 23.4Q73.1 17.6 76.9 12.6Q80.6 7.7 81.8 5.6Q83 3.5 84.3 2Q85.5 0.5 86.3 0.2Q87.1 0 89.2 0ZM60.5 46Q63.5 46 68.1 41.9Q72.8 37.7 76.1 33.3Q79.4 28.8 79.4 27.4Q79.4 27.2 79.2 27.2Q75.5 27.2 70.8 31.2Q66.1 35.2 63.1 39.5Q60 43.9 60 45.5Q60 46 60.5 46ZM114.3 0Q118 0 118 2Q118 4.9 112.4 10.8Q106.8 16.7 101.2 21.2L95.7 25.6Q95.2 26.1 95.2 26.4Q95.2 26.7 95.6 26.7Q101.2 23.1 105.7 22.9Q106.6 22.9 107.3 23.4Q109.7 25.4 109.7 28.1Q109.7 30.7 104.3 37Q106.6 36.4 110.5 34Q114.5 31.6 117.2 29.5L120 27.4Q120.7 27.8 120.7 28.6Q120.7 29.3 120 29.8Q108.3 40.7 102.2 40.7Q101.8 40.7 100.9 40.6L101.1 40.4Q96.9 44.5 92.7 47.3Q88.5 50 85.8 50Q79.1 50 79.1 45.4Q79.1 43.2 80.5 40.1Q82 37 84 34.2Q86.1 31.3 88.2 28.8Q90.3 26.4 91.8 24.9Q93.2 23.4 93.2 23.4Q98.3 17.6 102 12.6Q105.8 7.7 107 5.6Q108.2 3.5 109.4 2Q110.6 0.5 111.4 0.2Q112.3 0 114.3 0ZM85.7 46Q88.6 46 93.3 41.9Q97.9 37.7 101.2 33.3Q104.6 28.8 104.6 27.4Q104.6 27.2 104.3 27.2Q100.6 27.2 95.9 31.2Q91.2 35.2 88.2 39.5Q85.2 43.9 85.2 45.5Q85.2 46 85.7 46ZM116.2 43.8Q118.6 43.8 125.5 39.6Q132.5 35.4 138.2 31.2L143.9 27Q144.6 27.5 144.6 28.2Q144.6 28.9 143.9 29.6Q143.2 30.2 141.8 31.4Q140.5 32.6 136.8 35.8Q133.1 38.9 129.9 41.5Q121.5 48.2 117.5 49.4Q116.2 49.8 114.9 49.8Q113.5 49.8 112.7 49.6Q112 49.4 111 48.6Q109.2 47.1 109.2 41.7Q109.2 40.2 110.5 37.1Q111.8 34 114.7 29.7Q117.7 25.4 121.6 21Q125.6 16.7 131.7 12.3Q137.7 8 144.7 5.3Q145.7 4.9 146.6 4.9Q147.4 4.9 148.1 5.7Q148.9 6.4 149.1 7.2L149.5 7.9Q149.5 9.5 144.4 15.1Q139.2 20.9 132.4 26.1Q125.6 31.3 119.8 35Q115 38.2 115 41.6Q115 43.8 116.2 43.8ZM122.6 29.1Q124.4 29.1 133.4 20.3Q142.5 11.5 142.5 10.5L142.4 10.4L141.2 11Q137.5 13.4 131.3 19.2Q125.1 25.1 122.8 28.3Q122.5 28.7 122.5 28.9Q122.5 29.1 122.6 29.1ZM152.2 27Q150.4 27 145.9 30.8Q141.5 34.6 141.5 35.5Q141.5 35.6 141.7 35.6Q143.3 35.6 148 32.1Q152.6 28.6 152.6 27.4Q152.6 27 152.2 27ZM137 49.8Q131.6 49.8 131.6 43.1Q131.6 38.9 135.2 34.2Q138.9 29.4 143.9 26.4Q148.9 23.4 152.7 23.4Q154.4 23.4 155.9 24.7Q157.3 26.1 157.3 27.4Q157.3 29.7 154 32.7Q150.6 35.6 147 37.4Q143.3 39.2 142.1 39.2Q141 39.2 140.4 38.2Q140.1 38 139.6 38Q139.1 38 138 39.9Q136.8 41.7 136.8 42.9Q136.8 44.1 137.7 44.4Q143.1 44.4 149.4 41.2Q155.8 38 167 30.1Q167.7 29.5 169.3 28.3Q170.9 27.2 171.2 27Q171.9 27.5 171.9 28.2Q171.9 28.9 171.2 29.5Q167.7 33 162 37.5Q156.3 41.9 149 45.8Q141.7 49.8 137 49.8Z"/></svg>';
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -168,7 +171,7 @@
       : t.soon ? `<span class="mm-home mm-soon"><b>${t.label} <i class="mm-badge">Soon</i></b><span>${t.sub}</span></span>`
       : `<a class="mm-home${t.key === active ? " on" : ""}" href="${t.href}"><b>${em(t.key)}${t.label}</b><span>${t.sub}</span></a>`).join("");
     h.innerHTML = `<div class="nav-in">
-        <a class="brand" href="/" aria-label="Last Four In home">${LOGO}<b>Last Four In</b></a>
+        <a class="brand" href="/" aria-label="bubble home">${LOGO}${WORDMARK}</a>
         <nav class="nav-links" aria-label="Main">${top}</nav>
         <div class="nav-r">
           ${me && me.avatar_url ? `<a class="avatar" href="/account/" title="My account" aria-label="My account"><img src="${esc(me.avatar_url)}" alt="" referrerpolicy="no-referrer"></a>`
@@ -217,7 +220,7 @@
 
   function footer() {
     const f = document.querySelector("footer.foot");
-    if (f && !f.textContent.trim()) f.innerHTML = `Last Four In is free to play. No purchase necessary. Not affiliated with the NFL, the NCAA, the College Football Playoff, the AP or any team. Team names belong to their owners. <a href="/terms/">Terms</a> · <a href="/privacy/">Privacy</a>`;
+    if (f && !f.textContent.trim()) f.innerHTML = `bubble is free to play. No purchase necessary. Not affiliated with the NFL, the NCAA, the College Football Playoff, the AP or any team. Team names belong to their owners. <a href="/terms/">Terms</a> · <a href="/privacy/">Privacy</a>`;
   }
 
   function toast(msg) {
@@ -356,7 +359,7 @@
     const k = KIND[e.kind] || {};
     const d = ensureDialog();
     const url = shareUrl(e);
-    const text = e.shareText || `Here are my ${k.noun || "picks"} on Last Four In. Think you can beat me? 🔥`;
+    const text = e.shareText || `Here are my ${k.noun || "picks"} on PlayBubble. Think you can beat me? 🔥`;
     d.querySelector("#shK").textContent = opts.kicker || `Your ${k.noun || "entry"} ${opts.updated ? "is updated" : "is in"} ✅`;
     d.querySelector("#shP").textContent = opts.note || "Send it to your friends and see who calls it better.";
     d.querySelector("#shE").innerHTML = renderEntry(e);
@@ -364,7 +367,7 @@
     go.textContent = "📣 " + (k.share || "Share");
     go.onclick = async () => {
       if (navigator.share) {
-        try { await navigator.share({ title: "Last Four In", text, url }); return; } catch (err) { if (err && err.name === "AbortError") return; }
+        try { await navigator.share({ title: "PlayBubble", text, url }); return; } catch (err) { if (err && err.name === "AbortError") return; }
       }
       toast((await copyText(`${text} ${url}`)) ? "🔗 Link copied. Paste it to your friends." : "Couldn't copy. Long-press the link to share.");
     };
@@ -386,7 +389,7 @@
     const kind = ch.kind || (/^trivia-names/.test(e.id) ? "names" : /^grid/.test(e.id) ? "grid" : e.kind);
     const q = e.kind === "draft" && /^\?[\w=&%.+-]*$/.test((e.data || {}).q || "") ? e.data.q : "";
     const url = ch.url || (e.url && e.url[0] === "/" ? e.url : ((KIND[e.kind] || {}).url || "/") + q);
-    const title = ch.title || e.title || (KIND[e.kind] || {}).label || "Last Four In";
+    const title = ch.title || e.title || (KIND[e.kind] || {}).label || "PlayBubble";
     const note = e.result || (e.data && e.data.score && `Score to beat: ${e.data.score}`) || null;
     const go = async () => {
       if (!window.LFI.games) await new Promise((ok) => { const s = document.createElement("script"); s.src = "/assets/games.js"; s.onload = s.onerror = ok; document.head.appendChild(s); });

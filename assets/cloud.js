@@ -44,7 +44,7 @@
     comment: ["💬", "Join the conversation", "Make a free account to comment on picks and posts."],
     pool: ["👥", "Start a pool", "Make a free account to start a private pool with your friends. Your normal picks count."],
     money: ["💰", "Get your $1,000", "Make a free account to get your $1,000 for the week and place bets. Pretend money, no prize."],
-    play: ["🎮", "Make your free account to play", "Every game on Last Four In runs on a free account. It takes 30 seconds, then you're straight back in."],
+    play: ["🎮", "Make your free account to play", "Every game on bubble runs on a free account. It takes 30 seconds, then you're straight back in."],
   };
   const accountReady = () => !on || !!(cloud.profile && cloud.profile.onboarded);
   let pop;

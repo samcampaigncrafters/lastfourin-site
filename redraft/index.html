@@ -3,14 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>League Redraft · Last Four In</title>
+<title>League Redraft · PlayBubble</title>
 <meta name="description" content="Throw every current NFL player into one pool and redraft all 32 teams. You run one team, the computer drafts the rest by need and best player left. Ratings are our own, not fantasy points. Free.">
-<meta property="og:title" content="League Redraft · Last Four In">
+<meta property="og:title" content="League Redraft · PlayBubble">
+<meta property="og:image" content="https://lastfourin.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:description" content="Every NFL player in one pool, 32 new rosters. Draft your team, the computer drafts the rest. Free.">
 <meta property="og:url" content="https://lastfourin.com/redraft/">
-<meta property="og:site_name" content="Last Four In">
+<meta property="og:site_name" content="PlayBubble">
 <meta name="theme-color" content="#0d0820">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Crect width='34' height='34' rx='8' fill='%230d0820'/%3E%3Cpath d='M5 9h7v16H5M12 17h5' fill='none' stroke='%23fff' stroke-width='3.6'/%3E%3Ccircle cx='23.5' cy='17' r='6.8' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
@@ -126,7 +129,7 @@
     </div>
   </div>
   <div id="body"><p class="empty">Loading the player pool…</p></div>
-  <p class="credit">Player data: <a class="lnk" href="https://nflverse.com" rel="noopener">nflverse</a> (CC-BY 4.0). Ratings and every computer pick are Last Four In's own. Not affiliated with the NFL or any team.</p>
+  <p class="credit">Player data: <a class="lnk" href="https://nflverse.com" rel="noopener">nflverse</a> (CC-BY 4.0). Ratings and every computer pick are bubble's own. Not affiliated with the NFL or any team.</p>
 </main>
 <footer class="foot"></footer>
 
@@ -412,7 +415,7 @@
     LFI.share({ id: `redraft-${lg.seed}`, kind: "draft", title: `${tlabel(t)} · League Redraft`, result: `${ord(r.n)} of 32 teams`,
       data: { mn: `My starters · ${ovr(E.units(lg, me).u.ovr)} OVR`, me: stars.map((p) => [p.pos, `${p.name} · ${ovr(p.grade)}`, null]),
         on: "Top of the league", op: r.list.slice(0, 6).map(([i, u], k) => [String(k + 1), `${tlabel(team(i))} · ${ovr(u.ovr)}`, null]) },
-      shareText: `I redrafted the whole NFL and my ${tlabel(t)} rate ${ord(r.n)} of 32 on Last Four In. Draft a better team.` },
+      shareText: `I redrafted the whole NFL and my ${tlabel(t)} rate ${ord(r.n)} of 32 on PlayBubble. Draft a better team.` },
       { kicker: "Your redraft", note: "Send it to your friends and dare them to draft a better team." });
   }
 

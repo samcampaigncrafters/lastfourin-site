@@ -3,14 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Grid Race · Last Four In</title>
+<title>Grid Race · PlayBubble</title>
 <meta name="description" content="A 5x5 NFL trivia grid. Race a friend or the computer: the first right answer claims the square and locks it. Most squares wins.">
-<meta property="og:title" content="Grid Race · Last Four In">
+<meta property="og:title" content="Grid Race · PlayBubble">
+<meta property="og:image" content="https://lastfourin.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:description" content="Same 25 squares, two players. First right answer claims the square. Most squares wins.">
 <meta property="og:url" content="https://lastfourin.com/grid/">
-<meta property="og:site_name" content="Last Four In">
+<meta property="og:site_name" content="PlayBubble">
 <meta name="theme-color" content="#0d0820">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Crect width='34' height='34' rx='8' fill='%230d0820'/%3E%3Cpath d='M5 9h7v16H5M12 17h5' fill='none' stroke='%23fff' stroke-width='3.6'/%3E%3Ccircle cx='23.5' cy='17' r='6.8' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
@@ -64,7 +67,7 @@ body.playing .head { display: none; }
 @keyframes sq-in { from { transform: scale(.85); } }
 @media (max-width: 560px) { .grid5 { gap: 5px; } .sq { padding: 3px; font-size: 10px; border-radius: 7px; } .sq .yr { font-size: 14px; } .sq .ans { font-size: 9.5px; }
   .sq.mine .lb, .sq.theirs .lb, .sq.open-end .lb { display: none; } /* a claimed square shows year + player; the clue is in its label */ }
-:root { --mine: #5b17ff; --theirs: #ff3dbb; }
+:root { --mine: #5b17ff; --theirs: #b794ff; }
 
 /* Answer sheet */
 .ask .dlg-b form { display: grid; gap: 12px; }
@@ -379,7 +382,7 @@ body.playing .head { display: none; }
     const grid = [0, 1, 2, 3, 4].map((r) => R.own.slice(r * 5, r * 5 + 5).map((o) => o === "me" ? "🟪" : o === "them" ? "🟥" : "⬜").join("")).join("\n");
     lastEntry = entries.put({ id: R.game ? `grid-g-${R.game.id}` : `grid-${Date.now()}`, kind: "trivia", title, url: "/grid/" + R.rq, sub: R.them ? `vs ${R.them}` : "Solo", result,
       data: { score: R.them ? `${a}-${b}` : `${a}/25`, grid },
-      shareText: R.them ? `🏁 Grid Race${yrs} on Last Four In: ${result}. Think you can take more squares?` : `🏁 I claimed ${a} of 25 squares in the Grid Race${yrs} on Last Four In. Beat that.` });
+      shareText: R.them ? `🏁 Grid Race${yrs} on PlayBubble: ${result}. Think you can take more squares?` : `🏁 I claimed ${a} of 25 squares in the Grid Race${yrs} on PlayBubble. Beat that.` });
     scrollTo({ top: 0, behavior: "smooth" });
     setTimeout(() => LFI.share(lastEntry, { kicker: "Race saved", note: "Send it to a friend and race them next." }), 900);
   }
@@ -423,7 +426,7 @@ body.playing .head { display: none; }
     GAME = code;
     lobby(`<p class="empty">Opening the race room…</p>`);
     ME = await LFI.games.me();
-    if (!ME) return lobby(`<p>A friend challenged you to a Grid Race on Last Four In. Sign in free to join. You'll come right back here.</p>
+    if (!ME) return lobby(`<p>A friend challenged you to a Grid Race on bubble. Sign in free to join. You'll come right back here.</p>
       <div class="go-row"><a class="btn gold big" href="${LFI.games.signInUrl()}">Sign in to join</a><a class="btn" href="./">Race the computer instead</a></div>`, "You're challenged", "Grid Race");
     let g;
     try { g = await LFI.games.get(await LFI.games.join(code)); LFI.countChallenges(); } // joining answers any challenge for it
@@ -437,9 +440,9 @@ body.playing .head { display: none; }
     lobby(`<p style="margin:0">Send this link to the friend you want to race.${range ? ` Every square comes from ${range}.` : ""} The clock starts the moment they join${g.seconds ? ` and runs ${Math.round(g.seconds / 60)} minutes` : ""}.</p>
       <input class="lobby-link" readonly value="${esc(url)}" aria-label="Race link">
       <div class="go-row"><button class="btn gold big" type="button" id="lbShare">Send the link ${em("📣")}</button><button class="btn" type="button" id="lbCopy">Copy link ${em("🔗")}</button></div>
-      <div class="set-row" id="lbFr" hidden><div class="set-lbl">Or challenge a friend on Last Four In</div><div class="friend-pick" id="lbFrList"></div></div>
+      <div class="set-row" id="lbFr" hidden><div class="set-lbl">Or challenge a friend on bubble</div><div class="friend-pick" id="lbFrList"></div></div>
       <div class="go-row"><span class="note">${em("⏳")} Waiting for your friend… this page updates by itself.</span><button class="btn" type="button" id="lbCancel">Call it off</button></div>`, "Race room", range ? `${range} · Waiting` : "Waiting");
-    $("lbShare").onclick = () => LFI.games.shareLink(url, `🏁 Race me in the Grid Race${range ? ` (${range})` : ""} on Last Four In.`);
+    $("lbShare").onclick = () => LFI.games.shareLink(url, `🏁 Race me in the Grid Race${range ? ` (${range})` : ""} on PlayBubble.`);
     $("lbCopy").onclick = async () => toast((await LFI.copyText(url)) ? "🔗 Link copied" : "Couldn't copy the link here");
     $("lbCancel").onclick = async () => { try { await LFI.games.leave(g.id); } catch (err) {} toSetup(); };
     LFI.games.friends().then((fr) => {

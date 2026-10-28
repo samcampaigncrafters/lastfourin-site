@@ -3,14 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Draft Classes · Last Four In</title>
+<title>Draft Classes · PlayBubble</title>
 <meta name="description" content="Mock any NFL draft class since 1999 with what you know now, or see every class redrafted by the fantasy points the careers actually scored.">
-<meta property="og:title" content="Draft Classes · Last Four In">
+<meta property="og:title" content="Draft Classes · PlayBubble">
+<meta property="og:image" content="https://lastfourin.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:description" content="Redraft any NFL class since 1999 with hindsight. Could you beat the real draft?">
 <meta property="og:url" content="https://lastfourin.com/drafts/classes.html">
-<meta property="og:site_name" content="Last Four In">
+<meta property="og:site_name" content="PlayBubble">
 <meta name="theme-color" content="#0d0820">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Crect width='34' height='34' rx='8' fill='%230d0820'/%3E%3Cpath d='M5 9h7v16H5M12 17h5' fill='none' stroke='%23fff' stroke-width='3.6'/%3E%3Ccircle cx='23.5' cy='17' r='6.8' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
@@ -245,7 +248,7 @@
       id: `draft-class-${S.y}-${Date.now()}`, kind: "draft", title: `Mock: ${S.y} draft class`, sub: SC_LABEL[S.sc],
       result: win ? `Beat the real draft by ${fmt(a - b)}` : `Real draft won by ${fmt(b - a)}`,
       data: { me: me.map(row), op: real.map(row), mn: "You", on: "The real draft", mt: Math.round(a * 10) / 10, ot: Math.round(b * 10) / 10, q: `?class=${S.y}&s=${S.sc}` },
-      shareText: `🎓 I mocked the ${S.y} NFL draft on Last Four In with hindsight: ${fmt(a)} fantasy points to the real draft's ${fmt(b)}. Can you do better?`,
+      shareText: `🎓 I mocked the ${S.y} NFL draft on PlayBubble with hindsight: ${fmt(a)} fantasy points to the real draft's ${fmt(b)}. Can you do better?`,
     });
     tab("mock");
     scrollTo({ top: 0, behavior: "smooth" });

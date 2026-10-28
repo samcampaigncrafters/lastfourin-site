@@ -3,14 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Profile · Last Four In</title>
-<meta name="description" content="Picks, record and streaks on Last Four In.">
-<meta property="og:title" content="Profile · Last Four In">
+<title>Profile · PlayBubble</title>
+<meta name="description" content="Picks, record and streaks on PlayBubble.">
+<meta property="og:title" content="Profile · PlayBubble">
+<meta property="og:image" content="https://lastfourin.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:description" content="See their picks, record and streaks. Think you can do better? Free to play.">
 <meta property="og:url" content="https://lastfourin.com/u/">
-<meta property="og:site_name" content="Last Four In">
+<meta property="og:site_name" content="PlayBubble">
 <meta name="theme-color" content="#0d0820">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Crect width='34' height='34' rx='8' fill='%230d0820'/%3E%3Cpath d='M5 9h7v16H5M12 17h5' fill='none' stroke='%23fff' stroke-width='3.6'/%3E%3Ccircle cx='23.5' cy='17' r='6.8' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
@@ -86,10 +89,10 @@
       </div>
       ${badges.length ? `<div class="badges">${badges.map((b) => `<span class="badge">${esc(b)}</span>`).join("")}</div>` : ""}
     </div></section>`;
-    document.title = `${p.display_name || p.username} (@${p.username}) · Last Four In`;
+    document.title = `${p.display_name || p.username} (@${p.username}) · PlayBubble`;
     $("shareP").onclick = async () => {
       const url = `${location.origin}/u/${encodeURIComponent(p.username)}`;
-      if (navigator.share) { try { await navigator.share({ title: document.title, text: `${p.display_name || "@" + p.username}'s picks on Last Four In`, url }); return; } catch (e) { if (e.name === "AbortError") return; } }
+      if (navigator.share) { try { await navigator.share({ title: document.title, text: `${p.display_name || "@" + p.username}'s picks on PlayBubble`, url }); return; } catch (e) { if (e.name === "AbortError") return; } }
       toast((await copyText(url)) ? "🔗 Profile link copied" : "Couldn't copy the link");
     };
     if ($("fb")) $("fb").onclick = async (ev) => {

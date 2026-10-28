@@ -3,14 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Drafts · Last Four In</title>
+<title>Drafts · PlayBubble</title>
 <meta name="description" content="Draft the best team from any slice of NFL history: every player named Chris, the all-time Broncos, a division, a conference or the whole league. Higher fantasy total wins.">
-<meta property="og:title" content="Drafts · Last Four In">
+<meta property="og:title" content="Drafts · PlayBubble">
+<meta property="og:image" content="https://lastfourin.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:description" content="Draft every player named Chris, the best Broncos ever, or the whole league. Higher fantasy total wins.">
 <meta property="og:url" content="https://lastfourin.com/drafts/">
-<meta property="og:site_name" content="Last Four In">
+<meta property="og:site_name" content="PlayBubble">
 <meta name="theme-color" content="#0d0820">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Crect width='34' height='34' rx='8' fill='%230d0820'/%3E%3Cpath d='M5 9h7v16H5M12 17h5' fill='none' stroke='%23fff' stroke-width='3.6'/%3E%3Ccircle cx='23.5' cy='17' r='6.8' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
@@ -515,7 +518,7 @@ body.drafting .head { display: none; }
     $("crAs").textContent = S.kind === "coaches" ? "Every team he coached" : S.kind === "jerseys" ? "In that number, any team" : "Every team he played for";
     const h1t = S.kind === "jerseys" ? "Jersey Draft" : S.kind === "coaches" ? "Coaches' Draft" : "Drafts";
     $("h1").innerHTML = `${esc(h1t)} ${em(S.kind === "jerseys" ? "👕" : S.kind === "coaches" ? "🧢" : "📋")}`;
-    document.title = `${h1t} · Last Four In`;
+    document.title = `${h1t} · PlayBubble`;
     if (S.mode !== "fun" && S.lu === "full") { S.lu = "fantasy"; paints.forEach((p) => p()); }
     $("cpu").hidden = S.opp !== "cpu";
     $("poolName").hidden = !(S.pool === "first" || S.pool === "last");
@@ -774,9 +777,9 @@ body.drafting .head { display: none; }
     const e = {
       id: D.game ? `draft-g-${D.game.id}` : `draft-${Date.now()}`, kind: "draft", title: `${D.kname}: ${D.label}${D.crt}`, sub: D.val, result,
       data: { me: pack(me), op: pack(op), mn: me.name, on: op.name, mt: D.fun ? null : Math.round(a * 10) / 10, ot: D.fun ? null : Math.round(b * 10) / 10, q: D.setup, u: D.kind === "coaches" ? "wins" : undefined },
-      shareText: D.kind === "jerseys" ? `👕 I ran a jersey draft on Last Four In (${D.label}${D.fun ? "" : ": " + result}). Think you can beat my numbers?`
-        : D.kind === "coaches" ? `🧢 I drafted head coaches on Last Four In (${D.label}): ${result}. Think you can beat my staff?`
-        : D.fun ? `📋 I drafted ${D.label.replace(/^Every/, "every").replace(/^All-time/, "the all-time")} on Last Four In. Whose team is better?` : `📋 I drafted ${D.label.replace(/^Every/, "every").replace(/^All-time/, "the all-time")} on Last Four In: ${result}. Think you can beat my lineup?`,
+      shareText: D.kind === "jerseys" ? `👕 I ran a jersey draft on PlayBubble (${D.label}${D.fun ? "" : ": " + result}). Think you can beat my numbers?`
+        : D.kind === "coaches" ? `🧢 I drafted head coaches on PlayBubble (${D.label}): ${result}. Think you can beat my staff?`
+        : D.fun ? `📋 I drafted ${D.label.replace(/^Every/, "every").replace(/^All-time/, "the all-time")} on PlayBubble. Whose team is better?` : `📋 I drafted ${D.label.replace(/^Every/, "every").replace(/^All-time/, "the all-time")} on PlayBubble: ${result}. Think you can beat my lineup?`,
     };
     lastEntry = entries.put(e);
     if (D.game && !D.fun) LFI.games.finish(D.game.id, D.game.role === "host" ? { host: e.data.mt, guest: e.data.ot } : { host: e.data.ot, guest: e.data.mt }).catch(() => {});
@@ -815,7 +818,7 @@ body.drafting .head { display: none; }
     lobby(`<p class="empty">Opening the draft room…</p>`);
     ME = await LFI.games.me();
     if (!ME) {
-      return lobby(`<p>A friend invited you to a live draft on Last Four In. Sign in free to join. You'll come right back here.</p>
+      return lobby(`<p>A friend invited you to a live draft on bubble. Sign in free to join. You'll come right back here.</p>
         <div class="go-row"><a class="btn gold big" href="${LFI.games.signInUrl()}">Sign in to join</a><a class="btn" href="./">Draft the computer instead</a></div>`, "You're invited", "Live draft");
     }
     let g;
@@ -839,12 +842,12 @@ body.drafting .head { display: none; }
       <p style="margin:0">Send this link to the friend you want to draft against. The draft starts the moment they join. ${g.host_first ? "You pick first." : "They pick first."}</p>
       <input class="lobby-link" readonly value="${esc(url)}" aria-label="Draft link">
       <div class="go-row"><button class="btn gold big" type="button" id="lbShare">Send the link ${em("📣")}</button><button class="btn" type="button" id="lbCopy">Copy link ${em("🔗")}</button></div>
-      <div class="set-row" id="lbFr" hidden><div class="set-lbl">Or challenge a friend on Last Four In</div><div class="friend-pick" id="lbFrList"></div></div>
+      <div class="set-row" id="lbFr" hidden><div class="set-lbl">Or challenge a friend on bubble</div><div class="friend-pick" id="lbFrList"></div></div>
       <div class="go-row"><span class="pool-count">${em("⏳")} Waiting for your friend… this page updates by itself.</span><button class="btn" type="button" id="lbCancel">Call it off</button></div>`,
       "Draft room", "Waiting");
     const sk = (g.settings.setup || {}).kind;
-    const text = sk === "jerseys" ? `👕 Jersey draft against me on Last Four In: ${g.settings.title}.` : sk === "coaches" ? `🧢 Draft head coaches against me on Last Four In: ${g.settings.title}.`
-      : `📋 Draft ${g.settings.title.replace(/^Every/, "every").replace(/^All-time/, "the all-time")} against me on Last Four In.`;
+    const text = sk === "jerseys" ? `👕 Jersey draft against me on PlayBubble: ${g.settings.title}.` : sk === "coaches" ? `🧢 Draft head coaches against me on PlayBubble: ${g.settings.title}.`
+      : `📋 Draft ${g.settings.title.replace(/^Every/, "every").replace(/^All-time/, "the all-time")} against me on PlayBubble.`;
     $("lbShare").onclick = () => LFI.games.shareLink(url, text);
     $("lbCopy").onclick = async () => toast((await LFI.copyText(url)) ? "🔗 Link copied" : "Couldn't copy the link here");
     $("lbCancel").onclick = async () => { try { await LFI.games.leave(g.id); } catch (err) {} history.replaceState(null, "", setupQuery()); toSetup(); };

@@ -3,13 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pin Drop · Last Four In</title>
+<title>Pin Drop · PlayBubble</title>
 <meta name="description" content="Five football places a day. Drop a pin on the map: the closer you land, the more you score.">
-<meta property="og:title" content="Pin Drop · Last Four In">
+<meta property="og:title" content="Pin Drop · PlayBubble">
+<meta property="og:image" content="https://lastfourin.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:description" content="Stadiums, Super Bowls, college towns and hometowns. Drop a pin, see how many miles off you were.">
 <meta property="og:url" content="https://lastfourin.com/trivia/pindrop.html">
 <meta name="theme-color" content="#0d0820">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Crect width='34' height='34' rx='8' fill='%230d0820'/%3E%3Cpath d='M5 9h7v16H5M12 17h5' fill='none' stroke='%23fff' stroke-width='3.6'/%3E%3Ccircle cx='23.5' cy='17' r='6.8' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
@@ -52,8 +55,8 @@
 .gpin { position: relative; width: 0; height: 0; pointer-events: none; }
 .gpin i { position: absolute; left: -12px; bottom: 0; width: 24px; height: 32px; transform-origin: 50% 100%; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .6)); background: no-repeat center / contain; }
 .gpin b { position: absolute; left: -5px; top: -2px; width: 10px; height: 4px; border-radius: 50%; background: rgba(0, 0, 0, .55); }
-.gpin.guess i { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 32'%3E%3Cpath d='M12 31C10.6 26.5 1.5 19.5 1.5 12a10.5 10.5 0 0 1 21 0c0 7.5-9.1 14.5-10.5 19z' fill='%23ff3dbb' stroke='%2314001f' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='12' r='4' fill='%2314001f'/%3E%3C/svg%3E"); }
-.gpin.truth i { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 32'%3E%3Cpath d='M12 31C10.6 26.5 1.5 19.5 1.5 12a10.5 10.5 0 0 1 21 0c0 7.5-9.1 14.5-10.5 19z' fill='%23ffffff' stroke='%230d0820' stroke-width='1.5'/%3E%3Cpath d='M12 6.5l1.7 3.6 3.9.5-2.9 2.7.8 3.9-3.5-2-3.5 2 .8-3.9-2.9-2.7 3.9-.5z' fill='%23ff3dbb'/%3E%3C/svg%3E"); }
+.gpin.guess i { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 32'%3E%3Cpath d='M12 31C10.6 26.5 1.5 19.5 1.5 12a10.5 10.5 0 0 1 21 0c0 7.5-9.1 14.5-10.5 19z' fill='%23b794ff' stroke='%2314001f' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='12' r='4' fill='%2314001f'/%3E%3C/svg%3E"); }
+.gpin.truth i { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 32'%3E%3Cpath d='M12 31C10.6 26.5 1.5 19.5 1.5 12a10.5 10.5 0 0 1 21 0c0 7.5-9.1 14.5-10.5 19z' fill='%23ffffff' stroke='%230d0820' stroke-width='1.5'/%3E%3Cpath d='M12 6.5l1.7 3.6 3.9.5-2.9 2.7.8 3.9-3.5-2-3.5 2 .8-3.9-2.9-2.7 3.9-.5z' fill='%23b794ff'/%3E%3C/svg%3E"); }
 .gpin.tap i { animation: pinTap .28s cubic-bezier(.3, 1.5, .5, 1) both; }
 .gpin.drop i { animation: pinDrop .6s cubic-bezier(.25, 1.45, .5, 1) both; }
 .gpin.drop b { animation: pinShadow .6s ease-out both; }
@@ -261,7 +264,7 @@
       .htmlElementsData([]).htmlLat("lat").htmlLng("lng").htmlAltitude(0).htmlElement("el").htmlTransitionDuration(0)
       .pathsData([]).pathPoints("pts").pathPointLat((p) => p[1]).pathPointLng((p) => p[0]).pathPointAlt(0.0012)
       .pathColor(() => "rgba(255,255,255,.42)").pathTransitionDuration(0)
-      .arcsData([]).arcColor(() => ["#ff3dbb", "#ffffff"]).arcStroke("w").arcAltitudeAutoScale(0.45)
+      .arcsData([]).arcColor(() => ["#b794ff", "#ffffff"]).arcStroke("w").arcAltitudeAutoScale(0.45)
       .arcDashLength(0).arcDashGap(4).arcDashInitialGap(0).arcDashAnimateTime(0).arcsTransitionDuration(0)
       .ringsData([]).ringColor(() => (t) => `rgba(255,255,255,${(0.9 * (1 - t)).toFixed(3)})`).ringMaxRadius("r")
       .ringPropagationSpeed("v").ringRepeatPeriod(800).ringAltitude(0.0015);
@@ -566,7 +569,7 @@
   const gridOf = (d) => d.g.map((g) => EMOJI[tier(g.m)]).join("");
   function shareText() {
     const d = mine(), s = streaks();
-    return `📍 Last Four In · Pin Drop #${setNo}\n${gridOf(d)} ${fmt(total(d))}/5,000${s.cur > 1 ? `\n🔥 ${s.cur}-day streak` : ""}`;
+    return `📍 PlayBubble · Pin Drop #${setNo}\n${gridOf(d)} ${fmt(total(d))}/5,000${s.cur > 1 ? `\n🔥 ${s.cur}-day streak` : ""}`;
   }
 
   function countdown() {

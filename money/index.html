@@ -3,14 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>The $1,000 Challenge · Last Four In</title>
+<title>The $1,000 Challenge · PlayBubble</title>
 <meta name="description" content="Start every week with $1,000 in pretend money, bet it on real games and see how high you can run it. Resets every Tuesday. Free, no real money, no prize: bragging rights only.">
-<meta property="og:title" content="The $1,000 Challenge · Last Four In">
+<meta property="og:title" content="The $1,000 Challenge · PlayBubble">
+<meta property="og:image" content="https://lastfourin.com/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:description" content="$1,000 in pretend money every week, real games, real lines. How high can you get? Free to play, bragging rights only.">
 <meta property="og:url" content="https://lastfourin.com/money/">
-<meta property="og:site_name" content="Last Four In">
+<meta property="og:site_name" content="PlayBubble">
 <meta name="theme-color" content="#0d0820">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Crect width='34' height='34' rx='8' fill='%230d0820'/%3E%3Cpath d='M5 9h7v16H5M12 17h5' fill='none' stroke='%23fff' stroke-width='3.6'/%3E%3Ccircle cx='23.5' cy='17' r='6.8' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
@@ -543,7 +546,7 @@
   $("bank").addEventListener("click", async (e) => {
     if (e.target.id === "shareBtn") {
       const s = me.stand, url = `${location.origin}/money/`;
-      const text = `I'm at ${M.cash(+s.bankroll)} this week in the $1,000 Challenge on Last Four In${me.rank ? ` (${ord(me.rank)} of ${me.players})` : ""}. Pretend money, real games. Think you can beat me?`;
+      const text = `I'm at ${M.cash(+s.bankroll)} this week in the $1,000 Challenge on PlayBubble${me.rank ? ` (${ord(me.rank)} of ${me.players})` : ""}. Pretend money, real games. Think you can beat me?`;
       if (navigator.share) { try { await navigator.share({ title: "The $1,000 Challenge", text, url }); return; } catch (err) { if (err.name === "AbortError") return; } }
       toast((await copyText(`${text} ${url}`)) ? "Copied. Paste it to your friends." : "Couldn't copy the link");
     }

@@ -71,7 +71,7 @@
     // Share a game link: the phone's share sheet where there is one, else copy.
     async shareLink(url, text) {
       if (navigator.share) {
-        try { await navigator.share({ title: "Last Four In", text, url }); return; } catch (err) { if (err && err.name === "AbortError") return; }
+        try { await navigator.share({ title: "PlayBubble", text, url }); return; } catch (err) { if (err && err.name === "AbortError") return; }
       }
       LFI.toast((await LFI.copyText(url)) ? "Link copied. Send it to your friend." : "Couldn't copy. Long-press the link to share.");
     },
