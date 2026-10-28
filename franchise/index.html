@@ -570,6 +570,25 @@
   }
 
   // ---- Draft room (Redraft and rookie draft share it) ----
+  // Sim any time: solo, the AI drafts the rest of your picks and the draft runs to the end. In a friends league each
+  // owner can hand their own picks to the AI, and the creator can sim the whole draft (every owner's picks).
+  const draftLeft = () => (ML ? E.humansOf(lg) : []).filter((t) => !(lg.draft.autoT && lg.draft.autoT[t]));
+  function simBtns() {
+    if (!ML) return `<button class="btn gold" id="finBtn">Sim the rest of the draft</button>`;
+    const left = draftLeft(), mineOn = left.includes(ML.me), others = left.filter((t) => t !== ML.me);
+    return `<button class="btn${mineOn ? " gold" : ""}" id="finBtn" ${mineOn ? "" : "disabled"}>${mineOn ? "Sim my picks" : "The AI is drafting for you"}</button>`
+      + (ML.info.owner && others.length ? `<button class="btn" id="simAllBtn">Sim the whole draft</button>` : "");
+  }
+  async function simWholeDraft() {
+    // One owner at a time; a friend's move landing meanwhile reloads the league (a new ML), so re-read what's left.
+    for (let i = 0; i < 8 && ML && lg && lg.draft; i++) {
+      const left = draftLeft(); if (!left.length) break;
+      if (!(await mlSend({ t: "finish", team: left[0] }))) break;
+    }
+    if (ML && lg && !live) render();
+  }
+
+  // ---- Draft room ----
   function draftRoom(kick, title) {
     const d = lg.draft, rookie = d.kind === "rookie";
     const round = Math.floor(d.n / 32) + 1, inRound = (d.n % 32) + 1;
@@ -588,7 +607,7 @@
     const minePicks = d.picks.filter(([tm]) => tm === lg.user).map(([, id]) => lg.players[id]);
     $("body").innerHTML = `
       <div class="clock"><div><small>Round ${round} of ${d.rounds} · pick ${inRound} · ${ord(d.n + 1)} overall</small><div class="disp">${onClock ? "You're on the clock" : ML ? `On the clock: ${esc(whoName(who))}` : "Waiting"}</div>${ML ? `<small id="mlClock"></small>${ownersBar()}` : ""}</div>
-        <div class="actbar" style="margin:0"><button class="btn" id="autoBtn" ${ML && !onClock ? "disabled" : ""}>Auto-pick this one</button><button class="btn" id="finBtn">${rookie ? "Let the AI finish" : "AI finishes my draft"}</button></div></div>
+        <div class="actbar" style="margin:0"><button class="btn" id="autoBtn" ${ML && !onClock ? "disabled" : ""}>Auto-pick this one</button>${simBtns()}</div></div>
       <div class="grid2"><div class="stack">
         <section class="card"><div class="card-b" style="padding-bottom:12px">
           <div class="needs">${needs}</div>
@@ -612,8 +631,13 @@
       else if (b.dataset.sort) { boardSort = b.dataset.sort; render(); }
       else if (b.id === "moreBtn") { showN += 80; render(); }
       else if (b.id === "autoBtn") move({ t: "auto" });
-      else if (b.id === "finBtn" && ML) { if (b.dataset.sure) { b.disabled = true; move({ t: "finish" }); } else { b.dataset.sure = "1"; b.textContent = "Tap again: AI drafts for me"; b.classList.add("gold"); } }
-      else if (b.id === "finBtn") { if (confirm(rookie ? "Let the AI make the rest of your rookie picks?" : "Let the AI draft the rest of your roster?")) { b.disabled = true; b.textContent = "Drafting…"; setTimeout(() => move({ t: "finish" }), 20); } }
+      // Sim buttons ask on the page (tap twice) rather than with confirm(), which some browsers and in-app views block.
+      else if (b.id === "finBtn" || b.id === "simAllBtn") {
+        if (!b.dataset.sure) { const was = b.textContent; b.dataset.sure = "1"; b.textContent = "Tap again to sim"; setTimeout(() => { if (b.isConnected && !b.disabled) { delete b.dataset.sure; b.textContent = was; } }, 4000); return; }
+        b.disabled = true; b.textContent = "Drafting…";
+        if (b.id === "finBtn") setTimeout(() => move({ t: "finish" }), 20);
+        else simWholeDraft();
+      }
     };
     const qi = $("q");
     qi.oninput = () => { q = qi.value; showN = 60; const pos = qi.selectionStart; render(); const n = $("q"); n.focus(); n.setSelectionRange(pos, pos); };
