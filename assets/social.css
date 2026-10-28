@@ -29,7 +29,8 @@
 .err { color: var(--loss); font-size: 14px; font-weight: 600; min-height: 1em; margin: 0 0 10px; }
 .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; margin: 16px 0; }
 .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
-.btn.google { background: var(--card); border-color: var(--line-2); gap: 10px; min-height: 50px; font-size: 16px; width: 100%; }
+/* White with dark text in both modes, like Google's own button (colours come from lfi.css). */
+.btn.google { gap: 10px; min-height: 50px; font-size: 16px; width: 100%; }
 .btn.google svg { width: 20px; height: 20px; }
 .auth-card { max-width: 440px; margin: 0 auto; }
 .handle-prefix { position: relative; }

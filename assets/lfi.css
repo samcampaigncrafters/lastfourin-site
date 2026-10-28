@@ -7,7 +7,7 @@
   --brand-2: #1a1140;        /* lighter step of the brand surface */
   --brand-rgb: 13, 8, 32;   /* same colour as numbers, for shadows and overlays */
   --on-brand: #ffffff;       /* main text on the brand surface */
-  --on-brand-2: #bdb3e6;     /* quiet text on the brand surface */
+  --on-brand-2: #d0c8f2;     /* quiet text on the brand surface */
   --accent: #ff3dbb;         /* the one loud brand colour: logo chip, main buttons, highlights */
   --accent-ink: #14001f;     /* text on the accent */
   --accent-soft: rgba(255, 61, 187, .12);    /* pale accent wash on white */
@@ -20,8 +20,8 @@
   --line: #2e2163;
   --line-2: #45348c;
   --ink: #ffffff;
-  --ink-2: #d9d1f5;
-  --muted: #a99fd8;
+  --ink-2: #e6e0fa;
+  --muted: #bdb4e6;           /* quiet text; brightened 2026-10-28 (Sam: "hard to see") */
   --win: #d4c2ff;
   --loss: #ff5c7c;
   --f-display: "Anton", "Arial Narrow", "Helvetica Neue", sans-serif;
@@ -58,6 +58,9 @@ button { cursor: pointer; }
 .sg:hover { background: var(--card-2); }
 .sg-top { display: flex; justify-content: space-between; font-size: 10.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .sg-top .live { color: var(--loss); }
+/* One line only: a long network name ("SEC Network") used to wrap and push the teams out of view */
+.sg-top { white-space: nowrap; gap: 6px; }
+.sg-top > span:last-child { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .sg-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; font-family: var(--f-display); font-weight: 700; font-size: 15px; line-height: 1.15; }
 .sg-row > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sg-row .nk { font-family: var(--f-body); font-weight: 600; font-size: 11px; color: var(--muted); }
@@ -200,7 +203,7 @@ span.tmk > small { margin-top: 3px; font-size: var(--tmk-nick, 11px); font-weigh
 .nav-r .avatar { font-size: 15px; }
 .btn.big { font-family: var(--f-display); font-weight: var(--disp-weight); font-style: var(--disp-style); text-transform: uppercase; font-size: 22px; letter-spacing: .02em; padding: 16px 26px; border-radius: 8px; }
 .btn.block { width: 100%; }
-.btn:disabled { opacity: .45; cursor: default; filter: none; }
+.btn:disabled { opacity: .6; cursor: default; filter: none; }
 .lnk { color: var(--link); font-weight: 700; text-decoration: none; }
 .lnk:hover { text-decoration: underline; }
 .muted { color: var(--muted); }
@@ -584,6 +587,9 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 :root { --navy: var(--field); --navy-2: var(--field-deep); }
 .opt.ok .k { color: #14001f; }
 
+/* Body text one step heavier so it reads on both themes (Sam, 2026-10-28: "a lot of the fonts are hard to see") */
+body { font-weight: 500; }
+
 /* Phones: no score ticker (Sam: "a waste of space, everybody already knows the score") */
 @media (max-width: 820px) { .strip { display: none; } }
 /* --brand is the dark page colour in the purple look, so text that used it needs white */
@@ -607,14 +613,14 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   --line: #e2dbf3;
   --line-2: #c9bdea;
   --ink: #150a33;
-  --ink-2: #3b2f66;
-  --muted: #675c93;
-  --quiet: #5a4f86;
-  --accent: #e11d8f;
-  --accent-deep: #c4127f;
+  --ink-2: #2e2457;
+  --muted: #51467e;
+  --quiet: #4a3f78;
+  --accent: #cc0f80;
+  --accent-deep: #b00d72;
   --accent-soft: rgba(225, 29, 143, .08);
   --accent-line: rgba(225, 29, 143, .35);
-  --link: #c4127f;
+  --link: #b00d72;
   --win: #5b17ff;
   --loss: #d81b4f;
   --win-soft: rgba(91, 23, 255, .10);

@@ -32,7 +32,8 @@
   // ---- "Create account" pop-up: what a signed-out visitor sees when they reach for something that needs one ----
   // LFI.needAccount(reason, next) is true when the action can go ahead; otherwise it opens the pop-up and is false.
   // Any button or link with data-account="<reason>" gets the same check before its own click handler runs.
-  // Games that work without an account never call it.
+  // Sam, 2026-10-28: every game needs an account. Signed out, any play control on a game page (buttons, fields,
+  // anything clickable outside the nav and pop-ups) opens the pop-up instead; plain links still browse.
   const WHY = {
     picks: ["📋", "Save your picks", "Make a free account to keep your picks on every device, get graded and climb the leaderboard."],
     post: ["📣", "Post it to your profile", "Make a free account to post your picks, keep a record friends can follow and get on the leaderboard."],
@@ -43,6 +44,7 @@
     comment: ["💬", "Join the conversation", "Make a free account to comment on picks and posts."],
     pool: ["👥", "Start a pool", "Make a free account to start a private pool with your friends. Your normal picks count."],
     money: ["💰", "Get your $1,000", "Make a free account to get your $1,000 for the week and place bets. Pretend money, no prize."],
+    play: ["🎮", "Make your free account to play", "Every game on Last Four In runs on a free account. It takes 30 seconds, then you're straight back in."],
   };
   const accountReady = () => !on || !!(cloud.profile && cloud.profile.onboarded);
   let pop;
@@ -84,11 +86,48 @@
     accountPop(reason, next);
     return false;
   };
-  document.addEventListener("click", (ev) => {
-    const el = ev.target.closest && ev.target.closest("[data-account]");
-    if (!el || accountReady()) return;
+  // Pages anyone can use signed out; everything else is a game.
+  const OPEN = /^\/(signin|account|terms|privacy|mod|404)(\/|\.html|$)/;
+  const PAGE_WHY = [[/^\/(pickem|college|nba|nhl|mlb|ncaab|pools)\//, "picks"], [/^\/money\//, "money"], [/^\/(bracket|ap-poll)\//, "contest"],
+                    [/^\/(friends|challenges)\//, "friends"]];
+  const CHROME = "header, footer, .nav, .nav-leagues, .mmenu, .dd-panel, .ov, .toast, [data-free]";
+  const PLAY = "button, input, select, textarea, label, summary, [role=button], [tabindex], [contenteditable], [draggable=true]";
+  // Before the account check finishes, a saved session in this browser counts as signed in, so nobody signed in gets nagged.
+  const SESSION = `sb-${(SUPABASE_URL.match(/\/\/([^.]+)/) || [])[1]}-auth-token`;
+  const signedOut = () => {
+    if (!on) return false;
+    if (cloud.ready.done) return !accountReady(); // includes signed in without a handle yet
+    try { return !localStorage.getItem(SESSION); } catch (e) { return true; }
+  };
+  function walled(t) {
+    if (!t || !t.closest || OPEN.test(location.pathname) || t.closest(CHROME)) return null;
+    const a = t.closest("a[href]");
+    if (a && !a.matches("[data-account]")) return null; // links still browse
+    const el = t.closest(PLAY);
+    if (el) return el;
+    for (let e = t, i = 0; e && e !== document.body && i < 6; e = e.parentElement, i++) if (getComputedStyle(e).cursor === "pointer") return e;
+    return null;
+  }
+  const why = () => (PAGE_WHY.find(([re]) => re.test(location.pathname)) || [])[1] || "play";
+  function stop(ev, el) {
     ev.preventDefault(); ev.stopImmediatePropagation();
-    LFI.needAccount(el.dataset.account, el.dataset.next);
+    if (document.activeElement && document.activeElement !== document.body && !document.activeElement.closest(CHROME)) document.activeElement.blur();
+    if (ev.type !== "click") { if (!pop || pop.hidden) accountPop(el.dataset.account || why(), el.dataset.next); return; }
+    LFI.needAccount(el.dataset.account || why(), el.dataset.next);
+  }
+  document.addEventListener("click", (ev) => {
+    if (!signedOut()) return;
+    const el = (ev.target.closest && ev.target.closest("[data-account]")) || walled(ev.target);
+    if (el) stop(ev, el);
+  }, true);
+  // Fields and drop-downs react before a click (focus, opening the list, dragging), so catch those too.
+  document.addEventListener("pointerdown", (ev) => {
+    const el = signedOut() && walled(ev.target);
+    if (el && (el.matches("input, select, textarea, [contenteditable], [draggable=true]") || el.closest("[draggable=true]"))) stop(ev, el);
+  }, true);
+  document.addEventListener("focusin", (ev) => {
+    const el = signedOut() && walled(ev.target);
+    if (el && el.matches("input, select, textarea, [contenteditable]")) stop(ev, el);
   }, true);
 
   if (!on) { markReady(); return; }
