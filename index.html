@@ -160,7 +160,7 @@ main.home { padding-bottom: 64px; }
 </section>
 
 <main class="hin home">
-  <div class="sec"><small>Free, every week</small><h2 class="disp">Everything on Last Four In</h2></div>
+  <div class="sec"><small>Free, every week</small><h2 class="disp" id="secH">Everything on Last Four In</h2></div>
   <div class="tgrid" id="tiles"></div>
 
   <section class="wk">
@@ -331,7 +331,20 @@ main.home { padding-bottom: 64px; }
       [...g.children].forEach((el, i) => el.style.setProperty("--i", i)); g.classList.add("swap");
     }
   }
-  $("lgTabs").addEventListener("click", (e) => { const b = e.target.closest("button[data-lg]"); if (b && b.dataset.lg !== league) { league = b.dataset.lg; renderTiles(true); } });
+  $("lgTabs").addEventListener("click", (e) => { const b = e.target.closest("button[data-lg]"); if (b && b.dataset.lg !== league) { league = b.dataset.lg; renderTiles(true); showCarousel(league === "all"); $("secH").textContent = league === "all" ? "Everything on Last Four In" : `${(LEAGUES.find(([k]) => k === league) || [])[1]} on Last Four In`; } });
+  // Sam: the carousel is for the All view only; a league tab folds it away so that league's tiles sit right up top.
+  function showCarousel(on) {
+    const c = $("car");
+    if (on === !c.hidden) return;
+    const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (on) c.hidden = false;
+    const h = c.offsetHeight;
+    if (calm || !c.animate) { c.hidden = !on; return; }
+    c.style.overflow = "hidden";
+    const a = c.animate(on ? [{ height: "0px", opacity: 0 }, { height: h + "px", opacity: 1 }] : [{ height: h + "px", opacity: 1 }, { height: "0px", opacity: 0 }],
+      { duration: 340, easing: "cubic-bezier(.22,.9,.24,1)" });
+    a.onfinish = () => { c.style.overflow = ""; if (!on) c.hidden = true; };
+  }
   renderTiles();
 
   // AP tile status: open until the first ranked kickoff after the latest poll, then locked until the next poll.
