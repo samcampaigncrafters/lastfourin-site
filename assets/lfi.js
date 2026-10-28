@@ -35,6 +35,7 @@
       ["jerseys", "/drafts/?kind=jerseys", "Jersey Draft", "Best player to wear each number"],
       ["coaches", "/drafts/?kind=coaches", "Coaches' Draft", "Draft head coaches by wins"],
       ["redraft", "/drafts/classes.html", "Draft Classes", "Mock or redraft any class since 1999"],
+      ["league", "/redraft/", "League Redraft", "Redraft every NFL player into 32 new teams"],
     ] },
     { key: "fantasy", label: "Fantasy", href: "/fantasy/", sub: "Fantasy football tools" },
     { key: "l4picks", label: "L4 Picks AI", href: "/l4picks/", sub: "AI picks with the stats behind them" },
@@ -46,6 +47,7 @@
       ["jerseys", "/drafts/?kind=jerseys", "Jersey Draft", "Best player to wear each number"],
       ["coaches", "/drafts/?kind=coaches", "Coaches' Draft", "Draft head coaches by wins"],
       ["redraft", "/drafts/classes.html", "Draft Classes", "Mock or redraft any class since 1999"],
+      ["league", "/redraft/", "League Redraft", "Redraft every NFL player into 32 new teams"],
       ["money", "/money/", "$1,000 Challenge", "Pretend money on real games"],
     ] },
     { label: "NCAAF", items: [
@@ -63,7 +65,7 @@
   // The desktop main row stays plain: with emojis it no longer fits beside Sign in at 1280px.
   const EMO = { home: "🏠", trivia: "🧠", names: "📝", pindrop: "📍", grid: "🏁", race: "🏃", challenges: "⚔️",
     nfl: "🏈", cfb: "🏈", nba: "🏀", nhl: "🏒", cbb: "🏀", mlb: "⚾", pools: "👥", ap: "🗳️", bracket: "🏆", voters: "🕵️",
-    drafts: "📋", jerseys: "👕", coaches: "🧢", redraft: "🎓", franchise: "🏟️", fantasy: "📊", l4picks: "🤖",
+    drafts: "📋", jerseys: "👕", coaches: "🧢", redraft: "🎓", league: "🔁", franchise: "🏟️", fantasy: "📊", l4picks: "🤖",
     Trivia: "🧠", "Pick'em": "🎯", Multiplayer: "⚔️", Drafts: "📋", NFL: "🏈", NCAAF: "🏈", NBA: "🏀", NHL: "🏒", NCAAB: "🏀", MLB: "⚾" };
   const em = (k) => EMO[k] ? `<span class="em" aria-hidden="true">${EMO[k]}</span> ` : "";
   const CARET = '<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 4l4 4 4-4"/></svg>';
