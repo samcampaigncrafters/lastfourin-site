@@ -5,11 +5,11 @@
 <link rel="canonical" href="https://playbubble.app/l4picks/">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Bubble AI · PlayBubble</title>
-<meta name="description" content="Bubble AI makes its own line on every NFL game: a spread, total and moneyline lean with a confidence level and the reason. Free, for fun, not betting advice.">
+<meta name="description" content="NFL matchup analysis, projected scores and market comparisons from Bubble AI. Explore the numbers behind each game and make your own call. For fun, not betting advice.">
 <meta property="og:title" content="Bubble AI · PlayBubble">
 <meta property="og:image" content="https://playbubble.app/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta property="og:description" content="Our model's lean on every NFL game this week: spread, total and moneyline. For fun, not betting advice.">
+<meta property="og:description" content="NFL matchup analysis, projected scores and market comparisons. Explore the numbers behind each game and make your own call. For fun, not betting advice.">
 <meta property="og:url" content="https://playbubble.app/l4picks/">
 <meta property="og:site_name" content="PlayBubble">
 <meta name="theme-color" content="#0d0820">
@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/assets/lfi.css">
+<link rel="stylesheet" href="/l4picks/live-board.css">
 <script src="/assets/theme.js"></script>
 <style>
 .fun { display: flex; gap: 12px; align-items: flex-start; background: var(--card); border: 1px solid var(--accent-line); border-left: 4px solid var(--accent); border-radius: 12px; padding: 12px 14px; margin: 0 0 20px; font-size: 14px; color: var(--ink-2); }
@@ -30,7 +31,7 @@
 .bar-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin: 4px 0 12px; }
 .bar-row h2 { font-size: 30px; margin: 0; }
 
-/* Best Bets of the Day: the most likely hits on one game day, game picks and player props, on the purple field */
+/* Biggest Disagreements: where our line is furthest from the market on one game day, on the purple field */
 .days { margin-bottom: 14px; flex-wrap: wrap; }
 .top .t-pct { display: flex; align-items: baseline; gap: 8px; margin: 2px 0 0; }
 .top .t-pct b { font-family: var(--f-display); font-weight: 400; font-size: 44px; line-height: 1; }
@@ -127,7 +128,18 @@
 .steps li { margin-bottom: 6px; }
 .credit { margin-top: 22px; font-size: 12.5px; color: var(--muted); }
 .credit a { color: inherit; }
+#model-testing { margin-top: 14px; scroll-margin-top: 100px; }
+#model-testing summary { cursor: pointer; font-weight: 700; }
 .loading { padding: 40px 0; text-align: center; color: var(--muted); }
+
+/* $1,000 Challenge promo: sends readers of the model's leans to the free pretend-money contest */
+.m1k { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--card); border: 1px solid var(--accent-line); border-left: 4px solid var(--accent); border-radius: 14px; padding: 16px 18px; margin: 0 0 26px; }
+.m1k-ic { font-size: 34px; line-height: 1; }
+.m1k-b { flex: 1; min-width: 220px; }
+.m1k-b h2 { font-size: 24px; margin: 0 0 3px; }
+.m1k-b p { margin: 0; font-size: 14px; color: var(--ink-2); }
+.m1k .btn { flex: none; }
+@media (max-width: 560px) { .m1k .btn { width: 100%; } }
 </style>
 </head>
 <body>
@@ -144,20 +156,28 @@
     <div>
       <div class="kicker">Free · For fun</div>
       <h1 class="disp">Bubble AI</h1>
-      <p>Our model makes its own line on every NFL game, then leans wherever it disagrees with the market: spread, total and moneyline, each with its chance to hit, a confidence level and the reason. Plus player props where our projection beats the line.</p>
+      <p>NFL matchups, projected scores and market lines in one place. Explore the numbers behind each game and make your own call.</p>
     </div>
     <div class="modes" role="group" aria-label="Sort games">
       <button type="button" data-sort="time" aria-pressed="true">By kickoff</button>
-      <button type="button" data-sort="conf" aria-pressed="false">By confidence</button>
+      <button type="button" data-sort="conf" aria-pressed="false">Biggest gap</button>
     </div>
   </div>
 
   <div class="fun" role="note">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 7.5v5.5M12 16.5v.1"/></svg>
-    <div><b>For fun, not betting advice.</b> Bubble AI is a free computer model we built for entertainment. We don't take bets, we don't link to sportsbooks, and nothing here is a tip to wager money. If gambling stops being fun, call or text 1-800-GAMBLER. More in our <a href="/terms/">Terms</a>.</div>
+    <div><b>For fun, not betting advice.</b> Bubble AI is a free computer model built for entertainment. We don't take bets or link to sportsbooks. Read our <a href="#model-testing">model testing and limitations</a>. If gambling stops being fun, call or text 1-800-GAMBLER. More in our <a href="/terms/">Terms</a>.</div>
   </div>
 
+  <section id="live-board" class="live-board" data-free aria-label="Live NFL scores and pregame lines"></section>
+
   <div id="tops"></div>
+
+  <section class="m1k" aria-label="The $1,000 Challenge">
+    <span class="m1k-ic em" aria-hidden="true">💰</span>
+    <div class="m1k-b"><h2 class="disp">Think you can beat Bubble AI?</h2><p>Take $1,000 in pretend money to this week's real games and see how high you can run it. Free, no real money in, no prize out: bragging rights only.</p></div>
+    <a class="btn gold" href="/money/">Play the $1,000 Challenge</a>
+  </section>
 
   <div class="grid2">
     <div>
@@ -183,11 +203,16 @@
           <ol class="steps">
             <li>Every team gets an offense and a defense rating from this season's final scores, adjusted for who they played. Last season counts a little early on and fades out.</li>
             <li>For each game the model projects both scores, adds home field, and docks a team starting a backup quarterback.</li>
-            <li>It compares its line with the market's. Where they disagree it leans one way, and the bigger the gap, the more bars it gets.</li>
-            <li>A very big gap caps the confidence: the market may know about an injury the model can't see.</li>
-            <li>The percent is the model's chance the bet hits: results spread about 13.5 points around its margin and 10 around its total.</li>
-            <li>Player props: each player's projection is 60% his season average and 40% his last three games, nudged for the defense he faces, then weighed against the posted line (the line gets a quarter of the say).</li>
-            <li>Best Bets of the Day lists the picks where the model's chance beats the market's by the most on one game day, leaving out capped gaps, players just back from a missed stretch and touchdown or interception props.</li></ol>
+            <li>It compares its line with the market's and shows the side it leans to. The bars show how far apart they are, not how likely the lean is to hit.</li>
+            <li>A very big gap usually means the market knows something the model can't see, like an injury.</li>
+            <li>The moneyline chance shown first is the market's own, with the house cut removed. The model's estimate is shown beside it for comparison. The testing notes below explain the difference.</li>
+            <li>Player props: each player's projection is 60% his season average and 40% his last three games, nudged for the defense he faces, shown next to the posted line. Prop picks have not been tested against real lines (no free history exists), so treat them as a talking point.</li>
+            <li>Biggest Disagreements lists the games on one day where our line and the market's are furthest apart, leaving out gaps so big the line likely knows something.</li></ol>
+          <details id="model-testing" data-free>
+            <summary>Model testing and limitations</summary>
+            <p>Our backtest covered graded regular-season games from 2018 through Week 7 of 2026: 2,176 spread picks hit 49.7%, and 2,214 total picks hit 48.2%. Both were below the 52.4% break-even rate at -110; bigger gaps performed worse. This test found no winning edge, so spread and total leans are not presented as calibrated cover probabilities. The market's moneyline chance was better calibrated than the model's in this test.</p>
+            <p>Historical lines were approximately closing lines, while this page compares current lines. The backtest used prior-game data; its quarterback adjustment used the actual starter, which may not always have been known before kickoff. These results describe the existing score-based model, not a future replacement.</p>
+          </details>
         </div>
       </section>
     </aside>
@@ -197,6 +222,8 @@
 <footer class="foot"></footer>
 
 <script src="/assets/lfi.js"></script>
+<script src="/l4picks/live-board.js"></script>
+<script>BubbleLiveBoard.mount(document.getElementById('live-board'));</script>
 <script>
 (function () {
   const { $, esc, thisWeek, teamMark, fmtShort, stripHTML } = LFI;
@@ -253,8 +280,8 @@
     return { hp, ap, margin, total: hp + ap, pHome: cdf(margin / M.sd), notes, neutral };
   }
 
-  const CONF = ["", "Lean", "Lean", "Solid", "Strong", "Best"];
-  const bars = (c) => `<span class="conf" aria-label="Confidence ${c} of 5">${[1, 2, 3, 4, 5].map((i) => `<i${i <= c ? ' class="on"' : ""}></i>`).join("")}<span>${CONF[c]}</span></span>`;
+  const CONF = ["", "Small", "Small", "Medium", "Big", "Biggest"];
+  const bars = (c) => `<span class="conf" aria-label="Gap from the market ${c} of 5">${[1, 2, 3, 4, 5].map((i) => `<i${i <= c ? ' class="on"' : ""}></i>`).join("")}<span>${CONF[c]}</span></span>`;
   // Points of disagreement to confidence. Past the cap the market likely knows something the model doesn't.
   const level = (edge, steps, cap) => Math.min(edge > cap ? 3 : 5, 1 + steps.filter((s) => edge >= s).length);
 
@@ -265,19 +292,19 @@
       const mkt = -mk.spread, edge = Math.abs(p.margin - mkt), ha = p.margin > mkt ? "home" : "away";
       const line = ha === "home" ? mk.spread : -mk.spread;
       L.spread = { side: ha, label: `${name(ha)} ${line === 0 ? "PK" : sgn(line)}`, edge, conf: level(edge, [1.5, 3, 4.5, 6], 8), line,
-                   p: cdf(edge / M.sd), what: "to cover", capped: edge > 8 };
+                   p: .5, what: "Model lean", capped: edge > 8 };
     }
     if (mk && mk.total != null) {
       const edge = Math.abs(p.total - mk.total), over = p.total > mk.total;
       L.total = { over, label: `${over ? "Over" : "Under"} ${f1(mk.total)}`, edge, conf: level(edge, [2, 3.5, 5, 6.5], 9),
-                  p: cdf(edge / (M.sdTotal || 10)), what: over ? "to go over" : "to stay under", capped: edge > 9 };
+                  p: .5, what: "Model lean", capped: edge > 9 };
     }
     if (mk && mk.hML != null && mk.aML != null) {
       const qh = implied(mk.hML), qa = implied(mk.aML), fair = qh / (qh + qa);   // the market's chance, house cut removed
       const eh = p.pHome - fair, ha = eh >= 0 ? "home" : "away", edge = Math.abs(eh);
       L.ml = { side: ha, label: `${name(ha)} ${ml(ha === "home" ? mk.hML : mk.aML)}`, edge, conf: level(edge * 100, [4, 8, 12, 16], 22),
                model: ha === "home" ? p.pHome : 1 - p.pHome, fair: ha === "home" ? fair : 1 - fair, what: "to win", capped: edge > .22 };
-      L.ml.p = L.ml.model;
+      L.ml.p = L.ml.fair;
     }
     return L;
   }
@@ -313,7 +340,7 @@
     s.push(why.slice(0, 2).join(", and ") + ".");
     const out = s.map((x) => x.charAt(0).toUpperCase() + x.slice(1)).join(" ");
     const big = (L.spread && L.spread.edge > 8) || (L.total && L.total.edge > 9);
-    return { text: out, warn: big ? "Big gap from the market, so confidence is capped. Check the injury report: the line may know something the model can't." : "",
+    return { text: out, warn: big ? "Big gap from the market. In our tests the line was usually right in games like this: it may know about an injury the model can't see." : "",
              qbs: p.notes.filter((n) => !n.hit).map((n) => n.text) };
   }
 
@@ -332,16 +359,16 @@
     const div = M.week && M.week[g.id] && M.week[g.id].div;
     const proj = p ? `Bubble AI projects <b>${esc(g.away.abbr)} ${Math.round(p.ap)}</b>, <b>${esc(g.home.abbr)} ${Math.round(p.hp)}</b> · ${esc(g[p.margin >= 0 ? "home" : "away"].abbr)} wins ${pct(Math.max(p.pHome, 1 - p.pHome))} of the time` : "";
     const row = (kind, lbl, ln, l) => `<tr><td class="lbl">${lbl}</td><td class="ln">${ln}</td>
-      <td class="le">${l ? `<span class="lean${l.conf <= 2 ? " weak" : ""}">${esc(l.label)}</span>${grade(g, kind, l, mk)}<span class="chance">${pct(l.p)} ${l.what}</span>` : `<span class="muted">No line yet</span>`}</td>
+      <td class="le">${l ? `<span class="lean${l.conf <= 2 ? " weak" : ""}">${esc(l.label)}</span>${grade(g, kind, l, mk)}<span class="chance">${kind === "ml" ? `${pct(l.fair)} to win` : l.what}</span>` : `<span class="muted">No line yet</span>`}</td>
       <td class="cf">${l ? bars(l.conf) : ""}</td></tr>`;
     const spreadLn = mk && mk.spread != null ? `${esc(g.home.abbr)} ${mk.spread === 0 ? "PK" : sgn(mk.spread)}<small>Bubble AI line: ${esc(g.home.abbr)} ${sgn(-p.margin)}</small>` : `<small>Bubble AI line: ${esc(g.home.abbr)} ${sgn(-p.margin)}</small>`;
     const totalLn = mk && mk.total != null ? `O/U ${f1(mk.total)}<small>Bubble AI total: ${f1(p.total)}</small>` : `<small>Bubble AI total: ${f1(p.total)}</small>`;
-    const mlLn = mk && mk.hML != null ? `${esc(g.away.abbr)} ${ml(mk.aML)} · ${esc(g.home.abbr)} ${ml(mk.hML)}<small>Bubble AI win chance: ${esc(g[L.ml.side].abbr)} ${pct(L.ml.model)} (market ${pct(L.ml.fair)})</small>` : `<small>Bubble AI win chance: ${esc(g.home.abbr)} ${pct(p.pHome)}</small>`;
+    const mlLn = mk && mk.hML != null ? `${esc(g.away.abbr)} ${ml(mk.aML)} · ${esc(g.home.abbr)} ${ml(mk.hML)}<small>Win: ${esc(g[L.ml.side].abbr)} ${pct(L.ml.fair)} market · ${pct(L.ml.model)} Bubble AI</small>` : `<small>Bubble AI win chance: ${esc(g.home.abbr)} ${pct(p.pHome)}</small>`;
     return `<article class="gm" id="g${g.id}">
       <div class="gm-top"><span>${top}</span><span>${div ? '<span class="tag">Division</span> · ' : ""}${esc(g.tv)}</span></div>
       <div class="gm-teams">${teamSide(g, "away")}<div class="gm-at">@</div>${teamSide(g, "home")}</div>
       ${proj ? `<div class="gm-proj">${proj}</div>` : ""}
-      ${p ? `<table class="mk"><thead><tr><th>Bet</th><th>Market</th><th>Bubble AI lean</th><th>Confidence</th></tr></thead><tbody>
+      ${p ? `<table class="mk"><thead><tr><th>Bet</th><th>Market</th><th>Bubble AI lean</th><th>Gap</th></tr></thead><tbody>
         ${row("spread", "Spread", spreadLn, L.spread)}${row("total", "Total", totalLn, L.total)}${row("ml", "Moneyline", mlLn, L.ml)}
       </tbody></table>
       ${propsBlock(x)}
@@ -391,19 +418,19 @@
 
   const fmtStat = (k, v) => (COUNT[k] || k === "rec" ? f1(v) : String(Math.round(v)));
   function propWhy(l) {
-    const pl = l.pl, last = pl.miss ? ` Back after missing ${pl.miss} game${pl.miss > 1 ? "s" : ""}, so he's left out of Best Bets.` : "";
+    const pl = l.pl, last = pl.miss ? ` Back after missing ${pl.miss} game${pl.miss > 1 ? "s" : ""}.` : "";
     return `Bubble AI projects ${fmtStat(l.k, l.proj)} vs a line of ${f1(l.line)}; he averages ${fmtStat(l.k, l.avg)} in ${pl.g} game${pl.g > 1 ? "s" : ""} this season.${last}`;
   }
 
   function propsBlock(x) {
     if (!x.props || !x.props.length) return "";
-    const list = x.props.slice().sort((a, b) => b.p - a.p).slice(0, 6);
-    return `<details class="gm-props"><summary>Player props <small>${x.props.length} lines · best ${pct(list[0].p)}</small></summary><ul class="pp">${list.map((l) => `
+    const list = x.props.slice().sort((a, b) => Math.abs(b.proj - b.line) / Math.max(b.line, 1) - Math.abs(a.proj - a.line) / Math.max(a.line, 1)).slice(0, 6);
+    return `<details class="gm-props"><summary>Player props <small>${x.props.length} lines · projection vs line, untested</small></summary><ul class="pp">${list.map((l) => `
       <li><span class="who"><b>${esc(l.pl.n)}</b> <small>${esc(l.pl.pos)} · ${esc(l.pl.tm)}</small></span><span class="pk">${esc(l.label)}</span>
-      <span class="det"><span class="pc">${pct(l.p)} ${l.what}.</span> ${esc(propWhy(l))}</span></li>`).join("")}</ul></details>`;
+      <span class="det">${esc(propWhy(l))}</span></li>`).join("")}</ul></details>`;
   }
 
-  // ---- Best Bets of the Day ----
+  // ---- Biggest Disagreements (was Best Bets of the Day) ----
   let day = null;
   const dayKey = (d) => d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
   function bestBets() {
@@ -415,35 +442,35 @@
     const KIND = { spread: "Spread", total: "Total", ml: "Moneyline" };
     for (const x of pre) {
       if (dayKey(x.g.kickoff) !== day) continue;
-      for (const [kind, l] of Object.entries(x.L)) if (!l.capped && l.p > .5) all.push({ x, p: l.p, edge: l.p - (kind === "ml" ? l.fair : .5), kind: KIND[kind], pick: l.label, sub: `${pct(l.p)} ${l.what}`, bars: bars(l.conf), why: x.why.text });
-      for (const l of x.props || []) if (l.ok && l.p > .5) all.push({ x, p: l.p, edge: l.p - .5, kind: "Player prop", pick: `${l.pl.n.replace(/ (Jr\.?|Sr\.?|II|III|IV|V)$/, "").split(" ").slice(-1)[0]} ${l.label}`, sub: `${pct(l.p)} ${l.what}`, why: `${l.pl.n} (${l.pl.pos}, ${l.pl.tm}). ${propWhy(l)}` });
+      for (const kind of ["spread", "total"]) {
+        const l = x.L[kind];
+        if (!l || l.capped) continue;
+        const mkt = kind === "spread" ? `Market ${esc(x.g.home.abbr)} ${x.mk.spread === 0 ? "PK" : sgn(x.mk.spread)}, Bubble AI ${sgn(-x.p.margin)}` : `Market ${f1(x.mk.total)}, Bubble AI ${f1(x.p.total)}`;
+        all.push({ x, edge: l.edge, conf: l.conf, kind: KIND[kind], pick: l.label, gap: `${f1(l.edge)} pts`, sub: mkt, bars: bars(l.conf), why: x.why.text });
+      }
     }
-    // Ranked by how far the chance beats the market's own: a coin flip for spreads, totals and props (no prices
-    // on the prop feed), the vig-free implied chance for a moneyline, so heavy favorites don't top the list.
-    all.sort((a, b) => b.edge - a.edge);
-    // Keep game picks in the mix: up to two that beat the market by 4 points of chance or more get a seat.
-    const games = all.filter((o) => o.kind !== "Player prop" && o.edge >= .04).slice(0, 2);
-    const rest = all.filter((o) => !games.includes(o));
-    all.length = 0; all.push(...games, ...rest);
+    // Ranked by how far our line is from the market's. This is NOT a ranking of likely winners: in testing, the
+    // bigger the gap, the more often the market was right.
+    all.sort((a, b) => b.conf - a.conf || b.edge - a.edge);
     const nGames = pre.filter((x) => dayKey(x.g.kickoff) === day).length;
     // At most two from one game (three on a one- or two-game day), so one matchup can't fill the list.
     const cap = nGames <= 2 ? 3 : 2, per = {}, pick = [];
     for (const o of all) { per[o.x.g.id] = (per[o.x.g.id] || 0) + 1; if (per[o.x.g.id] <= cap) pick.push(o); if (pick.length === 6) break; }
-    pick.sort((a, b) => b.edge - a.edge);
+    pick.sort((a, b) => b.conf - a.conf || b.edge - a.edge);
     const tabs = days.length > 1 ? `<div class="modes days" role="group" aria-label="Game day">${days.map((d) => `<button type="button" data-day="${esc(d)}" aria-pressed="${d === day}">${esc(d)}</button>`).join("")}</div>` : "";
-    return `<div class="bar-row"><h2 class="disp">Best Bets of the Day</h2><span class="chip">${esc(day)} · ${nGames} game${nGames > 1 ? "s" : ""}</span></div>${tabs}
+    return `<div class="bar-row"><h2 class="disp">Biggest Disagreements</h2><span class="chip">${esc(day)} · ${nGames} game${nGames > 1 ? "s" : ""}</span></div>${tabs}
       ${pick.length ? `<div class="tops">${pick.map((o, i) => `
       <a class="top" href="#g${o.x.g.id}" style="text-decoration:none">
         <span class="t-rk">${i + 1}</span>
         <div class="t-k">${esc(o.kind)} · ${esc(o.x.g.away.abbr)} @ ${esc(o.x.g.home.abbr)}</div>
         <div class="t-pick">${esc(o.pick)}</div>
-        <div class="t-pct"><b>${pct(o.p)}</b><span>${esc(o.sub.replace(/^\d+% /, ""))}</span></div>
+        <div class="t-pct"><b>${esc(o.gap)}</b><span>${o.sub}</span></div>
         <div class="t-g">${esc(fmtShort(o.x.g.kickoff))}</div>
         ${o.bars || ""}
         <p class="t-why">${esc(o.why)}</p>
       </a>`).join("")}</div>
-      <p class="bb-more">Ranked by how far the model's chance beats the market's. ${propsReady ? "Player props come from lines posted for these games." : "Player prop lines are still loading or not posted yet."} For fun, not betting advice.</p>`
-      : `<p class="bb-more">No picks for this day yet.</p>`}`;
+      <p class="bb-more">Ranked by how far our line is from the market's, not by how likely the lean is to hit. For fun, not betting advice. <a href="#model-testing">Model testing and limitations</a>.</p>`
+      : `<p class="bb-more">No lines posted for this day yet.</p>`}`;
   }
   let propsReady = false;
 
