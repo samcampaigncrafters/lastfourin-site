@@ -62,7 +62,7 @@
         </div>
       </section>
       <section class="card">
-        <div class="card-h"><h2 class="disp">Other days</h2><span class="chip lock">Prototype</span></div>
+        <div class="card-h"><h2 class="disp">Other days</h2></div>
         <div class="card-b"><ul class="days-list" id="daysList"></ul></div>
       </section>
       <p class="credit" id="credit"></p>
@@ -86,10 +86,11 @@
   const etDate = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(d);
   const addDays = (iso, n) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   const pretty = (iso, opts) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", Object.assign({ timeZone: "UTC" }, opts || { weekday: "short", month: "short", day: "numeric" }));
-  const allDays = Object.keys(T.days).sort();
   const today = etDate();
+  // only today and earlier are playable; the data file only carries those, and this guards an older file that still has more
+  const allDays = Object.keys(T.days).filter((k) => k <= today).sort();
   const asked = new URLSearchParams(location.search).get("date");
-  const date = T.days[asked] ? asked : T.days[today] ? today : allDays[0];
+  const date = allDays.includes(asked) ? asked : allDays.includes(today) ? today : allDays[allDays.length - 1];
   const setNo = allDays.indexOf(date) + 1;
   const qs = T.days[date];
 
@@ -281,7 +282,7 @@
 
     $("daysList").innerHTML = allDays.map((k) => {
       const sc = scoreFor(k);
-      const tag = sc !== null ? `<span class="chip ${sc >= 4 ? "ok" : ""}">${sc}/5</span>` : k > today ? `<span class="chip lock">Preview</span>` : k === today ? `<span class="chip live">Today</span>` : `<span class="chip">Play</span>`;
+      const tag = sc !== null ? `<span class="chip ${sc >= 4 ? "ok" : ""}">${sc}/5</span>` : k === today ? `<span class="chip live">Today</span>` : `<span class="chip">Play</span>`;
       return `<li><a href="?date=${k}" class="${k === date ? "on" : ""}"><span>#${allDays.indexOf(k) + 1} · ${esc(pretty(k))}</span>${tag}</a></li>`;
     }).join("");
   }
@@ -295,7 +296,7 @@
     else if (view === "reveal" && e.key === "Enter" && document.activeElement?.id !== "next") next();
   });
 
-  $("kicker").textContent = date === today ? "Free daily game" : date > today ? `Prototype preview · ${pretty(date)}` : `Past set · ${pretty(date)}`;
+  $("kicker").textContent = date === today ? "Free daily game" : `Past set · ${pretty(date)}`;
   $("credit").innerHTML = `${esc(T.credit.replace(" (nflverse.com)", ""))} <a href="https://nflverse.com" rel="noopener">nflverse.com</a>. Built ${esc(T.generated)}.`;
   if (mine().picks.length && !isDone(mine())) view = "intro";
   renderStrip();

@@ -52,6 +52,14 @@
 .endline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-radius: var(--r); background: var(--navy); color: #fff; margin-bottom: 16px; }
 .endline .disp { font-size: 34px; }
 .endline span { color: var(--on-brand-2); font-size: 14px; }
+/* Daily / Infinite switch, a smaller sibling of the game tabs */
+.tabs.modes a { font-size: 14px; padding: 6px 12px; }
+.lock-cover .prompt { max-width: 26ch; margin: 0 auto 10px; }
+.recent { list-style: none; margin: 0; padding: 0; }
+.recent li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; font-weight: 600; }
+.recent li:last-child { border-bottom: 0; }
+.recent li span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.recent .chip { font-size: 11px; flex: none; }
 </style>
 </head>
 <body>
@@ -68,10 +76,11 @@
     <div>
       <div class="kicker" id="kicker">Free daily game</div>
       <h1 class="disp">Name Them All</h1>
-      <p>One list a day, the same for everyone. Name as many as you can before the clock hits zero. Spelling counts, capitals and punctuation don't.</p>
+      <p id="intro">One list a day, the same for everyone. Name as many as you can before the clock hits zero. Spelling counts, capitals and punctuation don't.</p>
     </div>
     <div class="headr">
       <nav class="tabs" aria-label="Daily games"><a href="./">Daily Five</a><a href="names.html" class="on">Name Them All</a></nav>
+      <nav class="tabs modes" aria-label="Mode"><a href="names.html" id="mDaily">Daily list</a><a href="names.html?mode=infinite" id="mInf">Infinite</a></nav>
     </div>
   </div>
 
@@ -86,7 +95,7 @@
       <section class="card">
         <div class="card-h"><h2 class="disp">How it works</h2></div>
         <div class="card-b">
-          <ol class="steps">
+          <ol class="steps" id="steps">
             <li>The list is hidden until you press start. Then the clock runs, and it keeps running if you leave the page.</li>
             <li>Type a full name. It locks in the moment it matches. Last name alone works too if you press Enter and nobody else on the list shares it.</li>
             <li>Every empty slot shows a hint: the season, team or game it belongs to.</li>
@@ -94,8 +103,12 @@
           </ol>
         </div>
       </section>
-      <section class="card">
-        <div class="card-h"><h2 class="disp">Other days</h2><span class="chip lock">Prototype</span></div>
+      <section class="card" id="recentCard" hidden>
+        <div class="card-h"><h2 class="disp">Recent lists</h2></div>
+        <div class="card-b"><ul class="recent" id="recent"></ul></div>
+      </section>
+      <section class="card" id="daysCard">
+        <div class="card-h"><h2 class="disp">Other days</h2></div>
         <div class="card-b"><ul class="days-list" id="daysList"></ul></div>
       </section>
       <p class="credit" id="credit"></p>
@@ -112,40 +125,66 @@
 (function () {
   const T = window.LFI_TRIVIA;
   const KEY = "lfi-names-v1";
+  const KEY_INF = "lfi-names-inf-v1"; // infinite play keeps its own record, so it never touches the daily one
+  const params = new URLSearchParams(location.search);
+  const INF = params.get("mode") === "infinite";
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   // ---- dates (same day boundary as Daily Five: midnight US Eastern) ----
   const etDate = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(d);
+  const addDays = (iso, n) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   const pretty = (iso) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" });
-  const allDays = Object.keys(T.lists).sort();
   const today = etDate();
-  const asked = new URLSearchParams(location.search).get("date");
-  const date = T.lists[asked] ? asked : T.lists[today] ? today : allDays[0];
+  // only today and earlier are playable; the data file only carries those, and this guards an older file that still has more
+  const allDays = Object.keys(T.lists).filter((k) => k <= today).sort();
+  const asked = params.get("date");
+  const date = allDays.includes(asked) ? asked : allDays.includes(today) ? today : allDays[allDays.length - 1];
   const setNo = allDays.indexOf(date) + 1;
-  const L = T.lists[date];
-  const N = L.answers.length;
+  let L, N, run;
 
   // ---- name matching ----
   // "Odell Beckham Jr." -> "odell beckham", "D.K. Metcalf" -> "dk metcalf", "Ja'Marr" -> "jamarr"
   const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
     .replace(/[.'’`]/g, "").replace(/[^a-z0-9]+/g, " ").replace(/\b(jr|sr|ii|iii|iv|v)\b/g, " ").replace(/\s+/g, " ").trim();
   const full = new Map(), last = new Map();
-  L.answers.forEach((a, i) => {
-    const n = norm(a.name);
-    full.set(n, i);
-    full.set(n.replace(/ /g, ""), i); // "aj green" or "ajgreen"
-    const parts = n.split(" ");
-    const ln = parts.slice(1).join(" ") || n;
-    last.set(ln, last.has(ln) ? -1 : i); // -1 = shared surname, needs the full name
-  });
+  function useList(list, r) {
+    L = list;
+    N = L.answers.length;
+    run = r;
+    full.clear();
+    last.clear();
+    L.answers.forEach((a, i) => {
+      const n = norm(a.name);
+      full.set(n, i);
+      full.set(n.replace(/ /g, ""), i); // "aj green" or "ajgreen"
+      const parts = n.split(" ");
+      const ln = parts.slice(1).join(" ") || n;
+      last.set(ln, last.has(ln) ? -1 : i); // -1 = shared surname, needs the full name
+    });
+  }
 
   // ---- storage (prototype: this browser only) ----
-  function load() { try { return JSON.parse(localStorage.getItem(KEY)) || { days: {} }; } catch (e) { return { days: {} }; } }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} }
-  const store = load();
-  const run = store.days[date] || (store.days[date] = { found: [], startedAt: null, endedAt: null });
+  function load(key, empty) { try { return JSON.parse(localStorage.getItem(key)) || empty; } catch (e) { return empty; } }
+  function save() { try { localStorage.setItem(INF ? KEY_INF : KEY, JSON.stringify(INF ? inf : store)); } catch (e) {} }
+  const store = load(KEY, { days: {} });
+  const inf = load(KEY_INF, { played: {}, cur: null });
   const isOver = () => !!run.endedAt;
+
+  // ---- infinite play: a random list from the pool, skipping ones this browser has already finished ----
+  let pool = [];
+  function dealNext() {
+    const curKey = inf.cur && inf.cur.key;
+    let from = pool.filter((l) => !inf.played[l.key] && l.key !== curKey);
+    if (!from.length) {
+      from = pool.filter((l) => l.key !== curKey);
+      toast("You've played every list. Repeats from here on.");
+    }
+    const next = from[Math.floor(Math.random() * from.length)];
+    inf.cur = { key: next.key, found: [], startedAt: null, endedAt: null };
+    save();
+    useList(next, inf.cur);
+  }
 
   const left = () => {
     if (!run.startedAt) return L.seconds;
@@ -202,12 +241,28 @@
       updateClock();
       clearInterval(tick);
       tick = setInterval(updateClock, 250);
+    } else if (INF) {
+      $("next").onclick = () => { dealNext(); render(); renderSide(); window.scrollTo({ top: 0, behavior: "smooth" }); };
     } else {
       $("share").onclick = share;
     }
   }
 
   function renderCover() {
+    if (INF) {
+      // nothing rides on an infinite list, so the question shows up front and a dud can be skipped
+      $("game").innerHTML = `
+      <div class="lock-cover">
+        <div class="kicker">Sandbox · ${Object.keys(inf.played).length} played</div>
+        <div class="chip" style="margin:10px 0 12px">${esc(L.cat)}</div>
+        <h2 class="prompt">${esc(L.prompt)}</h2>
+        <p>${N} names, ${mmss(L.seconds)} on the clock. Just for fun: never scored, never touches your record or streak.</p>
+        <div class="btns"><button class="btn gold" id="start" style="font-size:17px;padding:13px 30px">Start the clock</button><button class="btn" id="skip">Different list</button></div>
+      </div>`;
+      $("start").onclick = () => { run.startedAt = Date.now(); save(); render(); };
+      $("skip").onclick = () => { dealNext(); render(); };
+      return;
+    }
     $("game").innerHTML = `
       <div class="lock-cover">
         <div class="kicker">${esc(pretty(date))} · List #${setNo}</div>
@@ -215,6 +270,7 @@
         <p>${N} names to find, ${mmss(L.seconds)} on the clock. The list stays hidden until you start, and the clock doesn't stop once it's going.</p>
         <div class="rules" style="display:flex;justify-content:center;gap:8px;margin-bottom:22px"><span class="chip">${esc(L.cat)}</span><span class="chip">${N} answers</span><span class="chip">${mmss(L.seconds)}</span></div>
         <button class="btn gold" id="start" style="font-size:17px;padding:13px 30px">Start the clock</button>
+        ${date === today ? `<p class="note" style="margin:16px auto 0">This one counts. Finish it and infinite play opens up.</p>` : ""}
       </div>`;
     $("start").onclick = () => { run.startedAt = Date.now(); save(); render(); };
   }
@@ -222,7 +278,9 @@
   function endline() {
     const n = run.found.length, used = L.seconds - left();
     return `<div class="endline"><div><div class="disp num">${n} / ${N}</div><span>${n === N ? `All of them, with ${mmss(left())} to spare.` : `Time used ${mmss(used)}. The ones in red got away.`}</span></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn gold" id="share">Share score</button><a class="btn" href="./">Play Daily Five</a></div></div>`;
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${INF
+        ? `<button class="btn gold" id="next">Next list</button><a class="btn" href="names.html">Today's list</a>`
+        : `<button class="btn gold" id="share">Share score</button><a class="btn" href="names.html?mode=infinite">Keep playing</a>`}</div></div>`;
   }
 
   function updateClock() {
@@ -277,6 +335,7 @@
     if (ended) {
       // never record an end later than the clock allows (e.g. page reopened after time ran out)
       run.endedAt = Math.min(Date.now(), run.startedAt + L.seconds * 1000);
+      if (INF) inf.played[L.key] = { n: run.found.length, of: N, at: run.endedAt, p: L.prompt };
       save();
     }
     clearInterval(tick);
@@ -284,7 +343,7 @@
     render();
     renderSide();
     window.scrollTo({ top: 0, behavior: "smooth" });
-    if (ended) share(); // the game just ended: save it to My picks and offer the share pop-up
+    if (ended && !INF) share(); // the daily game just ended: save it to My picks and offer the share pop-up
   }
 
   function share() {
@@ -300,27 +359,85 @@
   let toastT;
   function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2200); }
 
-  function renderSide() {
+  // the record is the daily list only; sandbox lists never count
+  function renderRecord() {
     const done = Object.entries(store.days).filter(([k, d]) => d.endedAt && T.lists[k]);
     const pcts = done.map(([k, d]) => d.found.length / T.lists[k].answers.length);
     const avg = pcts.length ? Math.round((pcts.reduce((a, b) => a + b, 0) / pcts.length) * 100) : 0;
     const best = pcts.length ? Math.round(Math.max(...pcts) * 100) : 0;
-    const clean = pcts.filter((p) => p === 1).length;
-    $("recChip").textContent = done.length ? `${done.length} played` : "Start today";
-    $("stats").innerHTML = [[done.length, "Played"], [`${avg}%`, "Average"], [`${best}%`, "Best"], [clean, "Full lists"]]
+    const played = new Set(done.map(([k]) => k));
+    let streak = 0, d = played.has(today) ? today : addDays(today, -1);
+    while (played.has(d)) { streak++; d = addDays(d, -1); }
+    $("recChip").textContent = streak ? `🔥 ${streak} day${streak > 1 ? "s" : ""}` : "Start today";
+    $("stats").innerHTML = [[done.length, "Played"], [streak, "Streak"], [`${avg}%`, "Average"], [`${best}%`, "Best"]]
       .map(([n, l]) => `<div><b class="num">${n}</b><span>${l}</span></div>`).join("");
+  }
+
+  function renderSide() {
+    renderRecord();
+    if (INF) {
+      const done = Object.values(inf.played).sort((a, b) => b.at - a.at);
+      $("recent").innerHTML = done.slice(0, 8).map((d) => `<li><span>${esc(d.p)}</span><span class="chip">${d.n}/${d.of}</span></li>`).join("")
+        || `<li><span>Finish a list and it shows up here.</span></li>`;
+      return;
+    }
     $("daysList").innerHTML = allDays.map((k) => {
       const d = store.days[k];
       const tag = d && d.endedAt ? `<span class="chip">${d.found.length}/${T.lists[k].answers.length}</span>`
-        : k > today ? `<span class="chip lock">Preview</span>` : k === today ? `<span class="chip live">Today</span>` : `<span class="chip">Play</span>`;
+        : k === today ? `<span class="chip live">Today</span>` : `<span class="chip">Play</span>`;
       return `<li><a href="?date=${k}" class="${k === date ? "on" : ""}"><span>#${allDays.indexOf(k) + 1} · ${esc(pretty(k))}</span>${tag}</a></li>`;
     }).join("");
   }
 
-  $("kicker").textContent = date === today ? "Free daily game" : date > today ? `Prototype preview · ${pretty(date)}` : `Past list · ${pretty(date)}`;
   $("credit").innerHTML = `${esc(T.credit.replace(" (nflverse.com)", ""))} <a href="https://nflverse.com" rel="noopener">nflverse.com</a>. Built ${esc(T.generated)}.`;
-  render();
-  renderSide();
+  $("mDaily").classList.toggle("on", !INF);
+  $("mInf").classList.toggle("on", INF);
+  if (!INF) {
+    useList(T.lists[date], store.days[date] || (store.days[date] = { found: [], startedAt: null, endedAt: null }));
+    $("kicker").textContent = date === today ? "Free daily game" : `Past list · ${pretty(date)}`;
+    render();
+    renderSide();
+    return;
+  }
+
+  document.title = "Name Them All: Infinite · Last Four In";
+  $("kicker").textContent = "Infinite sandbox";
+  $("intro").textContent = "Today's list is the one that counts. Once it's done, keep going here as long as you like. Nothing in the sandbox is scored, and it never touches your record or streak.";
+  $("steps").innerHTML = `
+    <li>Play today's list first. It sets your score for the day and keeps your streak going.</li>
+    <li>Then infinite opens: lists drawn at random from hundreds, built from real NFL data. You see the question first, so skip any you don't fancy.</li>
+    <li>Type a full name. It locks in the moment it matches. Every empty slot shows a hint.</li>
+    <li>Press Next list when you're done. Lists you've finished don't come back until you've seen them all.</li>`;
+  $("daysCard").hidden = true;
+  $("recentCard").hidden = false;
+  // infinite is the reward for playing the day's list, so it stays shut until today's is finished
+  const todayRun = store.days[today];
+  if (T.lists[today] && !(todayRun && todayRun.endedAt)) {
+    const started = todayRun && todayRun.startedAt;
+    $("game").innerHTML = `
+      <div class="lock-cover">
+        <div class="kicker">Infinite sandbox · locked</div>
+        <h2 class="disp big">Today's list first</h2>
+        <p>${started ? "You've started today's list. Finish it" : "Play today's list, the one that counts for your record and streak"}, and infinite play opens right after.</p>
+        <a class="btn gold" href="names.html" style="font-size:17px;padding:13px 30px">${started ? "Back to today's list" : "Play today's list"}</a>
+      </div>`;
+    renderSide();
+    return;
+  }
+  // the pool is big, so only infinite players download it
+  const ps = document.createElement("script");
+  ps.src = "pool.js";
+  ps.onerror = () => { $("game").innerHTML = `<p class="note">Couldn't load the lists. Refresh to try again.</p>`; };
+  ps.onload = () => {
+    const daily = new Set(Object.values(T.lists).map((l) => l.key)); // belt and braces: the generator keeps the pool and the daily lists apart
+    pool = window.LFI_TRIVIA_POOL.lists.filter((l) => !daily.has(l.key))
+      .map((l) => ({ ...l, answers: l.a.map(([name, hint]) => ({ name, hint })) }));
+    const cur = inf.cur && pool.find((l) => l.key === inf.cur.key);
+    if (cur) useList(cur, inf.cur); else dealNext();
+    render();
+    renderSide();
+  };
+  document.head.appendChild(ps);
 })();
 </script>
 </body>
