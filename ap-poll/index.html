@@ -45,8 +45,8 @@
 <main class="page">
   <div class="head">
     <div>
-      <div class="kicker" id="kick"><span class="em" aria-hidden="true">🎉</span> Just for fun</div>
-      <h1 class="disp"><span class="em" aria-hidden="true">🗳️</span> Guess the AP Poll</h1>
+      <div class="kicker" id="kick"><span class="em" aria-hidden="true">🗳️</span> Just for fun</div>
+      <h1 class="disp">Guess the AP Poll</h1>
       <p id="lede">Rank the Top 25 you think the AP voters will release on Sunday. Start from this week's poll and move teams for how you think the games go.</p>
       <p class="sheet-note" style="margin-top:12px">Never a contest: AP voters and the people near them could know the real poll, so there are no prizes and no leaderboard.</p>
       <nav class="modes" aria-label="Mode"><a href="./" id="mContest">Sunday's poll</a><a href="?sandbox" id="mFun">Blank board</a></nav>
@@ -246,7 +246,7 @@
       document.body.classList.add("fun");
       document.title = "Build Your Own AP Poll · Last Four In";
       $("kick").textContent = "🎉 Just for fun · blank board";
-      document.querySelector("h1").innerHTML = `<span class="em" aria-hidden="true">🗳️</span> Build Your Own AP Poll`;
+      document.querySelector("h1").textContent = "Build Your Own AP Poll";
       $("lede").textContent = "A blank board. Rank any 25 teams however you see it, just for fun. It never closes and is only for you.";
       $("ballotH").textContent = "Your Top 25";
       $("winChip").textContent = "Just for fun";

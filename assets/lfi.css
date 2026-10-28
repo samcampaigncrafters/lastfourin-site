@@ -766,5 +766,5 @@ html.theme-flip::view-transition-new(root) { animation-name: lfi-fade-in; }
    strokes and wide letter-spacing never smear the glyph. One or two per element, always next to words, never instead of them. */
 .em { display: inline-block; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; font-style: normal; font-weight: 400;
   letter-spacing: 0; text-transform: none; text-shadow: none; -webkit-text-stroke: 0; -webkit-text-fill-color: initial; color: initial;
-  line-height: 1; vertical-align: .02em; }
-h1 .em, h2 .em, .disp .em { font-size: .8em; vertical-align: .06em; }
+  line-height: 0; vertical-align: 0; position: relative; top: -.04em; } /* zero line-height: the emoji never makes a line taller */
+h1 .em, h2 .em, .disp .em { font-size: .8em; top: -.06em; }
