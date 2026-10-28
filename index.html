@@ -50,6 +50,9 @@
 .car-track { position: relative; display: flex; align-items: flex-start; transition: height .32s var(--ease); overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; outline: none; }
 .car-track::-webkit-scrollbar { display: none; }
 .slide { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; }
+/* Sam: the slide's text must not move independently of its background, so each slide carries its own field and slashes */
+.car > svg.bg { display: none; }
+.car .slide { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1280 600' preserveAspectRatio='none'%3E%3Cpolygon points='760,0 1000,0 640,600 400,600' fill='%237b3dff' opacity='.5'/%3E%3Cpolygon points='1060,0 1110,0 750,600 700,600' fill='%23ff3dbb' opacity='.35'/%3E%3Cpolygon points='1180,0 1280,0 1280,600 840,600' fill='%232a0a7a' opacity='.55'/%3E%3Cpolygon points='0,420 220,260 120,600 0,600' fill='%232a0a7a' opacity='.55'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat, linear-gradient(160deg, var(--field) 0%, var(--field-deep) 100%); }
 .fh .slide .hin { padding-bottom: 104px; }
 .car-ctl { position: absolute; left: 0; right: 0; bottom: 30px; display: flex; justify-content: center; align-items: center; gap: 18px; pointer-events: none; }
 .car-ctl > * { pointer-events: auto; }
