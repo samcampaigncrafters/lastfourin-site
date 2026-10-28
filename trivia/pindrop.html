@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pin Drop · Last Four In</title>
+<meta name="description" content="Five football places a day. Drop a pin on the map: the closer you land, the more you score.">
+<meta property="og:title" content="Pin Drop · Last Four In">
+<meta property="og:description" content="Stadiums, Super Bowls, college towns and hometowns. Drop a pin, see how many miles off you were.">
+<meta property="og:url" content="https://lastfourin.com/trivia/pindrop.html">
+<meta name="theme-color" content="#0d0820">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/lfi.css">
+<script src="/assets/theme.js"></script>
+<link rel="stylesheet" href="trivia.css">
+<style>
+.mapwrap { position: relative; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--card); overflow: hidden; touch-action: manipulation; }
+.mapwrap svg { display: block; width: 100%; height: auto; cursor: crosshair; user-select: none; -webkit-user-select: none; }
+.mapwrap.locked svg { cursor: default; }
+.mapwrap .land { fill: var(--card-2); stroke: var(--line-2); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.mapwrap .guess { fill: var(--accent); stroke: var(--accent-ink); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.mapwrap .truth { fill: var(--win); stroke: var(--accent-ink); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.mapwrap .miss { stroke: var(--ink); stroke-width: 2; stroke-dasharray: 6 5; vector-effect: non-scaling-stroke; fill: none; opacity: .8; }
+.mapwrap .old { opacity: .45; }
+.zoom { position: absolute; right: 8px; bottom: 8px; display: flex; gap: 6px; }
+.zoom button { border: 1px solid var(--line-2); background: var(--card); color: var(--ink); border-radius: 6px; padding: 6px 11px; font: 800 13px var(--f-body); cursor: pointer; }
+.zoom button:disabled { opacity: .4; cursor: default; }
+.maphint { font-size: 13.5px; color: var(--muted); margin: 10px 0 0; }
+.lockrow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+.lockrow .btn:disabled { opacity: .45; cursor: default; }
+.pts { font-family: var(--f-display); font-weight: 800; font-size: 30px; line-height: 1; }
+.reveal .miles { font-weight: 700; color: var(--ink-2); }
+.pips i.t0 { background: var(--win); } .pips i.t1 { background: var(--win); opacity: .8; } .pips i.t2 { background: var(--accent); }
+.pips i.t3 { background: var(--accent); opacity: .55; } .pips i.t4 { background: var(--loss); }
+.recap .m.pt { width: auto; min-width: 46px; padding: 0 6px; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<header class="nav" data-active="pindrop"></header>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <div class="kicker" id="kicker">Free daily game</div>
+      <h1 class="disp">Pin Drop</h1>
+      <p>Five football places a day: a stadium, a college town, a Super Bowl, where a star played college ball, where a star was born. Drop a pin. The closer you land, the more you score.</p>
+    </div>
+    <div class="headr">
+      <nav class="tabs" aria-label="Daily games"><a href="./">Daily Five</a><a href="names.html">Name Them All</a><a href="pindrop.html" class="on">Pin Drop</a></nav>
+      <div class="pips" id="pips" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <section class="card qcard" id="game" aria-live="polite"></section>
+
+    <aside class="side">
+      <section class="card">
+        <div class="card-h"><h2 class="disp">Your streak</h2><span class="chip" id="streakChip"></span></div>
+        <div class="card-b"><div class="stats4" id="stats"></div></div>
+      </section>
+      <section class="card">
+        <div class="card-h"><h2 class="disp">How it works</h2></div>
+        <div class="card-b">
+          <ol class="steps">
+            <li>A new set of five drops every night at midnight Eastern, the same for everyone.</li>
+            <li>Tap the map to drop your pin. Tap again to move it, zoom in for the close calls, then lock it in.</li>
+            <li>Up to 1,000 points a round: a pin within 10 miles is worth almost all of it, 300 miles off is about a third.</li>
+            <li>Stadiums go by today's names, even for old Super Bowls. College rounds count the team's home stadium.</li>
+            <li>Share your score as a row of pins, no answers given away.</li>
+          </ol>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-h"><h2 class="disp">Other days</h2></div>
+        <div class="card-b"><ul class="days-list" id="daysList"></ul></div>
+      </section>
+      <p class="credit" id="credit"></p>
+    </aside>
+  </div>
+</main>
+
+<footer class="foot"></footer>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="/assets/lfi.js"></script>
+<script src="/assets/vendor/d3-array.min.js"></script>
+<script src="/assets/vendor/d3-geo.min.js"></script>
+<script src="/assets/vendor/topojson-client.min.js"></script>
+<script src="pindrop-data.js"></script>
+<script>
+(function () {
+  const P = window.LFI_PINDROP;
+  const KEY = "lfi-pindrop-v1";
+  const LAUNCH = "2026-10-28"; // set #1
+  const W = 975, H = 610;
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const fmt = (n) => Math.round(n).toLocaleString("en-US");
+
+  // ---- dates (the set turns over at midnight US Eastern) ----
+  const etDate = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(d);
+  const addDays = (iso, n) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const dayNo = (iso) => Math.round((new Date(iso + "T12:00:00Z") - new Date(LAUNCH + "T12:00:00Z")) / 864e5);
+  const pretty = (iso, opts) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", Object.assign({ timeZone: "UTC" }, opts || { weekday: "short", month: "short", day: "numeric" }));
+  const today = etDate() < LAUNCH ? LAUNCH : etDate();
+  const allDays = [];
+  for (let d = LAUNCH; d <= today; d = addDays(d, 1)) allDays.push(d);
+  const asked = new URLSearchParams(location.search).get("date");
+  const date = allDays.includes(asked) ? asked : today;
+  const setNo = dayNo(date) + 1;
+
+  // ---- today's five: every pool walks its own fixed shuffle, one step a day, so nothing repeats until a pool runs out ----
+  function rng(seed) { return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  const orders = {};
+  function order(key) {
+    if (orders[key]) return orders[key];
+    const r = rng([...key].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7)), a = P.pools[key].map((_, i) => i);
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return (orders[key] = a);
+  }
+  const pick = (key, n, skip = 0) => P.pools[key][order(key)[(n + skip) % P.pools[key].length]];
+  const ROUNDS = [["nfl", "Easy"], ["cfb", "Medium"], ["sb", "Medium"], ["college", "Hard"], ["born", "Hard"]];
+  function setFor(iso) {
+    const n = dayNo(iso), out = [];
+    ROUNDS.forEach(([key, diff]) => {
+      let q = pick(key, n), k = 1;
+      while (out.some((o) => Math.abs(o.lat - q.lat) < 0.05 && Math.abs(o.lon - q.lon) < 0.05) && k < 6) q = pick(key, n, k++); // no two answers in the same spot
+      out.push(Object.assign({ diff }, q));
+    });
+    return out;
+  }
+  const qs = setFor(date);
+
+  // ---- scoring ----
+  const R = 3958.8; // earth radius in miles
+  function miles(a, b) {
+    const r = Math.PI / 180, dLat = (b[0] - a[0]) * r, dLon = (b[1] - a[1]) * r;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+  }
+  const points = (mi) => (mi <= 10 ? 1000 : Math.round(1000 * Math.exp(-(mi - 10) / 280)));
+  const tier = (mi) => (mi <= 25 ? 0 : mi <= 100 ? 1 : mi <= 300 ? 2 : mi <= 700 ? 3 : 4);
+  const EMOJI = ["🎯", "🟩", "🟨", "🟧", "🟥"];
+
+  // ---- storage (this browser; the result also goes to My picks) ----
+  function load() { try { return JSON.parse(localStorage.getItem(KEY)) || { days: {} }; } catch (e) { return { days: {} }; } }
+  function save(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} }
+  let store = load();
+  const mine = () => store.days[date] || (store.days[date] = { g: [] });
+  const isDone = (d) => d && d.g.length === 5;
+  const total = (d) => d.g.reduce((s, g) => s + g.p, 0);
+
+  function streaks() {
+    const played = new Set(Object.keys(store.days).filter((k) => isDone(store.days[k])));
+    let cur = 0, d = played.has(today) ? today : addDays(today, -1);
+    while (played.has(d)) { cur++; d = addDays(d, -1); }
+    let best = 0, run = 0, prev = null;
+    [...played].sort().forEach((k) => { run = prev && addDays(prev, 1) === k ? run + 1 : 1; best = Math.max(best, run); prev = k; });
+    const scores = [...played].map((k) => total(store.days[k]));
+    return { cur, best: Math.max(best, cur), played: played.size, top: scores.length ? Math.max(...scores) : 0 };
+  }
+
+  // ---- the map ----
+  const proj = d3.geoAlbersUsa().scale(1300).translate([W / 2, H / 2]);
+  const path = d3.geoPath(proj);
+  let statesPath = "";
+  const ready = fetch("/assets/vendor/us-states-10m.json").then((r) => r.json()).then((us) => {
+    statesPath = path(topojson.feature(us, us.objects.states));
+  });
+  let pin = null, zoom = 1, center = [W / 2, H / 2];
+
+  function viewBox() {
+    const w = W / zoom, h = H / zoom;
+    const x = Math.max(0, Math.min(W - w, center[0] - w / 2)), y = Math.max(0, Math.min(H - h, center[1] - h / 2));
+    return `${x} ${y} ${w} ${h}`;
+  }
+  // r is in screen pixels, so pins stay the same size on a phone and when zoomed in
+  function marker(xy, cls, r) { return xy ? `<circle class="${cls}" cx="${xy[0]}" cy="${xy[1]}" r="${(r * W) / zoom / ($("map").clientWidth || W)}"></circle>` : ""; }
+  function drawMap(i, locked) {
+    const q = qs[i], d = mine();
+    const g = locked ? d.g[i] : null;
+    const guessXY = g ? proj([g.lon, g.lat]) : pin && proj([pin[1], pin[0]]);
+    const truthXY = locked ? proj([q.lon, q.lat]) : null;
+    const line = guessXY && truthXY ? `<line class="miss" x1="${guessXY[0]}" y1="${guessXY[1]}" x2="${truthXY[0]}" y2="${truthXY[1]}"></line>` : "";
+    $("map").setAttribute("viewBox", viewBox());
+    $("map").innerHTML = `<path class="land" d="${statesPath}"></path>${line}${marker(truthXY, "truth", 9)}${marker(guessXY, "guess", 7)}`;
+    $("zin").disabled = zoom >= 4;
+    $("zout").disabled = zoom <= 1;
+  }
+
+  // ---- game ----
+  let view = "intro";
+  function pips() {
+    const d = mine();
+    $("pips").innerHTML = qs.map((q, i) => {
+      if (i < d.g.length) return `<i class="t${tier(d.g[i].m)}"></i>`;
+      return `<i class="${i === d.g.length && view === "q" ? "now" : ""}"></i>`;
+    }).join("");
+  }
+
+  function render() {
+    const d = mine();
+    if (isDone(d) && view !== "reveal") view = "done";
+    pips();
+    if (view === "intro") return renderIntro();
+    if (view === "done") return renderDone();
+    renderRound();
+  }
+
+  function renderIntro() {
+    const d = mine(), started = d.g.length > 0;
+    $("game").innerHTML = `
+      <div class="intro">
+        <div class="kicker">${esc(pretty(date, { weekday: "long", month: "long", day: "numeric" }))} · Set #${setNo}</div>
+        <h2 class="disp big">${started ? "Pick up where you left off" : "Today's five places"}</h2>
+        <p>${started ? `You're ${d.g.length} of 5 in. Pins you've locked stay locked.` : "An NFL stadium, a college stadium, a Super Bowl, where a star played college ball and where a star was born. Up to 1,000 points each."}</p>
+        <div class="rules"><span class="chip easy">1 Easy</span><span class="chip medium">2 Medium</span><span class="chip hard">2 Hard</span></div>
+        <button class="btn gold" id="start" style="font-size:17px;padding:13px 30px">${started ? "Keep going" : "Start"}</button>
+      </div>`;
+    $("start").onclick = () => { view = "q"; render(); };
+    $("start").focus({ preventScroll: true });
+  }
+
+  function renderRound() {
+    const d = mine();
+    const i = view === "reveal" ? d.g.length - 1 : d.g.length;
+    const q = qs[i], g = view === "reveal" ? d.g[i] : null;
+    const last = i === qs.length - 1;
+    $("game").innerHTML = `
+      <div class="card-b">
+        <div class="qmeta"><span class="qn">Round ${i + 1} of 5</span><span class="chip">${esc(q.tag)}</span><span class="chip ${q.diff.toLowerCase()}">${esc(q.diff)}</span></div>
+        <h2 class="qtext">${esc(q.q)}</h2>
+        <div class="mapwrap${g ? " locked" : ""}">
+          <svg id="map" viewBox="0 0 ${W} ${H}" role="img" aria-label="Map of the United States. Tap to drop your pin."></svg>
+          <div class="zoom"><button id="zin" type="button">Zoom in</button><button id="zout" type="button">Zoom out</button></div>
+        </div>
+        ${g ? `
+        <div class="reveal ${g.m <= 100 ? "ok" : g.m > 700 ? "no" : ""}">
+          <div><b>${EMOJI[tier(g.m)]} ${fmt(g.m)} miles off · +${fmt(g.p)}</b><p>${esc(q.a)}</p></div>
+          <button class="btn navy" id="next">${last ? "See your score" : "Next place"}</button>
+        </div>` : `
+        <div class="lockrow"><button class="btn gold" id="lock" disabled>Lock it in</button><span class="maphint" id="hint" style="margin:0">Tap the map to drop your pin.</span></div>`}
+      </div>`;
+    ready.then(() => drawMap(i, !!g));
+    $("zin").onclick = () => { zoom = Math.min(4, zoom * 2); if (pin) center = proj([pin[1], pin[0]]); drawMap(i, !!g); };
+    $("zout").onclick = () => { zoom = Math.max(1, zoom / 2); drawMap(i, !!g); };
+    if (g) { $("next").onclick = next; $("next").focus({ preventScroll: true }); return; }
+    $("lock").onclick = lock;
+    $("map").addEventListener("click", (e) => {
+      const svg = $("map"), pt = svg.createSVGPoint();
+      pt.x = e.clientX; pt.y = e.clientY;
+      const xy = pt.matrixTransform(svg.getScreenCTM().inverse());
+      const ll = proj.invert([xy.x, xy.y]);
+      if (!ll) { toast("Drop it on the map: the US, Alaska or Hawaii."); return; }
+      pin = [ll[1], ll[0]];
+      if (zoom === 1) center = [xy.x, xy.y];
+      drawMap(i, false);
+      $("lock").disabled = false;
+      $("hint").textContent = "Tap again to move it, or zoom in to fine-tune.";
+    });
+  }
+
+  function lock() {
+    const d = mine();
+    if (view !== "q" || isDone(d) || !pin) return;
+    const q = qs[d.g.length];
+    const m = miles(pin, [q.lat, q.lon]);
+    d.g.push({ lat: +pin[0].toFixed(3), lon: +pin[1].toFixed(3), m: Math.round(m), p: points(m) });
+    save(store);
+    // frame the pin and the answer together for the reveal
+    const a = proj([pin[1], pin[0]]), b = proj([q.lon, q.lat]);
+    if (a && b) {
+      const dx = Math.abs(a[0] - b[0]) + 60, dy = Math.abs(a[1] - b[1]) + 60;
+      zoom = Math.max(1, Math.min(4, W / dx / 1.3, H / dy / 1.3));
+      center = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    } else zoom = 1;
+    pin = null;
+    view = "reveal";
+    render();
+    renderSide();
+  }
+
+  function next() {
+    view = isDone(mine()) ? "done" : "q";
+    zoom = 1; center = [W / 2, H / 2];
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (view === "done") share(); // the game just ended: save it to My picks and offer the share pop-up
+  }
+
+  const gridOf = (d) => d.g.map((g) => EMOJI[tier(g.m)]).join("");
+  function shareText() {
+    const d = mine(), s = streaks();
+    return `Last Four In · Pin Drop #${setNo}\n${gridOf(d)} ${fmt(total(d))}/5,000${s.cur > 1 ? `\n🔥 ${s.cur}-day streak` : ""}`;
+  }
+
+  function countdown() {
+    const el = $("cd");
+    if (!el) return;
+    const et = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+    const mins = 24 * 60 - (et.getHours() * 60 + et.getMinutes());
+    el.textContent = `${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, "0")}m`;
+  }
+
+  function renderDone() {
+    const d = mine(), sc = total(d);
+    const words = sc >= 4500 ? "Human GPS." : sc >= 3500 ? "Great day." : sc >= 2500 ? "Solid day." : sc >= 1500 ? "On the board." : "Road trip time.";
+    const recap = qs.map((q, i) => {
+      const g = d.g[i];
+      return `<li><span class="m pt ${g.m <= 100 ? "ok" : g.m > 700 ? "no" : ""}">${fmt(g.p)}</span><div>${esc(q.q)}<div class="a">${esc(q.a)} · you were ${fmt(g.m)} miles off</div></div></li>`;
+    }).join("");
+    $("game").innerHTML = `
+      <div class="intro" style="padding-bottom:12px">
+        <div class="kicker">Set #${setNo} · ${esc(pretty(date))}</div>
+        <div class="disp done-score num">${fmt(sc)}</div>
+        <h2 class="disp" style="font-size:28px;margin:0">${words}</h2>
+        <div class="grid5" aria-label="Your results">${gridOf(d)}</div>
+        <div class="btns">
+          <button class="btn gold" id="share">Share score</button>
+          <a class="btn" href="./">Play Daily Five</a>
+        </div>
+        ${date === today ? `<p style="margin:16px auto 0;font-size:14px;color:var(--muted)">Next set in <b class="num" id="cd"></b></p>` : ""}
+      </div>
+      <div class="card-b" style="padding-top:0"><ul class="recap">${recap}</ul></div>`;
+    $("share").onclick = share;
+    countdown();
+  }
+
+  function share() {
+    const d = mine();
+    const entry = LFI.entries.put({
+      id: `trivia-pindrop-${date}`, kind: "trivia", title: `Pin Drop #${setNo}`, sub: pretty(date), url: `/trivia/pindrop.html?date=${date}`,
+      data: { score: `${fmt(total(d))} pts`, grid: gridOf(d) },
+      shareText: shareText(),
+    });
+    LFI.share(entry, { kicker: "Your score is in", note: "Send it to your friends. The link shows your score, not the answers." });
+  }
+
+  let toastT;
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2200); }
+
+  // ---- sidebar ----
+  function renderSide() {
+    const s = streaks();
+    $("streakChip").textContent = s.cur ? `🔥 ${s.cur} day${s.cur > 1 ? "s" : ""}` : "Start today";
+    $("stats").innerHTML = [[s.played, "Played"], [s.cur, "Streak"], [s.best, "Best"], [fmt(s.top), "Top score"]]
+      .map(([n, l]) => `<div><b class="num">${n}</b><span>${l}</span></div>`).join("");
+    $("daysList").innerHTML = allDays.slice().reverse().map((k) => {
+      const d = store.days[k];
+      const tag = isDone(d) ? `<span class="chip ${total(d) >= 3500 ? "ok" : ""}">${fmt(total(d))}</span>` : k === today ? `<span class="chip live">Today</span>` : `<span class="chip">Play</span>`;
+      return `<li><a href="?date=${k}" class="${k === date ? "on" : ""}"><span>#${dayNo(k) + 1} · ${esc(pretty(k))}</span>${tag}</a></li>`;
+    }).join("");
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key !== "Enter") return;
+    if (view === "q" && pin && document.activeElement?.id !== "lock") lock();
+    else if (view === "reveal" && document.activeElement?.id !== "next") next();
+  });
+
+  $("kicker").textContent = date === today ? "Free daily game" : `Past set · ${pretty(date)}`;
+  $("credit").textContent = P.credit + " Map: US Census via us-atlas.";
+  if (mine().g.length && !isDone(mine())) view = "intro";
+  render();
+  renderSide();
+  setInterval(countdown, 30000);
+})();
+</script>
+</body>
+</html>
