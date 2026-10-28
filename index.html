@@ -47,7 +47,7 @@
 .go.later { background: transparent; color: #fff; box-shadow: none; border: 3px dashed rgba(255,255,255,.7); cursor: default; }
 .go.later:hover, .go.later:active { transform: none; box-shadow: none; }
 /* Carousel: one slide per contest, swipe on phones, arrows + dots on desktop, never moves on its own */
-.car-track { position: relative; display: flex; align-items: flex-start; transition: height .32s var(--ease); overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; outline: none; }
+.car-track { position: relative; display: flex; align-items: flex-start; transition: height .32s var(--ease); overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; outline: none; }
 .car-track::-webkit-scrollbar { display: none; }
 .slide { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; }
 /* Sam: the slide's text must not move independently of its background, so each slide carries its own field and slashes */
