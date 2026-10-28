@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NHL Pick'em · Last Four In</title>
+<meta name="description" content="Free NHL pick'em. Pick every game straight up, picks lock at puck drop, climb the weekly leaderboard.">
+<meta property="og:title" content="NHL Pick'em · Last Four In">
+<meta property="og:description" content="Pick every NHL game this week. Free to play. Picks lock at puck drop.">
+<meta property="og:url" content="https://lastfourin.com/nhl/">
+<meta property="og:site_name" content="Last Four In">
+<meta name="theme-color" content="#0d0820">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/assets/lfi.css">
+<script src="/assets/theme.js"></script>
+</head>
+<body>
+
+<div class="strip" aria-label="This week's games">
+  <div class="strip-lbl"><b>NHL</b><span id="stripWeek">Today</span></div>
+  <div class="strip-games" id="strip"></div>
+</div>
+
+<header class="nav" data-active="nhl"></header>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <div class="kicker">Free every night</div>
+      <h1 class="disp" id="title">NHL Pick'em</h1>
+      <p>Pick every game straight up, night by night. Overtime and shootouts count. Each pick locks at puck drop.</p>
+    </div>
+    <div class="weekbar">
+      <select id="weekSel" aria-label="Week"></select>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <div class="progress">
+          <b class="num" id="progN">0 of 0 picked</b>
+          <div class="bar"><i id="progBar" style="width:0"></i></div>
+          <span class="chip" id="deadline"></span>
+        </div>
+      </div>
+      <div id="days"></div>
+      <div class="dock">
+        <div class="card submitbar">
+          <span id="submitNote">Tap a team to pick it.</span>
+          <button class="btn gold" type="button" id="submitBtn" disabled>Submit my picks</button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="side">
+      <section class="card">
+        <div class="card-h"><h2 class="disp">Your week</h2><span class="chip" id="wkChip"></span></div>
+        <div class="card-b" id="myWeek"></div>
+      </section>
+      <section class="card" id="poolCard">
+        <div class="card-h"><h2 class="disp">Your pools</h2></div>
+        <div class="card-b" id="pools"><p class="empty">Loading…</p></div>
+      </section>
+      <section class="card">
+        <div class="card-h"><h2 class="disp">How it works</h2></div>
+        <div class="card-b">
+          <ol class="steps">
+            <li>Tap the team you think wins each game. Use the day tabs to move through the week.</li>
+            <li>Change your mind any time before that game's puck drop.</li>
+            <li>One point per correct pick, overtime and shootouts included. Your week runs Monday to Sunday.</li>
+            <li>Hit Submit to save the week to your account and challenge friends.</li></ol>
+        </div>
+      </section>
+    </aside>
+  </div>
+</main>
+<footer class="foot"></footer>
+
+<script src="/assets/lfi.js"></script>
+<script src="/assets/calendar.js"></script>
+<script>window.PICKS = { league: "nhl", name: "NHL Pick'em", url: "/nhl/", daily: true, cal: ["nhl"], share: "My NHL picks" };</script>
+<script src="/assets/gameinfo.js"></script>
+<script src="/assets/picks.js"></script>
+<script src="/assets/poolcard.js"></script>
+</body>
+</html>

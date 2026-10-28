@@ -1,4 +1,4 @@
-/* "Injuries & preview" panel under each pick'em game (/pickem/ and /college/).
+/* "Injuries & preview" panel under each pick'em game (every pick'em page).
    Opens on tap and loads only then: ESPN's game summary (line, win chance, form, leaders, injuries, venue, recap)
    plus each team's ESPN news feed, kept to stories actually about one of the two teams.
    picks.js calls LFI.gameInfo(league, game, panelEl). Everything is cached per game for the page visit. */
@@ -7,12 +7,21 @@
   const BASE = {
     nfl: "https://site.api.espn.com/apis/site/v2/sports/football/nfl",
     cfb: "https://site.api.espn.com/apis/site/v2/sports/football/college-football",
+    nba: "https://site.api.espn.com/apis/site/v2/sports/basketball/nba",
+    nhl: "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl",
+    cbb: "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball",
+    mlb: "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb",
   };
+  // Pro leagues read by nickname ("the Celtics have") and publish injury reports; colleges read by school ("Duke has").
+  const isPro = (league) => league !== "cfb" && league !== "cbb";
+  // Spread unit for "a 6.5-point favorite"; hockey and baseball lines are moneylines (handled below).
+  const UNIT = { nhl: "goal", mlb: "run" };
   const cache = {};
   const getJSON = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
 
   // Worst news first; anyone listed as active is left off.
-  const SEV = { "Out": 0, "Injured Reserve": 1, "Physically Unable to Perform": 1, "Suspension": 2, "Doubtful": 3, "Questionable": 4, "Day-To-Day": 5, "Probable": 6 };
+  const SEV = { "Out": 0, "Injured Reserve": 1, "Physically Unable to Perform": 1, "7-Day-IL": 1, "10-Day-IL": 1, "15-Day-IL": 1, "60-Day-IL": 1,
+                "Suspension": 2, "Doubtful": 3, "Questionable": 4, "Day-To-Day": 5, "Probable": 6 };
   const sev = (s) => (s in SEV ? SEV[s] : 7);
   const statusClass = (s) => (sev(s) <= 2 ? "out" : sev(s) === 3 ? "doubt" : "q");
   const shortStatus = (s) => ({ "Injured Reserve": "IR", "Physically Unable to Perform": "PUP", "Day-To-Day": "Day-to-day" }[s] || s);
@@ -44,7 +53,7 @@
     const h = Math.round((Date.now() - d) / 36e5);
     return h < 1 ? "just now" : h < 24 ? `${h}h ago` : `${Math.round(h / 24)}d ago`;
   };
-  const nameOf = (league, t) => (league === "nfl" ? t.nick : t.city);
+  const nameOf = (league, t) => (isPro(league) ? t.nick : t.city);
 
   function injuries(sum, t) {
     const block = (sum.injuries || []).find((x) => x.team && String(x.team.id) === String(t.id));
@@ -65,7 +74,8 @@
   function leaders(sum, t) {
     const L = (sum.leaders || []).find((x) => String(x.team.id) === String(t.id));
     if (!L) return [];
-    const want = { passingYards: "Pass", rushingYards: "Rush", receivingYards: "Rec" };
+    const want = { passingYards: "Pass", rushingYards: "Rush", receivingYards: "Rec", pointsPerGame: "Pts", reboundsPerGame: "Reb", assistsPerGame: "Ast",
+                   points: "Pts", goals: "G", homeRuns: "HR", avg: "Avg", ERA: "ERA" };
     return (L.leaders || []).filter((c) => want[c.name] && c.leaders && c.leaders[0]).map((c) => {
       const p = c.leaders[0];
       return { cat: want[c.name], name: p.athlete.shortName || p.athlete.displayName, line: p.displayValue };
@@ -80,10 +90,10 @@
   // One plain-English paragraph built from the numbers above. Only facts ESPN published; no predictions of our own.
   function summary(league, g, sum, inj) {
     // NFL reads "the Packers" mid-sentence; sentences are capitalised once at the end.
-    const the = (t) => (league === "nfl" ? `the ${t.nick}` : t.city);
+    const the = (t) => (isPro(league) ? `the ${t.nick}` : t.city);
     const A = the(g.away), H = the(g.home), s = [];
     // NFL names are plural nicknames ("the Packers have"), college names are schools ("Ohio State has").
-    const have = league === "nfl" ? "have" : "has";
+    const have = isPro(league) ? "have" : "has";
     if (g.status === "post" && sum.article && sum.article.headline) return null;
     const ln = line(sum), pr = sum.predictor;
     if (ln && ln.details && ln.details !== "EVEN") {
@@ -91,7 +101,9 @@
       const favName = fav === g.home.abbr ? H : fav === g.away.abbr ? A : fav;
       const n = pts.replace("-", ""), neutral = ((sum.header && sum.header.competitions) || [{}])[0].neutralSite;
       const where = neutral ? "" : favName === H ? " at home" : " on the road";
-      s.push(`${favName} ${league === "nfl" ? `are ${n}-point favorites` : `is a ${n}-point favorite`}${where}${ln.total ? `, with the total set at ${ln.total}` : ""}.`);
+      const ml = Math.abs(parseFloat(pts)) >= 100, unit = UNIT[league] || "point";
+      const call = ml ? `${isPro(league) ? "are" : "is"} favored (${pts} on the moneyline)` : isPro(league) ? `are ${n}-${unit} favorites` : `is a ${n}-${unit} favorite`;
+      s.push(`${favName} ${call}${where}${ln.total ? `, with the total set at ${ln.total}` : ""}.`);
     } else if (ln && ln.details === "EVEN") s.push(`The books have this one as a pick'em.`);
     if (pr && pr.homeTeam && pr.awayTeam) {
       const h = parseFloat(pr.homeTeam.gameProjection), a = parseFloat(pr.awayTeam.gameProjection);
@@ -100,7 +112,7 @@
     const fa = form(sum, g.away), fh = form(sum, g.home);
     const w = (f) => f.filter((r) => r === "W").length;
     if (fa.length && fh.length) s.push(`${A} ${g.away.rec ? `(${g.away.rec}) ` : ""}${have} won ${w(fa)} of the last ${fa.length}; ${H} ${g.home.rec ? `(${g.home.rec}) ` : ""}${have} won ${w(fh)} of ${fh.length}.`);
-    if (league === "nfl") {
+    if (isPro(league)) {
       const outs = (list) => list.filter((i) => sev(i.status) <= 3);
       const oa = outs(inj.away), oh = outs(inj.home);
       const say = (n, list) => list.length ? `${n} have ${list.length === 1 ? "one player" : `${list.length} players`} out or doubtful${list.length <= 2 ? ` (${list.map((i) => `${i.pos} ${i.name}`).join(", ")})` : ""}` : `${n} have nobody ruled out yet`;
@@ -134,14 +146,14 @@
         <h4>${esc(nameOf(league, t))}${t.rec ? ` <small>${esc(t.rec)}</small>` : ""}</h4>
         ${f.length ? `<div class="gi-form" aria-label="Last ${f.length} games">${f.map((r) => `<i class="${r === "W" ? "w" : r === "L" ? "l" : ""}">${esc(r)}</i>`).join("")}<small>last ${f.length}</small></div>` : ""}
         ${ld.length ? `<ul class="gi-lead">${ld.map((p) => `<li><small>${p.cat}</small> <b>${esc(p.name)}</b> ${esc(p.line)}</li>`).join("")}</ul>` : ""}
-        ${league === "nfl" ? `<div class="gi-lbl">Injury report</div>${injTable(inj[ha])}` : ""}
+        ${isPro(league) ? `<div class="gi-lbl">Injury report</div>${injTable(inj[ha])}` : ""}
       </div>`;
     };
 
     return `${recap}${para ? `<p class="gi-sum">${esc(para)}</p>` : ""}
       ${facts.length ? `<div class="gi-facts">${facts.map((f) => `<span>${f}</span>`).join("")}</div>` : ""}
       <div class="gi-teams">${teamCol("away")}${teamCol("home")}</div>
-      ${league === "nfl" ? "" : `<p class="gi-none">Injury report: colleges don't publish a public injury feed, so check the team news below.</p>`}
+      ${isPro(league) ? "" : `<p class="gi-none">Injury report: colleges don't publish a public injury feed, so check the team news below.</p>`}
       <div class="gi-lbl">Latest news</div>
       ${news.length ? `<ul class="gi-news">${news.map((n) => `<li><a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.headline)}</a>
           <small>ESPN · ${ago(n.when)}${n.premium ? " · ESPN+" : ""}</small></li>`).join("")}</ul>` : `<p class="gi-none">No team news this week yet.</p>`}

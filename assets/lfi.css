@@ -747,3 +747,16 @@ html.theme-flip::view-transition-new(root) { animation-name: lfi-fade-in; }
 .gi-none { margin: 0; color: var(--muted); font-size: 13px; }
 .gi-src { margin: 10px 0 0; color: var(--muted); font-size: 11.5px; }
 @media (max-width: 640px) { .gi-teams { grid-template-columns: 1fr; } }
+
+/* Daily pick'em (NBA, NHL, college hoops, MLB): one tab per game day this week, plus the off-season card. */
+.day-tabs { display: flex; gap: 8px; overflow-x: auto; margin: 18px 0 4px; padding-bottom: 4px; scrollbar-width: none; }
+.day-tabs::-webkit-scrollbar { display: none; }
+.day-tabs button { flex: 0 0 auto; min-width: 82px; display: grid; gap: 1px; text-align: left; padding: 9px 12px; border-radius: var(--r);
+  border: 1px solid var(--line-2); background: var(--card); color: var(--ink-2); font: 600 13px var(--f-body); cursor: pointer; }
+.day-tabs b { font: 400 17px var(--f-display); letter-spacing: .04em; text-transform: uppercase; color: var(--ink); }
+.day-tabs small { color: var(--muted); font-size: 11.5px; font-weight: 700; }
+.day-tabs button[aria-selected="true"] { background: var(--field, var(--brand)); border-color: transparent; color: #fff; box-shadow: 3px 3px 0 var(--shadow, #000); }
+.day-tabs button[aria-selected="true"] b, .day-tabs button[aria-selected="true"] small { color: #fff; }
+.off-season { padding: 22px 20px; margin-top: 14px; }
+.off-season h2 { margin: 6px 0 8px; font-size: 30px; }
+.off-season p { margin: 0; color: var(--muted); }

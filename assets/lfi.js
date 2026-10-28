@@ -15,6 +15,10 @@
     { label: "Pick'em", items: [
       ["nfl", "/pickem/", "NFL Pick'em", "Pick every game straight up"],
       ["cfb", "/college/", "College Pick'em", "Every game with a Top 25 team"],
+      ["nba", "/nba/", "NBA Pick'em", "Every NBA game, every night"],
+      ["nhl", "/nhl/", "NHL Pick'em", "Every NHL game, every night"],
+      ["cbb", "/ncaab/", "College Hoops Pick'em", "Every game with a Top 25 team"],
+      ["mlb", "/mlb/", "MLB Pick'em", "Every MLB game, every day"],
       ["pools", "/pools/", "Pick'em Pools", "Play your friends in a private pool"],
       ["ap", "/ap-poll/", "Predict the AP Poll", "Call Sunday's Top 25"],
       ["bracket", "/bracket/", "CFP Bracket Builder", "Build and share your field"],
@@ -48,6 +52,10 @@
       ["bracket", "/bracket/", "CFP Bracket Builder", "Build and share your field"],
       ["voters", "/ap-voters/", "AP Voter Tracker", "Every voter, Normal to Hot takes"],
     ] },
+    { label: "NBA", items: [["nba", "/nba/", "NBA Pick'em", "Every NBA game, every night"]] },
+    { label: "NHL", items: [["nhl", "/nhl/", "NHL Pick'em", "Every NHL game, every night"]] },
+    { label: "NCAAB", items: [["cbb", "/ncaab/", "College Hoops Pick'em", "Every game with a Top 25 team"]] },
+    { label: "MLB", items: [["mlb", "/mlb/", "MLB Pick'em", "Every MLB game, every day"]] },
   ];
   const CARET = '<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 4l4 4 4-4"/></svg>';
   const BURGER = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
@@ -230,9 +238,14 @@
   };
 
   // ---- Entry preview (share pop-up, share page, account page all draw it the same way) ----
+  const PICK_KINDS = ["nfl", "cfb", "nba", "nhl", "cbb", "mlb"];
   const KIND = {
     nfl: { label: "NFL Pick'em", noun: "picks", share: "Share your picks for the week", url: "/pickem/", make: "Make your NFL picks" },
     cfb: { label: "College Pick'em", noun: "picks", share: "Share your college picks", url: "/college/", make: "Make your college picks" },
+    nba: { label: "NBA Pick'em", noun: "picks", share: "Share your NBA picks", url: "/nba/", make: "Make your NBA picks" },
+    nhl: { label: "NHL Pick'em", noun: "picks", share: "Share your NHL picks", url: "/nhl/", make: "Make your NHL picks" },
+    cbb: { label: "College Hoops Pick'em", noun: "picks", share: "Share your college hoops picks", url: "/ncaab/", make: "Make your college hoops picks" },
+    mlb: { label: "MLB Pick'em", noun: "picks", share: "Share your MLB picks", url: "/mlb/", make: "Make your MLB picks" },
     ap: { label: "AP Poll Prediction", noun: "AP poll", share: "Share your AP poll", url: "/ap-poll/", make: "Predict the AP poll" },
     bracket: { label: "CFP Bracket", noun: "bracket", share: "Share your bracket", url: "/bracket/", make: "Build your bracket" },
     trivia: { label: "Trivia", noun: "score", share: "Share your score", url: "/trivia/", make: "Play today's trivia" },
@@ -264,7 +277,7 @@
       const top = d.top || [], n = opts.full ? top.length : 10;
       body = `<div class="mini-grid">${top.slice(0, n).map((t, i) => `<div><i>${i + 1}</i>${teamMark(abOf(d, i), "", "s")}${esc(t)}</div>`).join("")}</div>
         ${top.length > n ? `<div class="entry-more">+ ${top.length - n} more teams</div>` : ""}`;
-    } else if (e.kind === "nfl" || e.kind === "cfb") {
+    } else if (PICK_KINDS.includes(e.kind)) {
       const p = d.picks || [], n = opts.full ? p.length : 8;
       body = `<div class="mini-grid">${p.slice(0, n).map((x) => `<div>${teamMark(codeOf(x), "", "s")}<b>${esc(x.p)}</b>&nbsp;<span class="muted">over ${esc(x.o)}</span></div>`).join("")}</div>
         ${p.length > n ? `<div class="entry-more">+ ${p.length - n} more picks</div>` : ""}`;
@@ -386,6 +399,10 @@
   const ESPN = {
     nfl: "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
     cfb: "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard",
+    nba: "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard",
+    nhl: "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard",
+    cbb: "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard",
+    mlb: "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard",
   };
   const rankOf = (x) => { const r = x.curatedRank && x.curatedRank.current; return r && r <= 25 ? r : null; };
   function normalize(e) {
@@ -401,16 +418,21 @@
     let winner = null;
     if (status === "post") winner = home.score > away.score ? "home" : away.score > home.score ? "away" : "tie";
     return { id: e.id, kickoff: new Date(e.date), status, detail: st.shortDetail, home, away, winner,
-             tv: (c.broadcasts || [])[0]?.names?.[0] || "" };
+             tv: (c.broadcasts || [])[0]?.names?.[0] || "", stype: e.season && e.season.type };
   }
+  // Daily leagues (NBA, NHL, college hoops, MLB) take one day per call: q = "&dates=YYYYMMDD". Their calendar is a
+  // flat list of game days, returned as days; football's is weeks, returned as calendar.
   async function scoreboard(league, q = "") {
-    const url = league === "cfb" ? `${ESPN.cfb}?groups=80&limit=400${q}` : `${ESPN.nfl}${q ? "?" + q.slice(1) : ""}`;
+    const url = league === "cfb" ? `${ESPN.cfb}?groups=80&limit=400${q}` : league === "cbb" ? `${ESPN.cbb}?groups=50&limit=400${q}`
+      : `${ESPN[league]}${q ? "?" + q.slice(1) : ""}`;
     const d = await (await fetch(url)).json();
     let games = d.events.map(normalize);
-    if (league === "cfb") games = games.filter((g) => g.home.rank || g.away.rank);
+    if (league === "cfb" || league === "cbb") games = games.filter((g) => g.home.rank || g.away.rank);
     games.sort((a, b) => a.kickoff - b.kickoff);
-    return { raw: d, games, week: d.week && d.week.number, season: d.season.year, stype: d.season.type,
-             calendar: (d.leagues[0].calendar || []).find((c) => c.value == d.season.type)?.entries || [] };
+    const cal = d.leagues[0].calendar || [], season = d.season || d.leagues[0].season || {};  // a dated call has no top-level season
+    return { raw: d, games, week: d.week && d.week.number, season: season.year, stype: season.type,
+             calendar: cal.find((c) => c.value == season.type)?.entries || [],
+             days: cal.filter((c) => typeof c === "string") };
   }
   // This week's slate. ESPN's default feed stays on last week until midweek, so jump ahead once it's all final.
   async function thisWeek(league) {

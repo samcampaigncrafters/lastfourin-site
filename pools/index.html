@@ -88,7 +88,9 @@
 (function () {
   const { $, esc, toast, copyText, cloud } = LFI;
   const qs = new URLSearchParams(location.search);
-  const LEAGUE = { nfl: { name: "NFL Pick'em", url: "/pickem/" }, cfb: { name: "College Pick'em", url: "/college/" } };
+  const LEAGUE = { nfl: { name: "NFL Pick'em", url: "/pickem/" }, cfb: { name: "College Pick'em", url: "/college/" },
+                   nba: { name: "NBA Pick'em", url: "/nba/" }, nhl: { name: "NHL Pick'em", url: "/nhl/" },
+                   cbb: { name: "College Hoops Pick'em", url: "/ncaab/" }, mlb: { name: "MLB Pick'em", url: "/mlb/" } };
   let data = null, view = "season", me = null;
 
   const initial = (p) => esc(((p.display_name || p.username || "?").trim()[0] || "?").toUpperCase());
@@ -138,18 +140,16 @@
       <aside class="side stack">
         <section class="card"><div class="card-h"><h2 class="disp">Start a pool</h2></div><div class="card-b">
           <form class="pool-form col" id="newF" autocomplete="off">
-            <div class="seg" role="group" aria-label="Which pick'em"><button type="button" data-lg="nfl" aria-pressed="true">NFL</button><button type="button" data-lg="cfb" aria-pressed="false">College</button></div>
+            <div class="weekbar"><select name="lg" aria-label="Which pick'em">${Object.entries(LEAGUE).map(([k, l]) => `<option value="${k}">${esc(l.name)}</option>`).join("")}</select></div>
             <input name="name" maxlength="40" placeholder="Pool name, e.g. The Office" aria-label="Pool name" required>
             <button class="btn gold block" type="submit">Start the pool</button></form></div></section>
         <section class="card"><div class="card-h"><h2 class="disp">Join a pool</h2></div><div class="card-b">
           <form class="pool-form" id="joinF" autocomplete="off"><input name="code" maxlength="8" placeholder="6-letter code" aria-label="Pool code" autocapitalize="characters" spellcheck="false" required>
             <button class="btn gold" type="submit">Join</button></form></div></section>
       </aside></div>`;
-    let lg = "nfl";
-    $("newF").addEventListener("click", (e) => { const b = e.target.closest("[data-lg]"); if (!b) return; lg = b.dataset.lg; $("newF").querySelectorAll("[data-lg]").forEach((x) => x.setAttribute("aria-pressed", x === b)); });
     $("newF").onsubmit = async (e) => {
       e.preventDefault(); const btn = e.target.querySelector("[type=submit]"); btn.disabled = true;
-      try { const r = await cloud.poolCreate(lg, e.target.name.value); location.href = `/pools/?id=${r.id}&new=1`; }
+      try { const r = await cloud.poolCreate(e.target.lg.value, e.target.name.value); location.href = `/pools/?id=${r.id}&new=1`; }
       catch (err) { toast(err.message); btn.disabled = false; }
     };
     $("joinF").onsubmit = async (e) => {
@@ -187,7 +187,7 @@
         const t = g[ha], who = Object.entries(g.picks).filter(([, p]) => p === ha).map(([u]) => names[u]).filter(Boolean);
         const cls = (m) => [m.is_me ? "me" : "", final && g.winner && g.winner !== "tie" ? (g.winner === ha ? "ok" : "no") : ""].join(" ").trim();
         return `<div class="pg-side${final && g.winner === ha ? " won" : ""}">
-          <div class="pg-team"><span>${t.rank ? `<small>#${t.rank}</small> ` : ""}${esc(t.abbr)} <small>${esc(data.pool.league === "nfl" ? t.name : t.city || t.name)}</small></span>${g.status !== "pre" && t.score != null ? `<span class="sc">${t.score}</span>` : ""}</div>
+          <div class="pg-team"><span>${t.rank ? `<small>#${t.rank}</small> ` : ""}${esc(t.abbr)} <small>${esc(data.pool.league !== "cfb" && data.pool.league !== "cbb" ? t.name : t.city || t.name)}</small></span>${g.status !== "pre" && t.score != null ? `<span class="sc">${t.score}</span>` : ""}</div>
           ${g.locked ? `<div class="pg-who">${who.length ? who.map((m) => `<span class="${cls(m)}">${esc(short(m))}</span>`).join("") : "<em>nobody</em>"}</div>`
             : who.length ? `<div class="pg-who">${who.map((m) => `<span class="${cls(m)}">${esc(short(m))}</span>`).join("")}</div>` : ""}
         </div>`;

@@ -302,11 +302,11 @@ main.home { padding-bottom: 64px; }
     { lg: [], url: "/trivia/", t: "L4 Daily Trivia", d: "Five questions, same for everyone, every day.", st: "New today", ic: "q" },
     { lg: [], url: "/trivia/names.html", t: "L4 Name Them All", d: "How many can you name?", st: "New today", ic: "list" },
     { lg: [], url: "/trivia/pindrop.html", t: "L4 Pin Drop", d: "Drop a pin on the map. Closest wins.", st: "New today", ic: "pin" },
-    { lg: ["mlb"], off: true, cal: "mlb", t: "L4 MLB Pick'em", ic: "baseball" },
+    { lg: ["mlb"], cal: "mlb", url: "/mlb/", t: "L4 MLB Pick'em", d: "Pick every game straight up, every day.", st: "Open", more: " · each pick locks at first pitch", ic: "baseball" },
     { lg: [], off: true, t: "L4 Free to Play Stakes", sh: "L4 F2P Stakes", d: "Free-to-play betting challenge.", ic: "target" },
-    { lg: ["ncaab"], off: true, cal: "ncaab", t: "L4 NCAAB Pick'em", ic: "basketball" },
-    { lg: ["nba"], off: true, cal: "nba", t: "L4 NBA Pick'em", ic: "basketball" },
-    { lg: ["nhl"], off: true, cal: "nhl", t: "L4 NHL Pick'em", ic: "hockey" },
+    { lg: ["ncaab"], cal: "ncaab", url: "/ncaab/", t: "L4 NCAAB Pick'em", d: "Every game with a Top 25 team, all week long.", st: "Open", more: " · each pick locks at tip-off", ic: "basketball" },
+    { lg: ["nba"], cal: "nba", url: "/nba/", t: "L4 NBA Pick'em", d: "Pick every game straight up, every night.", st: "Open", more: " · each pick locks at tip-off", ic: "basketball" },
+    { lg: ["nhl"], cal: "nhl", url: "/nhl/", t: "L4 NHL Pick'em", d: "Pick every game straight up, every night.", st: "Open", more: " · each pick locks at puck drop", ic: "hockey" },
   ];
   // The calendar decides each tile's state: open contests first, then coming-soon ones whose sport is in season,
   // then anything out of season, labelled with the month it comes back.

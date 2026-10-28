@@ -125,7 +125,7 @@
                           data: e.data || {}, saved_at: e.saved || new Date().toISOString(), posted: !!e.posted, caption: e.caption || null });
   const fromRow = (r) => ({ id: r.key, kind: r.kind, title: r.title, sub: r.sub, result: r.result, url: r.url, data: r.data,
                             saved: r.saved_at, posted: r.posted, caption: r.caption, cloudId: r.id, postedAt: r.posted_at, hidden: r.hidden });
-  const KINDS = ["nfl", "cfb", "ap", "bracket", "trivia"];
+  const KINDS = ["nfl", "cfb", "nba", "nhl", "cbb", "mlb", "ap", "bracket", "trivia"];
 
   async function pushEntry(e) {
     if (!cloud.profile || !cloud.profile.onboarded || !KINDS.includes(e.kind)) return null;
