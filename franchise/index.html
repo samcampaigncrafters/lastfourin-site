@@ -341,13 +341,17 @@
         <li>Pick your team.</li>
         <li>Play the season a week at a time, then the 14-team playoffs.</li>
         <li>Offseason: players age, grow or fade, some retire. Re-sign or let go, draft a rookie class, cut to 53, go again.</li>
-      </ol><p class="empty">Grades run 1 to 10 and are our own, from that season's stats, draft slot, experience and age.</p></div></section></div></div>`;
+      </ol><p class="empty">Player ratings are a 1-100 overall (OVR), our own, from that season's stats, draft slot, experience and age.</p></div></section></div></div>`;
     $("body").onclick = (e) => {
       const b = e.target.closest("button"); if (!b) return;
       if (b.dataset.new) setup(+b.dataset.new);
       if (b.dataset.open) open(+b.dataset.open);
       if (b.dataset.dl) download(+b.dataset.dl);
-      if (b.dataset.del && confirm("Delete this franchise? This can't be undone.")) { const s = store.read(); s.slots[+b.dataset.del] = null; store.write(s); home(); }
+      // Delete asks on the page (tap twice) rather than with confirm(), which some browsers and in-app views block.
+      if (b.dataset.del) {
+        if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Tap again to delete"; b.classList.add("gold"); setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = "Delete"; b.classList.remove("gold"); } }, 4000); return; }
+        const s = store.read(); s.slots[+b.dataset.del] = null; if (s.last === +b.dataset.del) s.last = null; store.write(s); home();
+      }
     };
     $("loadF").onchange = async (e) => {
       const f = e.target.files[0]; if (!f) return;
