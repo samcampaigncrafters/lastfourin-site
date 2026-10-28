@@ -6,10 +6,10 @@
 <title>Sign in · PlayBubble</title>
 <meta name="description" content="Sign in free to keep your picks on every device, post them to your profile and climb the leaderboards.">
 <meta property="og:title" content="Sign in · PlayBubble">
-<meta property="og:image" content="https://lastfourin.com/assets/og.png">
+<meta property="og:image" content="https://playbubble.app/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta property="og:description" content="Free to play. Keep your picks on every device.">
-<meta property="og:url" content="https://lastfourin.com/signin/">
+<meta property="og:url" content="https://playbubble.app/signin/">
 <meta property="og:site_name" content="PlayBubble">
 <meta name="theme-color" content="#0d0820">
 <meta name="robots" content="noindex">
@@ -83,7 +83,7 @@
     head("Almost done", "Set up your profile", "Pick the handle people will see on your picks and comments.");
     box.innerHTML = `<form id="ff" novalidate>
       <div class="field"><label for="hd">Handle</label><div class="handle-prefix"><span>@</span><input id="hd" maxlength="20" autocomplete="username" autocapitalize="off" spellcheck="false" value="${esc(guess.length >= 3 ? guess : "")}" required></div>
-        <div class="hint">3 to 20 letters, numbers or underscores. Your profile lives at lastfourin.com/u/<b id="hdp">${esc(guess || "you")}</b></div></div>
+        <div class="hint">3 to 20 letters, numbers or underscores. Your profile lives at playbubble.app/u/<b id="hdp">${esc(guess || "you")}</b></div></div>
       <div class="field"><label for="dn">Name <span class="muted">(optional)</span></label><input id="dn" maxlength="40" autocomplete="nickname" value="${esc(p.display_name || "")}"></div>
       <div class="field"><label>Birthday</label><div class="field-2">
         <select id="bm" aria-label="Birth month"><option value="">Month</option>${months.map((m, i) => `<option value="${i + 1}">${m}</option>`).join("")}</select>

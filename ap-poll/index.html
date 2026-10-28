@@ -6,10 +6,10 @@
 <title>Guess the AP Poll · PlayBubble</title>
 <meta name="description" content="Guess next Sunday's AP Top 25, just for fun. Your guess opens after Saturday's games and closes when the real AP poll comes out.">
 <meta property="og:title" content="Guess the AP Poll · PlayBubble">
-<meta property="og:image" content="https://lastfourin.com/assets/og.png">
+<meta property="og:image" content="https://playbubble.app/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta property="og:description" content="Guess Sunday's AP Top 25 after Saturday's games. Just for fun.">
-<meta property="og:url" content="https://lastfourin.com/ap-poll/">
+<meta property="og:url" content="https://playbubble.app/ap-poll/">
 <meta property="og:site_name" content="PlayBubble">
 <meta name="theme-color" content="#0d0820">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Crect width='34' height='34' rx='8' fill='%230d0820'/%3E%3Cpath d='M5 9h7v16H5M12 17h5' fill='none' stroke='%23fff' stroke-width='3.6'/%3E%3Ccircle cx='23.5' cy='17' r='6.8' fill='%23fff'/%3E%3C/svg%3E">
@@ -308,7 +308,7 @@
   $("submitBtn").addEventListener("click", async () => {
     if (FUN) {
       if (!order.length) return;
-      const text = `🗳️ My AP Top 25 (just for fun):\n${order.map((id, i) => `${i + 1}. ${T[id].name}`).join("\n")}\n\nBuild yours: https://lastfourin.com/ap-poll/?sandbox`;
+      const text = `🗳️ My AP Top 25 (just for fun):\n${order.map((id, i) => `${i + 1}. ${T[id].name}`).join("\n")}\n\nBuild yours: https://playbubble.app/ap-poll/?sandbox`;
       try {
         if (navigator.share) await navigator.share({ text });
         else { await navigator.clipboard.writeText(text); toast("📣 Copied your poll. Paste it anywhere."); }

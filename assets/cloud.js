@@ -134,7 +134,7 @@
 
   // Visitor counter (supabase/60_visits.sql): one anonymous ping per page view on the live site. No cookies,
   // nothing kept in the browser; the database counts people with a daily-salted hash and never stores an IP.
-  if (location.hostname === "lastfourin.com" && !navigator.webdriver) {
+  if (location.hostname === "playbubble.app" && !navigator.webdriver) {
     let ref = "";
     try { ref = document.referrer ? new URL(document.referrer).hostname : ""; } catch (e) { /* bad referrer */ }
     fetch(SUPABASE_URL + "/rest/v1/rpc/log_visit", {
