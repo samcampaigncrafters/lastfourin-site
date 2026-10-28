@@ -207,6 +207,10 @@
   .ask .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 12px; }
   .ask .bar i { display: block; height: 100%; background: var(--accent); width: 100%; transition: width 1s linear; }
   .fr.k-to p { font-weight: 800; }
+  .pbar { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--card-2); font-weight: 700; font-size: 14px; }
+  .pbar:empty { display: none; }
+  .pbar input { flex: 1 1 200px; min-width: 0; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--card); color: var(--ink); font-weight: 700; }
+  .ctl button:disabled { opacity: .45; }
   .tc img { width: 18px; height: 18px; background: #fff; border-radius: 50%; padding: 1px; margin-right: 5px; flex: none; }
   .bxt { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 6px; }
   .bxt td, .bxt th { padding: 4px 6px; border-top: 1px solid var(--line); text-align: right; }
@@ -561,6 +565,7 @@
       const b = e.target.closest("button"); if (!b) return;
       if (b.dataset.tab) { tab = b.dataset.tab; sel = null; render(); }
       else if (b.dataset.watch != null) watch();
+      else if (b.dataset.party != null) partySetup();
       else if (b.dataset.pk) setPlan({ [b.dataset.pk]: +b.dataset.pv });
       else if (b.id === "suggestBtn") { const g = E.nextGame(lg); if (g) move({ t: "plan", plan: E.aiPlan(lg, lg.user, g.h === lg.user ? g.a : g.h, g.wk) }); }
       else if (b.id === "resetPlan") move({ t: "plan", plan: E.PLAN0 });
@@ -732,7 +737,7 @@
     return `<section class="card"><div class="card-h"><h2 class="disp">${esc(title)}</h2></div>${scoreRow(g)}
       <div class="card-b">${matchup(g)}
       <p class="empty" style="margin:10px 0 0">Your plan: ${esc(planWords(myPlan()))}. ${injuryLine(lg.user)}</p>
-      ${now ? `<div class="actbar" style="margin:12px 0 0"><button class="btn gold" data-watch>Watch live</button><button class="btn" data-tab="plan">Game plan &amp; scouting</button><button class="btn" data-tab="lineup">Lineup</button></div>` : ""}</div></section>`;
+      ${now ? `<div class="actbar" style="margin:12px 0 0"><button class="btn gold" data-watch>Watch live</button><button class="btn" data-party>Watch party</button><button class="btn" data-tab="plan">Game plan &amp; scouting</button><button class="btn" data-tab="lineup">Lineup</button></div>` : ""}</div></section>`;
   }
   const PLAN_UI = [
     ["lean", "Offense", "How often you throw on early downs. Third and long is a passing down whatever you pick.", [[-2, "Run heavy"], [-1, "Lean run"], [0, "Balanced"], [1, "Lean pass"], [2, "Pass heavy"]]],
@@ -931,7 +936,7 @@
   function liveView() {
     const L = live, g = L.g, H = team(g.h), A = team(g.a);
     L.dr = drivesOf(L.pv.plays); L.base = clockBase(L.pv.plays, L.times);
-    head(`${E.teamName(team(lg.user))} · ${g.po != null ? E.ROUNDS[g.po] : `Week ${g.wk}`}`, `${E.teamName(A)} at ${E.teamName(H)}`, "");
+    head(`${L.party ? "Watch party" : E.teamName(team(lg.user))} · ${g.po != null ? E.ROUNDS[g.po] : `Week ${g.wk}`}`, `${E.teamName(A)} at ${E.teamName(H)}`, "");
     $("body").onchange = null;
     $("body").innerHTML = `<div class="lv">
       <div class="sb">${bugSide(g.a, false)}
@@ -939,7 +944,7 @@
         ${bugSide(g.h, true)}<div class="flash" id="lvF"></div></div>
       <div class="ctl"><div class="seg" id="spd">${SPEEDS.map(([k, l, v]) => `<button type="button" data-spd="${k}" aria-pressed="${L.speed === v}">${l}</button>`).join("")}<button type="button" data-pause aria-pressed="false">Pause</button><button type="button" data-skip>Skip to end</button></div>
         <button class="btn" id="lvLeave" style="margin-left:auto">Leave</button></div>
-      <div id="lvBox"></div>
+      <div class="pbar" id="pBar"></div><div id="lvBox"></div>
       <div class="gcw"><div class="stack" style="display:grid;gap:12px">
         <div class="fld" id="fld">${fieldSvg(g)}</div>
         <section class="card"><div class="card-h"><h2 class="disp" style="font-size:18px">Current drive</h2></div><div class="card-b" style="display:grid;gap:8px">
@@ -949,6 +954,9 @@
     setSpeed();
     $("body").onclick = (e) => {
       const b = e.target.closest("button"); if (!b) return;
+      // Watch party: only the host runs the clock, and it goes through the server so both screens follow.
+      if (L.party && (b.dataset.spd || b.dataset.pause != null || b.dataset.skip != null)) return partyControl(b);
+      if (b.id === "pCopy") return copyInvite();
       if (b.dataset.spd) { L.speed = SPEEDS.find((x) => x[0] === b.dataset.spd)[2]; document.querySelectorAll("[data-spd]").forEach((x) => x.setAttribute("aria-pressed", x === b)); setSpeed(); }
       else if (b.dataset.pause != null) { if (L.asking || (L.half >= 0 && L.idx === L.half && $("lvBox").innerHTML)) return; L.paused = !L.paused; b.setAttribute("aria-pressed", L.paused); b.textContent = L.paused ? "Resume" : "Pause"; }
       else if (b.dataset.skip != null) { endAsk(); L.skipping = true; L.paused = false; L.ms = L.times[L.times.length - 1]; $("lvBox").innerHTML = ""; }
@@ -956,7 +964,8 @@
       else if (b.dataset.hk) { const p = { ...L.h2plan, [b.dataset.hk]: +b.dataset.pv }; L.h2plan = p; b.parentNode.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b)); }
       else if (b.id === "h2Go") secondHalf(true);
       else if (b.id === "h2Keep") secondHalf(false);
-      else if (b.id === "lvLeave") { if (L.committed || confirm("Leave the game? The rest of it plays out instantly.")) { commitLive(); stopLive(); tab = "week"; render(); } }
+      else if (b.id === "lvLeave" && L.guest) { stopLive(); location.href = "/franchise/"; }
+      else if (b.id === "lvLeave") { if (L.committed || confirm("Leave the game? The rest of it plays out instantly.")) { if (L.party) partyEnd(); commitLive(); stopLive(); tab = "week"; render(); } }
       else if (b.id === "lvBack") { stopLive(); tab = "week"; render(); }
       else if (b.dataset.g) boxScore(b.dataset.g);
     };
@@ -964,13 +973,15 @@
     const loop = (now) => {
       if (live !== L) return;
       const dt = Math.min(1000, now - L.last); L.last = now;
-      if (!L.paused) L.ms += dt * L.speed * (L.base || 1);
+      if (L.party) L.ms = partyMs(L);
+      else if (!L.paused) L.ms += dt * L.speed * (L.base || 1);
       show(E.live.at(L.times, L.sync ? Date.now() - L.sync : L.ms));
       L.raf = requestAnimationFrame(loop);
     };
     L.raf = requestAnimationFrame(loop);
+    if (L.party) partyBar();
   }
-  function stopLive() { if (live) { cancelAnimationFrame(live.raf); clearInterval(live.askT); } live = null; }
+  function stopLive() { if (live) { cancelAnimationFrame(live.raf); clearInterval(live.askT); if (live.party) clearInterval(live.party.poll); } live = null; }
   function feedRow(p, g, now) {
     const d = downText(p, g);
     return `<div class="fr ${p.big ? "big" : ""} ${now ? "now" : ""} k-${p.k}"><em>${qn(p.q)} ${clk(p.c)}</em><span>${d ? esc(d) : ""}</span><p>${esc(p.t)}</p></div>`;
@@ -999,7 +1010,7 @@
     if (idx === L.idx) return;
     // Halftime: in a solo game the viewer stops here so you can change your second-half plan.
     const hi = plays.findIndex((p) => p.k === "half");
-    if (!L.sync && hi >= 0 && idx >= hi && L.half < 0 && L.idx < hi && L.ms < L.times[L.times.length - 1]) { idx = hi; L.paused = true; L.ms = L.times[hi]; L.inHalf = true; halftime(hi); }
+    if (!L.sync && !L.party && hi >= 0 && idx >= hi && L.half < 0 && L.idx < hi && L.ms < L.times[L.times.length - 1]) { idx = hi; L.paused = true; L.ms = L.times[hi]; L.inHalf = true; halftime(hi); }
     L.idx = idx;
     $("feed").innerHTML = feedHtml(plays, g, idx);
     const p = plays[idx], nx = plays[idx + 1];
@@ -1088,18 +1099,19 @@
     return ["Clock running", `They're letting the clock run: ${when}, you're ${scoreWords(a)}. A timeout saves about ${a.save} seconds (${a.left} left).`, {}];
   }
   function askBox(a) {
-    const L = live; L.asking = a; L.askLeft = ASK_SECS;
-    const [title, text, sub] = askText(a), mine = L.coach.has(a.t) && (!L.party || L.party.mine.has(a.t));
+    const L = live, mine = L.coach.has(a.t) && (!L.party || L.party.mine.has(a.t));
+    L.asking = a; L.askLeft = mine ? ASK_SECS : ASK_SECS + 5;
+    const [title, text, sub] = askText(a);
     const opts = a.opts.map((c) => `<button class="btn${c === a.def ? " gold" : ""}" data-call="${c}" ${mine ? "" : "disabled"}>${ASK_LABEL[c]}<small>${c === a.def ? "default" : sub[c] || "&nbsp;"}</small></button>`).join("");
     $("lvBox").innerHTML = `<section class="card ask"><div class="card-h"><h2 class="disp">${title}</h2><small class="muted" id="askN">${L.askLeft}s</small></div><div class="card-b">
-      <p style="margin:0">${L.party && !mine ? `${esc(E.teamName(team(a.t)))}'s call. ` : ""}${text}</p><div class="opts">${opts}</div>
+      <p style="margin:0">${L.party && !mine ? `Call for ${esc(E.teamName(team(a.t)))}. ` : ""}${text}</p><div class="opts">${opts}</div>
       <div class="bar"><i id="askBar"></i></div><p class="empty" style="margin:6px 0 0">${mine ? "No answer when time runs out = the default." : "Waiting for their coach. No answer = the default."}</p></div></section>`;
     clearInterval(L.askT);
     L.askT = setInterval(() => {
       if (live !== L || L.asking !== a) return clearInterval(L.askT);
       L.askLeft--;
-      const n = $("askN"), bar = $("askBar"); if (n) n.textContent = Math.max(0, L.askLeft) + "s"; if (bar) bar.style.width = `${Math.max(0, L.askLeft) / ASK_SECS * 100}%`;
-      if (L.askLeft <= 0) askTimeout(a);
+      const n = $("askN"), bar = $("askBar"); if (n) n.textContent = Math.max(0, L.askLeft) + "s"; if (bar) bar.style.width = `${Math.min(1, Math.max(0, L.askLeft) / ASK_SECS) * 100}%`;
+      if (L.askLeft <= 0) { clearInterval(L.askT); askTimeout(a); }
     }, 1000);
   }
   function askTimeout(a) { if (live && live.party) partyTimeout(a); else answerAsk(a, a.def); }
@@ -1119,6 +1131,7 @@
   // Play the week for real. It plays out exactly what was shown (same league, same draws).
   function commitLive() {
     const L = live; if (!L || L.committed) return;
+    if (L.guest) { L.committed = true; L.key = ""; return; } // a watch party guest only watches the host's league
     E.apply(lg, { t: "week" }); persist(); L.committed = true;
     const done = [...lg.games, ...(lg.playoffs ? lg.playoffs.games : [])].find((x) => x.done && x.wk === L.g.wk && x.h === L.g.h && x.a === L.g.a);
     if (done && (done.hs !== L.pv.sc[0] || done.as !== L.pv.sc[1])) console.warn("live game and result differ", done.hs, done.as, L.pv.sc);
@@ -1126,10 +1139,11 @@
   }
   function finishLive() {
     const L = live; if (L.finished) return; L.finished = true;
-    commitLive();
-    const g = L.g, me = g.h === lg.user ? 0 : 1, won = L.pv.sc[me] > L.pv.sc[1 - me], tie = L.pv.sc[0] === L.pv.sc[1];
-    $("lvBox").innerHTML = `<section class="card"><div class="card-b"><p class="disp" style="font-size:30px;margin:0">${tie ? "A tie" : won ? "You win" : "You lose"} ${L.pv.sc[me]}-${L.pv.sc[1 - me]}</p>
-      <div class="actbar" style="margin:12px 0 0">${L.key ? `<button class="btn gold" data-g="${L.key}">Box score</button>` : ""}<button class="btn" id="lvBack">Back to the season</button></div></div></section>`;
+    commitLive(); if (L.party && L.party.host) partyEnd();
+    const g = L.g, myT = L.party ? [...L.party.mine][0] : lg.user, me = myT === g.a ? 1 : 0, won = L.pv.sc[me] > L.pv.sc[1 - me], tie = L.pv.sc[0] === L.pv.sc[1];
+    const wt = L.pv.sc[0] > L.pv.sc[1] ? g.h : g.a, line = tie ? "A tie" : myT == null ? `${E.teamShort(team(wt))} wins` : won ? "You win" : "You lose";
+    $("lvBox").innerHTML = `<section class="card"><div class="card-b"><p class="disp" style="font-size:30px;margin:0">${line} ${L.pv.sc[myT == null ? (wt === g.a ? 1 : 0) : me]}-${L.pv.sc[myT == null ? (wt === g.a ? 0 : 1) : 1 - me]}</p>
+      <div class="actbar" style="margin:12px 0 0">${L.key ? `<button class="btn gold" data-g="${L.key}">Box score</button>` : ""}${L.guest ? `<a class="btn" href="/franchise/">Back to my franchise</a>` : `<button class="btn" id="lvBack">Back to the season</button>`}</div></div></section>`;
   }
   const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 
@@ -1201,9 +1215,136 @@
   }
 
   // ---- The lock: names, nicknames and logos come from franchise_pack(), which answers only for invited accounts. ----
+  // ---- Watch party: two friends watch one game in sync ----
+  // The host's league save goes to the server with the game; the friend's browser replays it, so both work out the
+  // identical game. What's shared is the clock (speed, pause, start time on the server's clock) and the answers to coach
+  // decisions. Each owner gets prompts for their own team (the friend can coach the other side); both screens stop
+  // for any prompt. Polled about once a second (supabase/67_franchise_party.sql).
+  const rpc = async (fn, args) => {
+    const c = LFI.cloud; if (!c || !c.on) throw new Error("Watch parties need the site's accounts.");
+    await c.ready; if (!c.user) throw new Error("Sign in first.");
+    const { data, error } = await c.sb.rpc(fn, args); if (error) throw new Error(error.message); return data;
+  };
+  function partySetup() {
+    const g = E.nextGame(lg); if (!g) return;
+    const opp = oppOf(g);
+    $("body").onchange = null;
+    $("body").innerHTML = `<section class="card" style="max-width:620px"><div class="card-h"><h2 class="disp">Watch party</h2></div><div class="card-b">
+      <p style="margin:0 0 10px">Watch ${esc(E.teamName(team(g.a)))} at ${esc(E.teamName(team(g.h)))} with a friend, in sync. You run the clock; the game stops for both of you whenever there's a coach decision.</p>
+      <label class="tog" style="margin:0 0 12px"><input type="checkbox" id="pCoach" checked> <span><b>My friend coaches ${esc(E.teamName(team(opp)))}</b><span>They make that team's calls. Off: they just watch.</span></span></label>
+      <div class="actbar" style="margin:0"><button class="btn gold" id="pMake">Make the party</button><button class="btn" id="pBack">Back</button></div></div></section>`;
+    $("body").onclick = async (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      if (b.id === "pBack") { tab = "week"; render(); return; }
+      if (b.id !== "pMake") return;
+      b.disabled = true;
+      try {
+        const pv = E.previewGame(lg, g), sv = E.saveOf(lg);
+        const code = await rpc("franchise_party_create", { p_save: sv, p_game: { wk: g.wk, h: g.h, a: g.a, n: pv.plays.length, sc: pv.sc },
+          p_host_team: lg.user, p_guest_team: $("pCoach").checked ? opp : null });
+        const st = await rpc("franchise_party_get", { p_code: code });
+        partyStart(code, true, st);
+      } catch (err) { toast(err.message || "Couldn't make the party."); b.disabled = false; }
+    };
+  }
+  async function joinParty(code) {
+    head("Watch party", "Joining…", "");
+    $("body").innerHTML = `<p class="empty">Loading the game…</p>`;
+    try {
+      const st = await rpc("franchise_party_join", { p_code: code });
+      const sv = st.save, data = sv.settings && sv.settings.mode === "real" ? await realData(sv.settings.year) : DATA;
+      lg = E.replay(data, sv); slot = -1;
+      const g = E.nextGame(lg);
+      if (!g || g.wk !== st.game.wk || g.h !== st.game.h || g.a !== st.game.a) throw new Error("That game isn't next in the host's league any more.");
+      // Before any answers, this copy must work out exactly the host's game.
+      const pv = E.previewGame(lg, g), fresh = !Object.keys(st.answers || {}).length;
+      if (fresh && (pv.plays.length !== st.game.n || pv.sc.join() !== st.game.sc.join())) throw new Error("Your copy of the league doesn't match the host's. Reload and try again.");
+      partyStart(st.code, false, st);
+    } catch (err) {
+      console.error(err);
+      $("body").innerHTML = `<section class="card" style="max-width:560px"><div class="card-b"><p class="disp" style="font-size:26px;margin:0 0 6px">Couldn't join the watch party.</p>
+        <p style="margin:0 0 14px">${esc(err.message || "Something went wrong.")}</p><div class="actbar" style="margin:0"><a class="btn gold" href="/franchise/">My franchise</a></div></div></section>`;
+    }
+  }
+  function partyStart(code, host, st) {
+    const g = E.nextGame(lg), pv = E.previewGame(lg, g);
+    const coach = [st.host_team, st.guest_team].filter((x) => x != null);
+    live = { g, pv, times: E.live.times(pv.plays), ms: 0, speed: st.clock.speed, idx: -1, half: -1, paused: false, committed: false, sync: 0, last: 0,
+      coach: new Set(coach), guest: !host,
+      party: { code, host, st, mine: new Set(host ? [st.host_team] : st.guest_team != null ? [st.guest_team] : []), clock: st.clock, off: st.now - Date.now(), rtt: 1e9 } };
+    partyAnswers(st.answers);
+    liveView();
+    live.party.poll = setInterval(partyPoll, 1000);
+  }
+  function partyMs(L) {
+    const c = L.party.clock;
+    if (c.skip) { if (!L.skipping) { endAsk(); L.skipping = true; $("lvBox").innerHTML = ""; } return L.times[L.times.length - 1]; }
+    if (c.paused || !c.t0) return c.ms0;
+    return c.ms0 + Math.max(0, Date.now() + L.party.off - c.t0) * c.speed * (L.base || 1);
+  }
+  function partyTake(st) { // a fresh state from the server: clock, answers, who's here
+    const L = live; if (!L || !L.party || !st) return;
+    const P = L.party; P.st = st; P.clock = st.clock;
+    if (L.speed !== st.clock.speed) { L.speed = st.clock.speed; document.querySelectorAll("[data-spd]").forEach((x) => x.setAttribute("aria-pressed", SPEEDS.find((s) => s[0] === x.dataset.spd)[2] === L.speed)); }
+    partyAnswers(st.answers); partyBar();
+  }
+  async function partyPoll() {
+    const L = live; if (!L || !L.party || L.party.busy) return;
+    const P = L.party, t0 = Date.now(); P.busy = true;
+    try {
+      const st = await rpc("franchise_party_get", { p_code: P.code });
+      const rtt = Date.now() - t0;
+      if (st && rtt <= P.rtt * 1.5 + 50) { P.off = st.now - (t0 + rtt / 2); P.rtt = Math.min(P.rtt, rtt); } // the server's clock, from the quickest replies
+      if (live === L) partyTake(st);
+    } catch (err) { console.warn(err.message); } finally { P.busy = false; }
+  }
+  // Apply the shared answers in the order the decisions come up (an answer can change which decision comes next).
+  function partyAnswers(ans) {
+    const L = live; if (!L || !ans) return;
+    for (let guard = 0; guard < 40; guard++) {
+      const a = L.pv.asks.find((x) => L.coach.has(x.t) && !answered(x)); if (!a) return;
+      const key = `${a.t}:${a.id}`; if (!(key in ans)) return;
+      const c = ans[key] == null || !a.opts.includes(ans[key]) ? a.def : ans[key];
+      if (L.asking === a) applyCall(a, c);
+      else { E.apply(lg, { t: "call", k: a.id, c, team: a.t }); if (!L.guest) persist(); repreview(a.at, "plays before a coach decision changed"); }
+    }
+  }
+  async function partyAnswer(a, c) {
+    document.querySelectorAll(".ask [data-call]").forEach((x) => (x.disabled = true));
+    try { partyTake(await rpc("franchise_party_answer", { p_code: live.party.code, p_key: `${a.t}:${a.id}`, p_choice: c, p_ms0: live.times[a.at] })); }
+    catch (err) { toast(err.message); document.querySelectorAll(".ask [data-call]").forEach((x) => (x.disabled = !live.party.mine.has(a.t))); }
+  }
+  async function partyTimeout(a) { // no answer in time: the default (the other screen fills it in if the coach is gone)
+    try { partyTake(await rpc("franchise_party_answer", { p_code: live.party.code, p_key: `${a.t}:${a.id}`, p_choice: null, p_ms0: live.times[a.at] })); }
+    catch (err) { console.warn(err.message); if (live && live.asking === a) applyCall(a, a.def); } // the party closed: play on alone
+  }
+  async function partyControl(b) {
+    const L = live, P = L.party; if (!P.host) return toast("The host runs the clock.");
+    if (L.asking && b.dataset.skip == null) return;
+    const c = P.clock, now = L.ms;
+    let speed = c.speed, paused = c.paused, skip = false;
+    if (b.dataset.spd) speed = SPEEDS.find((x) => x[0] === b.dataset.spd)[2];
+    else if (b.dataset.pause != null) paused = !paused;
+    else if (b.dataset.skip != null) skip = true;
+    try { partyTake(await rpc("franchise_party_clock", { p_code: P.code, p_speed: speed, p_paused: paused, p_ms0: skip ? L.times[L.times.length - 1] : now, p_skip: skip })); }
+    catch (err) { toast(err.message); }
+  }
+  function partyEnd() { const P = live && live.party; if (P && P.host) rpc("franchise_party_end", { p_code: P.code }).catch(() => {}); }
+  const inviteUrl = () => `${location.origin}/franchise/?party=${live.party.code}`;
+  function copyInvite() { const u = inviteUrl(); (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => toast("Invite link copied."), () => { $("pLink").select(); }); }
+  function partyBar() {
+    const L = live, P = L && L.party; if (!P || !$("pBar")) return;
+    const st = P.st, c = P.clock, start = c.paused && !c.ms0, pb = document.querySelector("[data-pause]");
+    if (pb) { pb.textContent = start ? "Start" : c.paused ? "Resume" : "Pause"; pb.setAttribute("aria-pressed", !!c.paused); }
+    document.querySelectorAll(".ctl .seg button").forEach((x) => (x.disabled = !P.host));
+    const who = st.status === "done" && !P.host ? "The host left. The game plays on." : P.host ? (st.joined ? "Your friend is here." : "Waiting for your friend to join.") : "Watching with the host. The host runs the clock.";
+    const html = `${P.host && !st.joined ? `<input id="pLink" readonly value="${esc(inviteUrl())}"><button class="btn" id="pCopy">Copy invite</button>` : ""}<span>👥 ${who}${start ? (P.host ? " Press Start when you're both ready." : " Waiting for the host to start.") : ""}</span>`;
+    if ($("pBar").dataset.h !== html) { $("pBar").innerHTML = html; $("pBar").dataset.h = html; }
+  }
+
   function gate(kind) {
     head("NFL · Private league", "Franchise Simulator", "");
-    const next = encodeURIComponent("/franchise/");
+    const next = encodeURIComponent("/franchise/" + location.search);
     const msg = {
       signin: ["This league is invite-only.", "Sign in with the account Sam added to get in.", `<a class="btn gold" href="/signin/?next=${next}">Sign in</a>`],
       invite: ["This league is invite-only.", "You're signed in, but this account isn't on the list yet. Ask Sam to add you, then reload.", `<button class="btn gold" type="button" onclick="location.reload()">Reload</button>`],
@@ -1232,6 +1373,8 @@
     DATA = window.FRANCHISE_DATA; fill(DATA.players, "players");
     // Open the last franchise straight away if there is one; otherwise the start screen.
     const s0 = store.read();
+    const pc = new URLSearchParams(location.search).get("party");
+    if (pc) return joinParty(pc);
     if (new URLSearchParams(location.search).has("new") || s0.last == null || !s0.slots[s0.last]) home(); else open(s0.last);
   })();
 })();
