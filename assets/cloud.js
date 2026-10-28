@@ -53,6 +53,15 @@
     if (!cloud.user) { cloud.profile = null; return; }
     const { data } = await cloud.sb.from("profiles").select("*").eq("id", cloud.user.id).maybeSingle();
     cloud.profile = data || null;
+    await countInbox();
+  }
+  // How many friend requests are waiting on me (the badge on the Friends button).
+  async function countInbox() {
+    cloud.inbox = 0;
+    if (!cloud.profile || !cloud.profile.onboarded) return;
+    const { count } = await cloud.sb.from("friendships").select("requester", { count: "exact", head: true })
+      .eq("addressee", cloud.user.id).eq("status", "pending");
+    cloud.inbox = count || 0;
   }
 
   // ---- Sign-in ----
@@ -214,6 +223,32 @@
   };
   cloud.block = async (uid) => { need(); const { error } = await cloud.sb.from("blocks").insert({ blocked: uid }); if (error && error.code !== "23505") fail(error); };
   cloud.unblock = async (uid) => { need(); const { error } = await cloud.sb.from("blocks").delete().eq("blocked", uid); fail(error); };
+
+  // ---- Friends: mutual, by request. Every change goes through a database call that checks blocks and limits ----
+  const afterFriendChange = async () => { await countInbox(); LFI.setMe(cloud.profile); };
+  cloud.friendStatus = async (uid) => {
+    if (!cloud.profile || !cloud.profile.onboarded) return "none";
+    const { data } = await cloud.sb.rpc("friend_status", { p_user: uid }); return data || "none";
+  };
+  // Returns 'sent', 'accepted' (they had already asked you), 'already' or 'pending'.
+  cloud.friendRequest = async (handle) => {
+    need(); const { data, error } = await cloud.sb.rpc("friend_request", { p_handle: handle });
+    fail(error, "Couldn't send that request."); await afterFriendChange(); return data;
+  };
+  cloud.friendRespond = async (uid, accept) => {
+    need(); const { error } = await cloud.sb.rpc("friend_respond", { p_user: uid, p_accept: accept });
+    fail(error); await afterFriendChange();
+  };
+  cloud.friendRemove = async (uid) => { need(); const { error } = await cloud.sb.rpc("friend_remove", { p_user: uid }); fail(error); await afterFriendChange(); };
+  cloud.friendRequests = async () => { need(); const { data, error } = await cloud.sb.rpc("friend_requests"); fail(error); return data || []; };
+  cloud.friendsBoard = async () => { need(); const { data, error } = await cloud.sb.rpc("friends_board"); fail(error); return data || []; };
+  // Handle search for the "Add a friend" box: finished profiles whose handle starts with what's typed.
+  cloud.findPeople = async (q) => {
+    q = q.replace(/^@/, "").trim(); if (!/^[A-Za-z0-9_]{1,20}$/.test(q)) return [];
+    const { data } = await cloud.sb.from("profiles").select("id,username,display_name,avatar_url")
+      .ilike("username", q.replace(/_/g, "\\_") + "%").eq("onboarded", true).eq("banned", false).limit(6);
+    return (data || []).filter((p) => p.id !== cloud.user.id);
+  };
 
   // ---- Moderators ----
   cloud.isAdmin = async () => { if (!cloud.user) return false; const { data } = await cloud.sb.rpc("is_admin"); return !!data; };

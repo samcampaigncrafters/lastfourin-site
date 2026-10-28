@@ -96,3 +96,11 @@
 .legal p, .legal li { color: var(--ink-2); }
 .notice { background: var(--accent-soft); border: 1px solid var(--accent-line); color: var(--accent-deep); border-radius: var(--r); padding: 10px 14px; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
 [hidden] { display: none !important; }
+
+/* Friends button in the header (signed in only), with a badge for requests waiting on you */
+.fbtn { position: relative; width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; border: 2px solid var(--line-2); color: var(--ink); text-decoration: none; transition: border-color .18s, transform .18s; flex: none; }
+.fbtn:hover, .fbtn.on { border-color: var(--ink); }
+.fbtn i, .mm-badge { font-style: normal; font-family: var(--f-body); font-weight: 800; font-size: 11px; line-height: 1; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--accent); color: #fff; display: inline-grid; place-items: center; }
+.fbtn i { position: absolute; top: -5px; right: -6px; box-shadow: 0 0 0 2px var(--bg); }
+.mm-badge { vertical-align: 2px; margin-left: 4px; }
+@media (max-width: 820px) { .fbtn { width: 38px; height: 38px; } }

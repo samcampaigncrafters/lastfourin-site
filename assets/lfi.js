@@ -41,6 +41,7 @@
     document.startViewTransition(go).finished.finally(() => root.classList.remove("theme-flip"));
   }
   const themeLabel = () => theme() === "light" ? "Dark mode" : "Light mode";
+  const FRIENDS = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.4"/><path d="M2.8 20c.6-3.6 3.1-5.6 6.2-5.6s5.6 2 6.2 5.6"/><path d="M15.5 4.9a3.3 3.3 0 0 1 0 6.3M18 14.7c1.9.7 3 2.5 3.3 5.3"/></svg>';
   const LOGO = '<svg width="26" height="26" viewBox="0 0 30 30" aria-hidden="true"><rect x="2" y="2" width="11.5" height="11.5" rx="2" fill="currentColor"/><rect x="16.5" y="2" width="11.5" height="11.5" rx="2" fill="currentColor"/><rect x="2" y="16.5" width="11.5" height="11.5" rx="2" fill="currentColor"/><rect x="16.5" y="16.5" width="11.5" height="11.5" rx="2" fill="#ff3dbb"/></svg>';
 
   const $ = (id) => document.getElementById(id);
@@ -84,6 +85,8 @@
 
   // The signed-in profile, set by cloud.js once the session is known (null when signed out).
   let me = null;
+  // Friend requests waiting on me, counted by cloud.js; shows as a badge on the Friends button.
+  const inbox = () => (window.LFI && LFI.cloud && LFI.cloud.inbox) || 0;
   const myName = () => (me && (me.display_name || me.username)) || local.get("lfi-name", "");
 
   function header() {
@@ -105,6 +108,7 @@
             : name ? `<a class="avatar" href="/account/" title="My predictions" aria-label="My predictions">${esc(name.trim()[0].toUpperCase())}</a>`
                  : window.LFI_CLOUD_ON ? `<a class="btn si" href="/signin/"${active === "signin" ? ' aria-current="page"' : ""}>Sign in</a>`
                  : `<a class="btn si" href="/account/"${active === "account" ? ' aria-current="page"' : ""}>My picks</a>`}
+          ${me && me.onboarded ? `<a class="fbtn${active === "friends" ? " on" : ""}" href="/friends/" title="Friends" aria-label="Friends${inbox() ? `, ${inbox()} new request${inbox() > 1 ? "s" : ""}` : ""}">${FRIENDS}${inbox() ? `<i>${inbox() > 9 ? "9+" : inbox()}</i>` : ""}</a>` : ""}
           <button type="button" class="tbtn" data-theme-flip aria-label="${themeLabel()}" title="${themeLabel()}">${theme() === "light" ? MOON : SUN}</button>
           <button type="button" class="mbtn" aria-expanded="false" aria-controls="mmenu" aria-label="Menu">${BURGER}</button>
         </div>
@@ -115,6 +119,7 @@
           <a class="mm-home${active === "account" ? " on" : ""}" href="/account/"><b>My picks</b><span>Everything you've submitted</span></a>
           ${me && me.onboarded ? `<a class="mm-home${active === "profile" ? " on" : ""}" href="/u/?h=${encodeURIComponent(me.username)}"><b>My profile</b><span>@${esc(me.username)}</span></a>`
             : window.LFI_CLOUD_ON ? `<a class="mm-home" href="/signin/"><b>Sign in</b><span>Keep your picks on every device</span></a>` : ""}
+          ${me && me.onboarded ? `<a class="mm-home${active === "friends" ? " on" : ""}" href="/friends/"><b>Friends${inbox() ? ` <i class="mm-badge">${inbox()}</i>` : ""}</b><span>${inbox() ? `${inbox()} new friend request${inbox() > 1 ? "s" : ""}` : "Add friends and compare stats"}</span></a>` : ""}
           <button type="button" class="mm-home mm-theme" data-theme-flip>${theme() === "light" ? MOON : SUN}<b>${themeLabel()}</b></button>
       </div>`;
     if (h.dataset.bound) return;

@@ -38,7 +38,8 @@
 (function () {
   const { $, esc, toast, renderEntry, copyText, cloud, KIND } = LFI;
   const handle = (new URLSearchParams(location.search).get("h") || "").replace(/^@/, "").trim();
-  let P = null, viewer = null, myBlocks = [], last = null, mine = false;
+  const FOUNDER = "5214afa8-3e8b-4689-9023-df683e81c168"; // @Sam (by account id, so it survives a handle change)
+  let P = null, viewer = null, myBlocks = [], last = null, mine = false, fs = "none";
 
   const initial = (p) => esc(((p.display_name || p.username || "?").trim()[0] || "?").toUpperCase());
   const av = (p, cls = "avatar") => `<span class="${cls}">${p.avatar_url ? `<img src="${esc(p.avatar_url)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : initial(p)}</span>`;
@@ -58,10 +59,19 @@
     if (+st.perfect_weeks) badges.push(`💯 Perfect week${st.perfect_weeks > 1 ? ` ×${st.perfect_weeks}` : ""}`);
     if (+st.best_streak >= 5) badges.push(`⚡ Best streak ${st.best_streak}`);
     if (+st.weeks >= 10) badges.push(`📅 ${st.weeks} weeks played`);
-    if (new Date(p.created_at) < new Date("2027-01-01")) badges.push("⭐ Founding member");
+    // Sam's account is the one Founder; everyone who joins before 2027 is a Founding member.
+    if (p.id === FOUNDER) badges.push("👑 Founder");
+    else if (new Date(p.created_at) < new Date("2027-01-01")) badges.push("⭐ Founding member");
     const share = `<button class="btn" type="button" id="shareP">Share</button>`;
+    // Friend button: what it says depends on where you stand with them. Signed out, it sends you to sign in.
+    const fb = myBlocks.includes(p.id) ? ""
+      : !viewer ? (cloud.on ? `<a class="btn gold" href="/signin/?next=${encodeURIComponent(location.pathname + location.search)}">Add friend</a>` : "")
+      : { none: `<button class="btn gold" type="button" id="fb" data-f="add">Add friend</button>`,
+          outgoing: `<button class="btn" type="button" id="fb" data-f="cancel">Requested</button>`,
+          incoming: `<button class="btn gold" type="button" id="fb" data-f="accept">Accept friend</button>`,
+          friend: `<button class="btn" type="button" id="fb" data-f="friend">✓ Friends</button>` }[fs] || "";
     const acts = mine ? `<a class="btn" href="/account/#profile">Edit profile</a>${share}`
-      : `${share}${viewer ? `<div class="menu-wrap"><button class="btn" type="button" id="pm" aria-label="More" aria-expanded="false">•••</button></div>` : ""}`;
+      : `${fb}${share}${viewer ? `<div class="menu-wrap"><button class="btn" type="button" id="pm" aria-label="More" aria-expanded="false">•••</button></div>` : ""}`;
     $("prof").innerHTML = `<section class="prof"><div class="prof-cover"></div><div class="prof-in">
       <div class="prof-top">${av(p, "prof-av")}<div class="prof-acts">${acts}</div></div>
       <h1>${esc(p.display_name || p.username)}</h1>
@@ -81,6 +91,16 @@
       const url = `${location.origin}/u/${encodeURIComponent(p.username)}`;
       if (navigator.share) { try { await navigator.share({ title: document.title, text: `${p.display_name || "@" + p.username}'s picks on Last Four In`, url }); return; } catch (e) { if (e.name === "AbortError") return; } }
       toast((await copyText(url)) ? "Profile link copied" : "Couldn't copy the link");
+    };
+    if ($("fb")) $("fb").onclick = async (ev) => {
+      const b = ev.currentTarget, what = b.dataset.f;
+      try {
+        if (what === "add") { const r = await cloud.friendRequest(p.username); toast(r === "accepted" ? `You and @${p.username} are now friends` : `Request sent to @${p.username}`); }
+        else if (what === "accept") { await cloud.friendRespond(p.id, true); toast(`You and @${p.username} are now friends`); }
+        else if (what === "cancel") { if (!confirm(`Cancel your friend request to @${p.username}?`)) return; await cloud.friendRemove(p.id); toast("Request cancelled"); }
+        else if (what === "friend") { if (!confirm(`Unfriend @${p.username}? You can add each other again any time.`)) return; await cloud.friendRemove(p.id); toast("Unfriended"); }
+        b.disabled = true; fs = await cloud.friendStatus(p.id); drawProfile(p, st);
+      } catch (e) { toast(e.message); }
     };
     if ($("pm")) $("pm").onclick = (ev) => openMenu(ev.currentTarget, [
       myBlocks.includes(p.id) ? ["Unblock @" + p.username, async () => { await cloud.unblock(p.id); myBlocks = myBlocks.filter((x) => x !== p.id); toast("Unblocked"); load(); }]
@@ -235,7 +255,7 @@
       }
       if (P.banned && !(viewer && viewer.id === P.id)) { $("prof").innerHTML = `<section class="card"><div class="card-b"><p style="margin:0">This account is paused.</p></div></section>`; return; }
       mine = !!(viewer && viewer.id === P.id);
-      myBlocks = await cloud.blocks();
+      [myBlocks, fs] = await Promise.all([cloud.blocks(), mine ? "self" : cloud.friendStatus(P.id)]);
       const st = await cloud.stats(P.id);
       drawProfile(P, st);
       if (myBlocks.includes(P.id)) {
