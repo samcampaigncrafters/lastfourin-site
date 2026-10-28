@@ -110,6 +110,9 @@
   const GROUPS = ["QB", "RB", "WR", "TE", "OL", "DL", "ED", "LB", "CB", "S", "K", "P"];
   const GROUP_NAME = { QB: "Quarterback", RB: "Running back", WR: "Receiver", TE: "Tight end", OL: "Offensive line",
     DL: "Interior line", ED: "Edge rusher", LB: "Linebacker", CB: "Cornerback", S: "Safety", K: "Kicker", P: "Punter" };
+  // One player at the position, for news lines ("its punter", never "its offensive line").
+  const POS_ONE = { QB: "quarterback", RB: "running back", WR: "receiver", TE: "tight end", OL: "offensive lineman",
+    DL: "defensive tackle", ED: "edge rusher", LB: "linebacker", CB: "cornerback", S: "safety", K: "kicker", P: "punter" };
   const STARTERS = { QB: 1, RB: 1, WR: 3, TE: 1, OL: 5, DL: 2, ED: 2, LB: 2, CB: 3, S: 2, K: 1, P: 1 };
   const TARGET = { QB: 3, RB: 4, WR: 6, TE: 3, OL: 9, DL: 5, ED: 5, LB: 5, CB: 6, S: 4, K: 1, P: 1 }; // 52 + 1 spare
   const MAXPOS = { QB: 3, RB: 5, WR: 8, TE: 4, OL: 11, DL: 7, ED: 7, LB: 7, CB: 8, S: 6, K: 1, P: 1 };
@@ -183,10 +186,10 @@
     }
     const lg = {
       v: 1, seed, data: data.built, year: data.season, user: viewer(opts),
-      settings: { team: opts.team | 0, slot: opts.slot | 0, userRounds: clamp(opts.userRounds || 15, 1, REDRAFT_ROUNDS), ...(opts.lr ? { lr: 1 } : {}), ...(opts.straight ? { straight: 1 } : {}), ...humansOpt(opts) },
+      settings: { team: opts.team | 0, slot: opts.slot | 0, userRounds: clamp(opts.userRounds || 15, 1, REDRAFT_ROUNDS), ...(opts.lr ? { lr: 1 } : {}), ...(opts.inj2 ? { inj2: 1 } : {}), ...(opts.cap ? { cap: 1 } : {}), ...(opts.realRookies ? { realRookies: 1 } : {}), ...(opts.straight ? { straight: 1 } : {}), ...humansOpt(opts) },
       teams: TEAMS.map((t) => ({ ...t, roster: [] })),
       players, moves: [], phase: "redraft", week: 0, games: [], log: [], history: [], stats: {}, lastRank: null,
-      fa: [], notes: [],
+      fa: [], notes: [], drafts: data.drafts || null,
     };
     lrInit(lg);
     // Redraft order: the user's slot (or a random one), the other 31 franchises shuffled.
@@ -210,7 +213,7 @@
     const seed = String(opts.seed || Date.now().toString(36));
     const lg = {
       v: 1, seed, data: data.built, year: data.season, user: viewer(opts),
-      settings: { mode: "real", year: data.season, team: opts.team | 0, hindsight: !!opts.hindsight, ...(opts.lr ? { lr: 1 } : {}), ...humansOpt(opts) },
+      settings: { mode: "real", year: data.season, team: opts.team | 0, hindsight: !!opts.hindsight, ...(opts.lr ? { lr: 1 } : {}), ...(opts.inj2 ? { inj2: 1 } : {}), ...(opts.cap ? { cap: 1 } : {}), ...(opts.realRookies ? { realRookies: 1 } : {}), ...humansOpt(opts) },
       teams: TEAMS.map((t) => ({ ...t, roster: [] })),
       players: {}, moves: [], phase: "season", week: 0, games: [], log: [], history: [], stats: {}, lastRank: null,
       fa: [], notes: [], drafts: data.drafts || null, realSched: data.sched,
@@ -227,6 +230,7 @@
     for (const t of lg.teams) for (const pid of t.roster) {
       const p = lg.players[pid], r = rng(seed, "deal", pid);
       p.yrs = p.exp <= 3 ? Math.max(1, (p.pick ? 4 : 3) - p.exp) : p.age < 26 ? 2 + r.int(3) : p.age < 30 ? 1 + r.int(3) : 1 + r.int(2);
+      if (capOn(lg)) p.sal = p.exp <= 3 && p.pick ? rookieSal(p.pick) : askSalary(lg, p); // still on a rookie deal: the rookie scale
     }
     for (const t of lg.teams) aiCut(lg, t);
     fillRosters(lg);
@@ -298,7 +302,36 @@
         return true;
       }
       case "ready": return multi(lg); // a friends-league owner is done for now; the server counts these, the league doesn't change
-      case "week": return lg.phase === "season" ? simWeek(lg) : lg.phase === "playoffs" ? simPlayoffRound(lg) : false;
+      case "pilot": {
+        if (!multi(lg) || !Number.isInteger(m.n) || m.n < 0 || m.n > 22 ||
+          (m.n > 0 && lg.phase !== "season")) return false;
+        lg.pilot = lg.pilot || {};
+        lg.pilot[T] = { left: m.n, until: Number.isInteger(m.until) ? Math.min(lg.weeks || 18, m.until) : lg.week + m.n,
+          stop: m.stop !== false };
+        return true;
+      }
+      case "week": {
+        const ok = lg.phase === "season" ? simWeek(lg) : lg.phase === "playoffs" ? simPlayoffRound(lg) : false;
+        if (ok !== false && lg.pilot) for (const p of Object.values(lg.pilot)) p.left = Math.max(0, p.left - 1);
+        if (ok !== false && lg.inj2p) { lg.inj2 = true; delete lg.inj2p; }
+        return ok;
+      }
+      case "realRookies": { // versioned upgrade: previous draft moves replay before this marker
+        if (lg.settings.realRookies || lg.realRookies) return false;
+        lg.realRookies = true;
+        // Keep already-made picks, but do not draft another generated player from an old unfinished class.
+        if (d && d.kind === "rookie" && [...d.pool].some((id) => lg.players[id].gen)) {
+          lg.pendingRookieDraft = d; lg.draft = null; lg.phase = "rookie-data";
+        }
+        return true;
+      }
+      case "inj2": { // switch a league made before 2026-10-28 to on-the-field injuries (see simGame)
+        if (inj2On(lg) || lg.inj2p) return false;
+        // In a friends league mid-season it starts after this week's games, so a game a friend may already be
+        // watching never changes. Solo, it is made when the save loads, before anything is shown: at once.
+        if (multi(lg) && (lg.phase === "season" || lg.phase === "playoffs")) lg.inj2p = true; else lg.inj2 = true;
+        return true;
+      }
       case "season": { // play out the rest of the regular season
         if (lg.phase !== "season") return false;
         while (lg.phase === "season") simWeek(lg);
@@ -336,12 +369,41 @@
         lg.teams[T].custom = s || undefined;
         return true;
       }
+      case "trade": { // a trade with an AI team: { to, give, get, gp, tp, cut }; it happens only if their value model says yes
+        const D = dealOf(lg, T, m);
+        if (!D || isHuman(lg, D.to) || dealProblem(lg, D) || !tradeVerdict(lg, D).ok) return false;
+        doTrade(lg, D, D.cut, null);
+        return true;
+      }
+      case "offer": { // friends league: a trade offer to another person's team, { id, to, give, get, gp, tp, cut }
+        const D = dealOf(lg, T, m), id = offerId(m.id);
+        if (!multi(lg) || !D || !id || !isHuman(lg, D.to) || (lg.offers && lg.offers[id]) || offersOf(lg, T).out.length >= OFFER_MAX || dealProblem(lg, D)) return false;
+        lg.offers = { ...(lg.offers || {}), [id]: { id, from: T, to: D.to, give: D.give, get: D.get, gp: D.gp, tp: D.tp, cut: D.cut, y: lg.year, wk: lg.week, ph: lg.phase } };
+        return true;
+      }
+      case "accept": { // the other owner says yes: the trade happens now if it is still possible; cut = who they release to stay at 53
+        const o = lg.offers && lg.offers[m.id];
+        if (!o || o.to !== T) return false;
+        const D = dealOf(lg, o.from, { ...o, team: o.from }), back = D && cutsOk(lg, T, D.get, D.give, m.cut);
+        if (!D || !back || dealProblem(lg, D, back)) return false;
+        delete lg.offers[o.id];
+        doTrade(lg, D, D.cut, back);
+        return true;
+      }
+      case "decline": case "withdraw": { // the other owner says no, or the one who offered takes it back
+        const o = lg.offers && lg.offers[m.id];
+        if (!o || (m.t === "decline" ? o.to : o.from) !== T) return false;
+        delete lg.offers[o.id];
+        return true;
+      }
+      case "sign": return signFA(lg, T, m); // a free agent: { p, yrs, cut }
       default: return false;
     }
   }
 
   // Run everything that does not need a person: AI draft picks, the end of a draft.
   function settle(lg) {
+    if (lg.offers) for (const o of Object.values(lg.offers)) if (!dealOf(lg, o.from, { ...o, team: o.from })) delete lg.offers[o.id]; // no longer possible
     const d = lg.draft;
     if (!d) return;
     while (d.n < d.seq.length) {
@@ -364,7 +426,7 @@
     d.n++;
     p.team = t;
     lg.teams[t].roster.push(pid);
-    if (d.kind === "rookie") p.yrs = 4;
+    if (d.kind === "rookie") { p.yrs = 4; if (capOn(lg)) p.sal = rookieSal(d.n); }
   }
 
   function endDraft(lg) {
@@ -377,6 +439,7 @@
       for (const t of lg.teams) for (const pid of t.roster) {
         const p = lg.players[pid], r = rng(lg.seed, "deal", pid);
         p.yrs = p.age < 26 ? 2 + r.int(3) : p.age < 30 ? 1 + r.int(3) : 1 + r.int(2);
+        if (capOn(lg)) p.sal = askSalary(lg, p);
       }
       startSeason(lg);
     } else {
@@ -521,7 +584,14 @@
     passBase: 0.53, lean: 0.06, blitz: [0.14, 0.27, 0.42], gap: [39, 33, 24], snapT: 6,
     pen: 0.055, rz: 1.1, cmpRz: 0.28,
     knock: 0.8, agg: 0.3, // coach decisions: a starter kept in with a knock plays this much slower; chance he aggravates it
+    inj2: 0.0119, // on-the-field injuries: a starter's chance per game, times INJ_W for his position
   };
+  // Injury exposure by position (on-the-field injuries): backs, receivers and linebackers take the most hits,
+  // quarterbacks fewer, kickers and punters almost none. Same total per team as the old flat PM.inj.
+  const INJ_W = { QB: 0.75, RB: 1.35, WR: 1.1, TE: 1.1, OL: 1.0, DL: 0.95, ED: 1.0, LB: 1.15, CB: 1.1, S: 1.0, K: 0.04, P: 0.04 };
+  const inj2On = (lg) => !!(lg.settings.inj2 || lg.inj2);
+  const OFF_G = new Set(["QB", "RB", "WR", "TE", "OL"]), SCRIM = new Set(["run", "pass", "inc", "sack", "int", "fum", "2pt"]);
+  const HURT_K = new Set([...SCRIM, "ko", "punt", "fg", "xp"]);
   // Coach decisions: the choices each kind of in-game call can take (see "Coach decisions" in simGame).
   const CALL_OPTS = { go: 1, punt: 1, fg: 1, kick: 1, two: 1, sit: 1, keep: 1, stay: 1, bench: 1, run: 1, to: 1 };
   const GO2 = new Set([-2, -5, -10, -13, 1, 5, 12]); // after the touchdown, trailing or leading by these: go for two
@@ -559,8 +629,13 @@
     const R1 = rng(lg.seed, "pbp", lg.year, g.wk, g.h, g.a, 1), R2 = rng(lg.seed, "pbp", lg.year, g.wk, g.h, g.a, 2);
     const R3 = rng(lg.seed, "pbp", lg.year, g.wk, g.h, g.a, "ot");
     let r = R1;
-    const ir = rng(lg.seed, "inj", lg.year, g.wk, g.h, g.a), hurt = [];
-    S.forEach((s, i) => { for (const grp of GROUPS) for (const p of s.L[grp]) if (p.id && ir() < PM.inj) {
+    // Injuries are drawn up front: who, from what second, how long. Leagues made before 2026-10-28 (until their
+    // "inj2" move) use the old way: anyone, at that second, even a punter on a running play. Since then (inj2On) an
+    // injury waits for a play the player is on the field for: offense on his team's snaps, defense on the other
+    // team's, the kicker on returned kickoffs, extra points and field goals, the punter on punts. Backs, receivers and
+    // defenders usually go down on a play they are in (the carry, the catch, the tackle); linemen on any snap.
+    const inj2 = inj2On(lg), ir = rng(lg.seed, "inj", lg.year, g.wk, g.h, g.a), hurt = [];
+    S.forEach((s, i) => { for (const grp of GROUPS) for (const p of s.L[grp]) if (p.id && ir() < (inj2 ? PM.inj2 * INJ_W[grp] : PM.inj)) {
       const x = ir(); hurt.push({ i, p, at: 60 + ir.int(3480), w: x < 0.55 ? 1 + ir.int(2) : x < 0.88 ? 3 + ir.int(4) : 30 });
     } });
     hurt.sort((a, b) => a.at - b.at);
@@ -569,14 +644,19 @@
     const st = {}, plays = rec ? [] : null, scoring = [];
     const T = [0, 1].map(() => ({ plays: 0, pass: 0, run: 0, yards: 0, passY: 0, rushY: 0, sacks: 0, sackY: 0, to: 0, fd: 0, d3: [0, 0], d4: [0, 0],
       top: 0, pen: 0, penY: 0, blz: 0, drop: 0, touch: {}, two: [0, 0], q: [0, 0, 0, 0, 0] }));
-    const add = (p, k, v) => { if (!p || !p.id || !v) return; const s = st[p.id] || (st[p.id] = {}); s[k] = (s[k] || 0) + v; };
+    let inv = {}, py = 25; // who was in the play (by stat), and the yard line it started from
+    const seen = []; // plays since the last injury check (on-the-field injuries only)
+    const add = (p, k, v) => { if (!p || !p.id || !v) return; const s = st[p.id] || (st[p.id] = {}); s[k] = (s[k] || 0) + v; (inv[p.id] || (inv[p.id] = {}))[k] = 1; };
     const sc = [0, 0];
     let q = 1, clock = 900, o = 0, yl = 25, dn = 1, tg = 10, over = false, kickNext = null, onside = false, otPoss = null, pre = null;
     const recv1 = R1() < 0.5 ? 0 : 1;
     const elapsed = () => (q <= 4 ? (q - 1) * 900 + 900 - clock : 3600);
     const ax = (side, y) => (side === 0 ? y : 100 - y);
-    const mark = () => { pre = { q, c: clock, o, x0: ax(o, yl), dn, tg: Math.min(tg, 100 - yl) }; };
-    const log = (k, t, extra) => { if (plays) plays.push({ ...pre, k, t, x1: ax(o, yl), to: o, sc: [sc[0], sc[1]], ...extra }); };
+    const mark = () => { pre = { q, c: clock, o, x0: ax(o, yl), dn, tg: Math.min(tg, 100 - yl) }; inv = {}; py = yl; };
+    const log = (k, t, extra) => {
+      if (plays) plays.push({ ...pre, k, t, x1: ax(o, yl), to: o, sc: [sc[0], sc[1]], ...extra });
+      if (inj2 && HURT_K.has(k)) seen.push({ k, o: pre.o, q: pre.q, e: elapsed(), y: yl - py, d: 117 - py, inv, td: / Touchdown!/.test(t), ret: /returned|Onside/.test(t), ons: /Onside/.test(t), tb: /Touchback/.test(t) });
+    };
     const use = (secs) => { const s = Math.min(clock, secs); clock -= s; T[o].top += s; };
     // Always log the play first, then score: the scoring play's record then shows the new score.
     const score = (side, pts, what, p) => { sc[side] += pts; if (plays && plays.length) plays[plays.length - 1].sc = [sc[0], sc[1]]; T[side].q[Math.min(q, 5) - 1] += pts; scoring.push([q, clock, side, what, p && p.id ? p.id : null, sc[0], sc[1]]); };
@@ -608,20 +688,66 @@
       if (k < 0) return;
       // Coach decision: a minor knock (one or two weeks) to a starter. Sitting him is what always happened. Keeping him
       // in: he plays on a bit slower, misses a week less afterwards, but may aggravate it (out longer, sometimes the year).
-      if (!h.agg && h.w <= 2 && ask(h.i, "inj", "sit", ["sit", "keep"], plays ? plays.length : 0, { p: h.p.id, w: h.w }) === "keep") {
+      if (!h.agg && h.w <= 2 && ask(h.i, "inj", "sit", ["sit", "keep"], plays ? plays.length : 0, { p: h.p.id, w: h.w, ...(h.how ? { how: h.how } : {}) }) === "keep") {
         const kr = rng(lg.seed, "knock", lg.year, g.wk, g.h, g.a, h.p.id), hurtP = { ...h.p, grade: h.p.grade - PM.knock };
         arr[k] = hurtP; s.u = unitsOf(s.L); setEdges();
         if (kr() < PM.agg) { const x = kr(); hurt.push({ i: h.i, p: hurtP, agg: 1, at: Math.min(3599, elapsed() + 60 + kr.int(Math.max(1, 3540 - elapsed()))), w: x < 0.8 ? 3 + kr.int(4) : 30 }); hurt.sort((a, b) => a.at - b.at); }
-        else if (h.w > 1) s.later = [...(s.later || []), { p: h.p.id, t: s.t, w: h.w - 1, hp: hurtP }];
-        mark(); log("inj", `${short(h.p)} is banged up but stays in the game.`, { side: h.i });
+        else if (h.w > 1) s.later = [...(s.later || []), { p: h.p.id, t: s.t, w: h.w - 1, hp: hurtP, ...(h.hw ? { how: h.hw, q: h.hq } : {}) }];
+        mark(); log("inj", `${short(h.p)} is banged up${h.how ? " " + h.how : ""} but stays in the game.`, { side: h.i, who: h.p.id });
         return;
       }
       if (h.agg && s.later) s.later = s.later.filter((x) => x.hp !== h.p);
-      s.out.add(h.p.id); injured.push({ p: h.p.id, t: s.t, w: h.w });
+      s.out.add(h.p.id); injured.push({ p: h.p.id, t: s.t, w: h.w, ...(h.hw ? { how: h.hw, q: h.hq } : {}) });
       const next = s.L.bench[h.p.g].find((p) => !arr.includes(p) && !s.out.has(p.id)) || { id: null, name: "Replacement", g: h.p.g, grade: 2.5 };
       arr[k] = next; s.u = unitsOf(s.L); setEdges();
       if (s.feat === h.p.id) s.feat = null;
-      mark(); log("inj", `${h.agg ? `${short(h.p)} aggravates the injury and` : `Injury: ${short(h.p)}`} is out for the game${next.id ? `, ${short(next)} takes over` : ""}.`, { side: h.i });
+      const how = h.how ? " " + h.how : "";
+      mark(); log("inj", `${h.agg ? `${short(h.p)} aggravates the injury${how} and` : how ? `Injury: ${short(h.p)} is hurt${how} and` : `Injury: ${short(h.p)}`} is out for the game${next.id ? `, ${short(next)} takes over` : ""}.`, { side: h.i, who: h.p.id });
+    }
+    // On-the-field injuries: was h's player on the field for play x, in a way that can hurt him?
+    function onField(h, x) {
+      const g = h.p.g, mine = x.o === h.i;
+      if (g === "K") return mine && (x.k === "ko" ? x.ret : x.k === "fg" || x.k === "xp");
+      if (g === "P") return mine && x.k === "punt";
+      return SCRIM.has(x.k) && (OFF_G.has(g) ? mine : !mine);
+    }
+    // What happened, in words: "making a 12-yard catch", "blocking on a 4-yard run", "covering a punt".
+    function hurtHow(h, x) {
+      const g = h.p.g, iv = x.inv[h.p.id] || {}, y = x.y, line = g === "OL" || g === "DL" || g === "ED";
+      const an = (n) => (n === 8 || n === 11 || n === 18 || (n >= 80 && n < 90) ? "an" : "a");
+      const run = x.td ? `${an(y)} ${y}-yard touchdown run` : y > 0 ? `${an(y)} ${y}-yard run` : y < 0 ? `a run for a loss of ${-y}` : "a run for no gain";
+      const cat = x.td ? `${an(y)} ${y}-yard touchdown catch` : y > 0 ? `${an(y)} ${y}-yard catch` : "a catch at the line";
+      if (g === "K") return x.k === "fg" ? `on ${an(x.d)} ${x.d}-yard field goal try` : x.k === "xp" ? "on an extra point" : x.ons ? "on an onside kick" : "making a tackle on a kickoff return";
+      if (g === "P") return x.tb ? "on a punt" : "covering a punt";
+      if (x.k === "2pt") return "on a two-point try";
+      if (x.o === h.i) {
+        if (x.k === "run") return iv.car ? `on ${run}` : g === "OL" ? `blocking on ${run}` : `on ${run}`;
+        if (x.k === "pass") return iv.rec ? `making ${cat}` : g === "QB" ? "on a completed pass" : g === "OL" ? "pass blocking" : "on a pass play";
+        if (x.k === "inc") return iv.tgt ? "going up for a pass" : g === "QB" ? "on an incomplete pass" : g === "OL" ? "pass blocking" : "on a pass play";
+        if (x.k === "sack") return g === "QB" ? "taking a sack" : g === "OL" ? "pass blocking" : "on a sack";
+        if (x.k === "fum") return iv.fum ? "on a fumble" : g === "OL" ? "blocking on a fumble" : "on a fumble";
+        return "on an interception";
+      }
+      if (iv.sk) return "making a sack";
+      if (iv.di) return "making an interception";
+      if (iv.ff) return "forcing a fumble";
+      if (iv.tk) return x.k === "run" ? `making a tackle on ${run}` : "making a tackle after a catch";
+      if (x.k === "run" || x.k === "fum") return line ? "taking on a block on a run play" : `on ${run}`;
+      return line ? "rushing the passer" : "in coverage";
+    }
+    const when = (x) => (x.q <= 4 ? `in the ${nth[x.q]} quarter` : "in overtime");
+    // Check the plays since the last check. A drawn injury waits until its second has passed and its player is on
+    // the field; backs, receivers and defenders wait up to three more such snaps for one they are in.
+    function hurtCheck() {
+      for (const x of seen.splice(0)) for (const h of hurt.slice()) {
+        if (h.at > x.e) break;
+        if (!S[h.i].L[h.p.g].includes(h.p) || !onField(h, x)) continue;
+        const inPlay = !!x.inv[h.p.id];
+        if (!inPlay && !["OL", "K", "P"].includes(h.p.g) && x.k !== "2pt" && (h.wait = (h.wait || 0) + 1) <= 3) continue;
+        hurt.splice(hurt.indexOf(h), 1);
+        const w = hurtHow(h, x);
+        injure({ ...h, how: `${w} ${when(x)}`, hw: w, hq: x.q });
+      }
     }
 
     function kickoff(kicker) {
@@ -640,6 +766,7 @@
       newSeries(recv, at); use(6); log("ko", `Kickoff returned to the ${at > 50 ? "opposing " + (100 - at) : at}.`);
     }
     function pat(side) {
+      if (inj2) hurtCheck();
       o = side; yl = 98; dn = 0; tg = 2; mark();
       const diff = sc[side] - sc[1 - side], a = S[side].plan.fourth, chart = GO2.has(diff);
       const late = q >= 4 && clock <= 600;
@@ -672,6 +799,7 @@
       const d = 1 - o; score(d, 2, "SAF", null); endPoss();
       if (plays) plays[plays.length - 1].t += " Safety!";
       otCheck(); if (over) return;
+      if (inj2) hurtCheck();
       // Free kick from the 20: the scoring team gets it back around midfield.
       newSeries(o, 20); mark();
       const at = clamp(Math.round(40 + r.normal() * 8), 20, 65);
@@ -915,11 +1043,12 @@
     let guard = 0, lastO = -1;
     while (!over && guard++ < 600) {
       if (clock <= 0) { endPeriod(); continue; }
-      if (kickNext != null) { const k = kickNext; kickNext = null; kickoff(k); continue; }
+      if (kickNext != null) { const k = kickNext; kickNext = null; kickoff(k); if (inj2) hurtCheck(); continue; }
       otCheck(); if (over) { mark(); log("end", "Final."); break; }
-      while (hurt.length && hurt[0].at <= elapsed()) injure(hurt.shift());
+      if (!inj2) while (hurt.length && hurt[0].at <= elapsed()) injure(hurt.shift());
       if (o !== lastO) { lastO = o; qbCheck(o); }
       snap();
+      if (inj2) hurtCheck();
     }
     if (!over) { mark(); log("end", "Final."); }
     if (plays) { mark(); plays.push({ ...pre, k: "final", t: sc[0] === sc[1] ? "Final, a tie." : "Final.", x1: pre.x0, to: o, sc: [sc[0], sc[1]] }); }
@@ -958,7 +1087,7 @@
       for (const id of res.ls[i]) { lg.starts[id] = (lg.starts[id] || 0) + 1; lg.wkStart.add(id); }
       lg.feat[t] = res.plans[i].feature;
     });
-    for (const h of res.injured) { const p = lg.players[h.p]; p.inj = h.w; lg.log.push({ y: lg.year, wk: g.wk, t: h.t, p: h.p, w: h.w }); }
+    for (const h of res.injured) { const p = lg.players[h.p]; p.inj = h.w; lg.log.push({ y: lg.year, wk: g.wk, t: h.t, p: h.p, w: h.w, ...(h.how ? { how: h.how, q: h.q } : {}) }); }
   }
   // The same game, without changing anything: what a viewer shows before the week is played. The week then plays
   // out exactly this (nothing that could change it happens in between).
@@ -1077,6 +1206,7 @@
   // ---- Season ----
   function startSeason(lg) {
     lg.phase = "season"; lg.week = 0; lg.stats = {}; lg.playoffs = null; lg.log = [];
+    if (lg.pilot) lg.pilot = {}; // an owner's last-season choice never readies a new season
     if (lg.settings.mode === "real") setCities(lg);
     // Real Rosters, year one: that season's real schedule. Every other season: our formula schedule.
     const real = lg.realSched && lg.year === lg.settings.year;
@@ -1272,10 +1402,18 @@
     for (const t of lg.teams) {
       if (isHuman(lg, t.i)) continue;
       const exp = t.roster.map((id) => lg.players[id]).filter((p) => p.yrs <= 0);
+      // Salary cap leagues: the most valuable first, while the money lasts (room kept back for rookies and fill-ins).
+      let pay = capOn(lg) ? payroll(lg, t.i) - salOf(lg, exp.map((p) => p.id)) : 0;
+      if (capOn(lg)) exp.sort((a, b) => keepValue(b) - keepValue(a));
       for (const p of exp) {
-        const keep = p.grade >= 6 || p.age < 26 || rng(lg.seed, "keep", lg.year, p.id)() < 0.35;
+        let keep = p.grade >= 6 || p.age < 26 || rng(lg.seed, "keep", lg.year, p.id)() < 0.35;
         const no = keep && refuses(lg, p); // build B: an unhappy player may walk
         if (no && p.grade >= 7.5) news(lg, { k: "walk", t: t.i, p: p.id, pr: 4 + (p.grade - 7.5), wk: 24, h: `${p.name} won't re-sign with ${teamName(t)}`, b: "He is heading to free agency." });
+        if (keep && !no && capOn(lg)) {
+          const s = askSalary(lg, p);
+          if (pay + s > CAP - CAP_KEEP) { keep = false; if (p.grade >= 7.5) news(lg, { k: "walk", t: t.i, p: p.id, pr: 4 + (p.grade - 7.5), wk: 24, h: `${teamName(t)} can't afford ${p.name}`, b: `He wants ${money(s)} a year. He is heading to free agency.` }); }
+          else pay += s;
+        }
         if (keep && !no) newDeal(lg, p); else release(lg, p);
       }
     }
@@ -1283,7 +1421,7 @@
     for (const ht of humansOf(lg)) for (const id of O.exp[ht] || []) { const p = lg.players[id]; if (refuses(lg, p)) { O.wont.push(id);
       news(lg, { k: "walk", t: ht, p: id, pr: 9, wk: 24, h: `${p.name} won't re-sign with ${teamName(lg.teams[ht])}`, b: "Unhappy with last season, he wants to test free agency." }); } }
     for (const id of O.retired) { const p = lg.players[id]; if (p.grade >= 6)
-      news(lg, { k: "retire", t: lg.user, p: id, pr: 6, wk: 24, h: `${p.name} retires`, b: `The ${GROUP_NAME[p.g].toLowerCase()} calls it a career.` }); }
+      news(lg, { k: "retire", t: lg.user, p: id, pr: 6, wk: 24, h: `${p.name} retires`, b: `The ${POS_ONE[p.g]} calls it a career.` }); }
     lrOffseason(lg);
     lg.phase = "resign";
     // Friends league: every owner with an expiring deal answers for their own team; nobody else waits on them.
@@ -1292,17 +1430,25 @@
   }
   function newDeal(lg, p) {
     const r = rng(lg.seed, "redeal", lg.year, p.id); p.yrs = p.age < 27 ? 3 + r.int(2) : p.age < 31 ? 2 + r.int(2) : 1 + r.int(2);
+    if (capOn(lg)) p.sal = askSalary(lg, p);
     if (lg.mood) { lg.mood[p.id] = Math.min(100, moodOf(lg, p.id) + 15); lg.why[p.id] = ["newdeal"]; }
   }
   function release(lg, p) {
     if (lg.mood) delete lg.mood[p.id];
     if (p.team >= 0) lg.teams[p.team].roster = lg.teams[p.team].roster.filter((x) => x !== p.id);
     p.team = -1; p.yrs = 0; if (!lg.fa.includes(p.id)) lg.fa.push(p.id);
+    if (p.sal != null) delete p.sal;
   }
   function resign(lg, keep, T) {
     const O = lg.offseason, wont = new Set(O.wont || []);
     if (multi(lg) && !(O.left || []).includes(T)) return false;
     const ids = multi(lg) ? O.exp[T] || [] : O.expiring;
+    if (capOn(lg)) { // salary cap: kept in the order chosen, as long as each new deal fits under the cap
+      let pay = payroll(lg, T) - salOf(lg, ids);
+      const order = [...keep].filter((id) => ids.includes(id)).concat(ids.filter((id) => !keep.has(id)));
+      for (const id of order) { const p = lg.players[id]; if (p.gone) continue; const s = askSalary(lg, p);
+        if (keep.has(id) && !wont.has(id) && pay + s <= CAP) { pay += s; newDeal(lg, p); } else release(lg, p); }
+    } else
     for (const id of ids) { const p = lg.players[id]; if (p.gone) continue; keep.has(id) && !wont.has(id) ? newDeal(lg, p) : release(lg, p); }
     if (multi(lg)) { O.left = O.left.filter((t) => t !== T); if (O.left.length) return true; }
     startRookieDraft(lg);
@@ -1311,15 +1457,28 @@
   function startRookieDraft(lg) {
     // The rookie class (Real Rosters: the real draft class of that year while there is one; otherwise generated).
     const cls = rookieClass(lg);
+    if (!cls || (!cls.length && (lg.settings.realRookies || lg.realRookies))) { lg.draft = null; lg.phase = "rookie-data"; return; }
+    const order = draftOrder(lg, lg.year);
+    lg.draftOrder = order;
+    lg.draft = startDraft(lg, "rookie", order, ROOKIE_ROUNDS, false, cls);
+    // Traded picks: the team that owns each pick now makes it (d.via = the team it came from).
+    const own = lg.pickOwn;
+    if (own) {
+      const d = lg.draft;
+      d.seq = d.seq.map((t, i) => { const k = pickKey(lg.year, Math.floor(i / 32) + 1, t); if (own[k] == null) return t; (d.via = d.via || {})[i] = t; return own[k]; });
+      for (const k of Object.keys(own)) if (+k.split(".")[0] <= lg.year) delete own[k];
+    }
+    lg.phase = "rookie";
+    return true;
+  }
+  // The rookie draft order once a season is over: out of the playoffs first (by record), then by how far each team got.
+  // year = the draft's year (the season that just ended is year - 1; the league is in that state until the draft).
+  function draftOrder(lg, year) {
     const rec = standings(lg);
     const P = lg.playoffs;
     const exitRound = (t) => { if (t === P.champ) return 5; const g = P.games.filter((x) => x.h === t || x.a === t); return g.length ? g[g.length - 1].po + 1 : 0; };
-    const order = lg.teams.map((t) => t.i).sort((a, b) => exitRound(a) - exitRound(b) || rec[a].pct - rec[b].pct || rec[a].diff - rec[b].diff ||
-      rng(lg.seed, "dorder", lg.year, a)() - rng(lg.seed, "dorder", lg.year, b)());
-    lg.draftOrder = order;
-    lg.draft = startDraft(lg, "rookie", order, ROOKIE_ROUNDS, false, cls);
-    lg.phase = "rookie";
-    return true;
+    return lg.teams.map((t) => t.i).sort((a, b) => exitRound(a) - exitRound(b) || rec[a].pct - rec[b].pct || rec[a].diff - rec[b].diff ||
+      rng(lg.seed, "dorder", year, a)() - rng(lg.seed, "dorder", year, b)());
   }
 
   const FIRST = ["Aiden", "Andre", "Bryce", "Caleb", "Camden", "Darius", "Dante", "Devin", "Elijah", "Emmanuel", "Ethan", "Grant", "Isaiah",
@@ -1356,8 +1515,11 @@
     return ids;
   }
   function rookieClass(lg) {
-    const D = lg.drafts && lg.drafts.years[lg.year];
+    const actualOnly = !!(lg.settings.realRookies || lg.realRookies);
+    // Redraft saves predating the upgrade must keep their original generated-class replay.
+    const D = (lg.settings.mode === "real" || actualOnly) && lg.drafts && lg.drafts.years[lg.year];
     if (D && D.length) return realClass(lg, D);
+    if (actualOnly) return null; // never invent a missing actual class
     const ids = [], used = new Set(Object.values(lg.players).map((p) => p.name));
     let n = 0;
     for (const g of GROUPS) for (let i = 0; i < CLASS_MIX[g]; i++, n++) {
@@ -1410,33 +1572,263 @@
     return true;
   }
   // Every team short of 53 or of a position minimum signs the best free agents it needs.
-  function fillRosters(lg) {
+  function fillRosters(lg) { for (const t of lg.teams) fillTeam(lg, t); }
+  function fillTeam(lg, t) {
     const pool = () => lg.fa.map((id) => lg.players[id]).filter((p) => !p.gone).sort((a, b) => keepValue(b) - keepValue(a));
-    for (const t of lg.teams) {
-      let c = countBy(lg, t.i);
-      const sign = (p) => { lg.fa = lg.fa.filter((x) => x !== p.id); p.team = t.i; p.yrs = 1; t.roster.push(p.id); c[p.g]++; };
-      for (const g of GROUPS) while (c[g] < MINPOS[g]) { const p = pool().find((x) => x.g === g); if (!p) break; sign(p); }
-      while (t.roster.length < ROSTER) { const p = pool().find((x) => c[x.g] < MAXPOS[x.g]); if (!p) break; sign(p); }
-      if (!isHuman(lg, t.i)) aiCut(lg, t);
-    }
+    let c = countBy(lg, t.i);
+    const sign = (p) => { lg.fa = lg.fa.filter((x) => x !== p.id); p.team = t.i; p.yrs = 1; t.roster.push(p.id); c[p.g]++; if (capOn(lg)) p.sal = askSalary(lg, p); };
+    // Salary cap leagues: the best one they can afford (leaving the minimum for every spot still open), else the cheapest.
+    const fits = (p) => { const s = askSalary(lg, p); return s <= MIN_SAL || s <= CAP - payroll(lg, t.i) - MIN_SAL * Math.max(0, ROSTER - t.roster.length - 1); };
+    const find = (ok) => !capOn(lg) ? pool().find(ok) : pool().find((x) => ok(x) && fits(x)) || pool().filter(ok).sort((a, b) => askSalary(lg, a) - askSalary(lg, b))[0];
+    for (const g of GROUPS) while (c[g] < MINPOS[g]) { const p = find((x) => x.g === g); if (!p) break; sign(p); }
+    while (t.roster.length < ROSTER) { const p = find((x) => c[x.g] < MAXPOS[x.g]); if (!p) break; sign(p); }
+    if (!isHuman(lg, t.i)) aiCut(lg, t);
   }
   function finishCuts(lg) {
     fillRosters(lg);
     startSeason(lg);
   }
 
+  // ---- Money (Sam 2026-10-28, "include it"): salaries and a salary cap, only in leagues made with settings.cap ----
+  // Every player under contract carries a salary (p.sal, millions a year) from his grade, position and age; rookies get a
+  // scale by draft slot. The cap is soft: a team over it can still play, but can't add money (a trade or signing must
+  // leave it under the cap or no higher than before; a minimum-salary signing is always allowed). Older leagues have no
+  // cap setting, never get a salary, and replay exactly as before.
+  const CAP = 255, MIN_SAL = 0.9, CAP_KEEP = 10; // the cap; the league minimum; room AI teams keep back when re-signing
+  const PAY = { QB: 2.0, RB: 0.65, WR: 1.15, TE: 0.8, OL: 0.9, DL: 1.0, ED: 1.25, LB: 0.75, CB: 1.0, S: 0.75, K: 0.25, P: 0.2 };
+  const capOn = (lg) => !!lg.settings.cap;
+  const money = (s) => `$${(Math.round(s * 10) / 10).toFixed(1)}M`;
+  // What a player asks for a year: climbs steeply with talent (a top quarterback ~$45M, a solid starter ~$5-10M, depth the minimum).
+  function askSalary(lg, p) {
+    const eff = p.grade + Math.max(0, p.ceil - p.grade) * clamp((26 - p.age) / 5, 0, 1) * 0.4 - Math.max(0, p.age - PEAK[p.g]) * 0.3;
+    return Math.max(MIN_SAL, r1(MIN_SAL + 0.3 * PAY[p.g] * Math.max(0, eff - 4.6) ** 2.6));
+  }
+  // The least a free agent takes: 90% of his ask. Deterministic, so every browser agrees.
+  const faFloor = (lg, p) => Math.max(MIN_SAL, r1(askSalary(lg, p) * 0.9));
+  const rookieSal = (n) => r1(MIN_SAL + 9.5 * Math.exp(-(Math.max(1, n) - 1) / 20)); // pick 1 ~$10M, 32 ~$2.9M, day three the minimum
+  const salOf = (lg, ids) => ids.reduce((s, id) => s + ((lg.players[id] && lg.players[id].sal) || 0), 0);
+  function payroll(lg, t) { return r1(salOf(lg, lg.teams[t].roster)); }
+
+  // ---- Trades and free agents (build 4, Sam 2026-10-28) ----
+  // Any team trades players and rookie-draft picks with any other. An AI team says yes only when its own value model
+  // (tradeVerdict) comes out ahead by a margin, so the computer can't be fleeced; in a friends league a person gets an
+  // offer and accepts or declines it. Free agents can be signed (releasing someone when the roster is full). It is all
+  // moves in the log, worked out from the state alone with no random draws, so every browser replays the same league.
+  // Trades: the regular season up to the deadline (halfway), once the season is over, and during contracts.
+  // Free agents: any time except during a draft or the cut to 53. Salary cap leagues: see Money above.
+  // Every deal is checked for fairness league-wide, between friends too (no dumping a star on a buddy): if one side
+  // gets less than half of what it gives (raw value, a little slack for spare parts), it can't happen. Computer teams
+  // also hold on to their best few (untouchables, priced half again higher) unless they are rebuilding.
+  const TRADE_MAX = 6; // players a side
+  const OFFER_MAX = 10; // open offers a team may have out
+  function tradeDeadline(lg) { return Math.floor((lg.weeks || 18) / 2); } // trades close once this many weeks are played
+  function tradeOpen(lg) { return lg.phase === "season" ? lg.week <= tradeDeadline(lg) : lg.phase === "done" || lg.phase === "resign"; }
+  function signOpen(lg) { return lg.phase === "season" || lg.phase === "playoffs" || lg.phase === "done" || lg.phase === "resign"; }
+
+  // Picks: "year.round.team" (the team whose pick it was). lg.pickOwn holds only the ones that changed hands.
+  // The next two drafts that haven't started can be traded.
+  const pickKey = (y, r, t) => `${y}.${r}.${t}`;
+  function parsePick(k) { const m = /^(\d{4})\.([1-7])\.(\d{1,2})$/.exec(String(k)); return m && +m[3] < 32 ? { y: +m[1], r: +m[2], t: +m[3] } : null; }
+  function pickYears(lg) { const y = lg.phase === "resign" ? lg.year : lg.year + 1; return [y, y + 1]; }
+  function pickHolder(lg, k) { const x = parsePick(k); return !x ? -1 : lg.pickOwn && lg.pickOwn[k] != null ? lg.pickOwn[k] : x.t; }
+  function picksOf(lg, t) {
+    const out = [];
+    for (const y of pickYears(lg)) for (let r = 1; r <= ROOKIE_ROUNDS; r++) for (let o = 0; o < 32; o++) { const k = pickKey(y, r, o); if (pickHolder(lg, k) === t) out.push(k); }
+    return out;
+  }
+  const ROUND_W = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th"];
+  function pickName(lg, k, short) { const x = parsePick(k); return `${x.y} ${ROUND_W[x.r]}${short ? "" : "-round pick"}${pickHolder(lg, k) === x.t && !short ? "" : ` (${teamShort(lg.teams[x.t])})`}`; }
+  const offerId = (x) => (typeof x === "string" && /^[A-Za-z0-9]{4,16}$/.test(x) ? x : null);
+
+  // A proposed deal, checked against the league as it is now; null if it isn't possible. T gives give + gp and gets
+  // get + tp from m.to; cut = who T releases to stay at 53 (exactly as many as needed, none otherwise).
+  function dealOf(lg, T, m) {
+    const to = m.to, ids = (x) => (Array.isArray(x) ? x.map(String) : []);
+    if (!tradeOpen(lg) || !lg.teams[T] || !Number.isInteger(to) || to < 0 || to > 31 || to === T) return null;
+    const give = ids(m.give), get = ids(m.get), gp = ids(m.gp), tp = ids(m.tp);
+    if (give.length > TRADE_MAX || get.length > TRADE_MAX || gp.length > 14 || tp.length > 14) return null;
+    if ((!give.length && !gp.length) || (!get.length && !tp.length)) return null;
+    for (const a of [give, get, gp, tp]) if (new Set(a).size !== a.length) return null;
+    const onTeam = (id, t) => { const p = lg.players[id]; return !!p && !p.gone && p.team === t && p.yrs >= 1; };
+    if (!give.every((id) => onTeam(id, T)) || !get.every((id) => onTeam(id, to))) return null;
+    const yrs = pickYears(lg), pickOk = (k, t) => { const x = parsePick(k); return !!x && yrs.includes(x.y) && pickHolder(lg, k) === t; };
+    if (!gp.every((k) => pickOk(k, T)) || !tp.every((k) => pickOk(k, to))) return null;
+    const cut = cutsOk(lg, T, give, get, m.cut);
+    return cut ? { from: T, to, give, get, gp, tp, cut } : null;
+  }
+  function cutsOk(lg, T, out, inc, cut) {
+    const c = Array.isArray(cut) ? cut.map(String) : [], t = lg.teams[T];
+    if (new Set(c).size !== c.length || c.some((id) => out.includes(id) || !t.roster.includes(id))) return null;
+    const n = t.roster.length - out.length + inc.length - c.length;
+    return n <= ROSTER && (!c.length || n === ROSTER) ? c : null;
+  }
+
+  // What a player is worth in a trade: talent first (it climbs steeply, so three backups never buy a star), youth with
+  // room to grow, age past his position's peak, the position itself, a contract about to end, an injury.
+  const POS_VAL = { QB: 1.6, RB: 0.8, WR: 1, TE: 0.85, OL: 1, DL: 0.95, ED: 1.15, LB: 0.85, CB: 1.05, S: 0.85, K: 0.35, P: 0.3 };
+  function tradeValue(lg, p) {
+    const young = Math.max(0, p.ceil - p.grade) * clamp((26 - p.age) / 5, 0, 1) * 0.5;
+    const eff = p.grade + young - Math.max(0, p.age - PEAK[p.g]) * 0.35;
+    const hurt = lg.phase !== "season" ? 1 : p.inj >= 30 ? 0.45 : 1 - 0.02 * Math.min(p.inj || 0, 20);
+    return POS_VAL[p.g] * Math.max(0, eff - 4) ** 2 * (p.yrs <= 1 ? 0.9 : 1) * hurt;
+  }
+  // Where a pick should land: the real order once the season is over; during it, team strength blended with the record
+  // as the weeks go by; the draft after that, the middle of the round.
+  function pickProj(lg) {
+    const first = pickYears(lg)[0];
+    let slot = null;
+    if (lg.phase === "done" || lg.phase === "resign") { const o = draftOrder(lg, first); slot = (t) => o.indexOf(t) + 1; }
+    else if (lg.phase === "season" || lg.phase === "playoffs") {
+      const rec = standings(lg), n = Math.min(1, lg.week / (lg.weeks || 18));
+      const z = (a) => { const m = a.reduce((s, x) => s + x, 0) / a.length, sd = Math.sqrt(a.reduce((s, x) => s + (x - m) ** 2, 0) / a.length) || 1; return a.map((x) => (x - m) / sd); };
+      const zo = z(lg.teams.map((t) => units(lg, t.i).u.ovr)), zp = z(lg.teams.map((t) => rec[t.i].pct));
+      const sc = lg.teams.map((t) => zo[t.i] * (1 - n) + zp[t.i] * n);
+      slot = (t) => 1 + sc.filter((x, i) => x < sc[t] || (x === sc[t] && i < t)).length;
+    }
+    return (x) => (x.y === first && slot ? slot(x.t) : 16.5);
+  }
+  function pickValue(lg, k, proj) { // a rookie of the grade and ceiling that pick usually brings, a little less a year out
+    const x = parsePick(k), n = (x.r - 1) * 32 + proj(x), s = Math.max(0, 1 - Math.log(n) / Math.log(300));
+    const g = 2.5 + 4.3 * s, c = Math.min(9.9, g + 1 + 3.6 * s);
+    return Math.max(0, g + (c - g) * 0.5 - 4) ** 2 * (x.y > pickYears(lg)[0] ? 0.85 : 1);
+  }
+  // How the team receiving the offer (D.to) sees it. A player who would start for them counts in full, a backup less
+  // (a backup quarterback much less), anyone past their position limit hardly at all; their own starters cost a little
+  // extra to give up; whoever they'd have to release to stay at 53 counts against it. Yes when what they get beats
+  // what they give by 10% plus a little.
+  function tradeVerdict(lg, D) {
+    const A = D.to, proj = pickProj(lg), L = lineup(lg, A), starters = new Set(GROUPS.flatMap((g) => L[g].map((p) => p.id)));
+    const reb = !isHuman(lg, A) && rebuilding(lg, A), U = untouchables(lg, A);
+    const after = lg.teams[A].roster.filter((id) => !D.get.includes(id)).map((id) => lg.players[id]), inc = D.give.map((id) => lg.players[id]);
+    const all = after.concat(inc);
+    let gain = 0, loss = 0;
+    for (const p of inc) {
+      const at = all.filter((q) => q.g === p.g), i = at.filter((q) => !q.inj).sort((a, b) => b.grade - a.grade).indexOf(p);
+      const fit = at.length > MAXPOS[p.g] ? 0.25 : i >= 0 && i < STARTERS[p.g] ? 1 : p.g === "QB" ? 0.3 : 0.6;
+      gain += tradeValue(lg, p) * fit;
+    }
+    for (const id of D.get) { const p = lg.players[id];
+      loss += tradeValue(lg, p) * (starters.has(id) ? 1.1 : 0.85) * (U.has(id) ? UNTOUCH : 1) * (reb && p.age > PEAK[p.g] ? 0.85 : 1); } // rebuilding: veterans can go
+    for (const k of D.gp) gain += pickValue(lg, k, proj) * (reb ? 1.2 : 1);
+    for (const k of D.tp) loss += pickValue(lg, k, proj);
+    const over = all.length - ROSTER;
+    if (over > 0) for (const p of all.slice().sort((a, b) => keepValue(a) - keepValue(b)).slice(0, over)) loss += tradeValue(lg, p) * 0.85;
+    const need = loss * 1.1 + 0.5;
+    return { ok: gain >= need, gain, loss, need, reb, untouch: D.get.filter((id) => U.has(id)) };
+  }
+  // Rebuilding: a losing record (under .400 once four games are in), or before that one of the 8 weakest rosters.
+  function rebuilding(lg, t) {
+    const r = standings(lg)[t];
+    if (r.w + r.l + r.tie >= 4) return r.pct < 0.4;
+    const o = units(lg, t).u.ovr;
+    return lg.teams.filter((x) => units(lg, x.i).u.ovr < o).length < 8;
+  }
+  // A computer team's untouchables: its three most valuable players and a starting quarterback worth building around.
+  // None while it rebuilds, and never on a person's team (people decide for themselves).
+  const UNTOUCH = 1.5;
+  function untouchables(lg, t) {
+    if (isHuman(lg, t) || rebuilding(lg, t)) return new Set();
+    const ros = lg.teams[t].roster.map((id) => lg.players[id]).filter((p) => tradeValue(lg, p) >= 6);
+    const S = new Set(ros.sort((a, b) => tradeValue(lg, b) - tradeValue(lg, a)).slice(0, 3).map((p) => p.id));
+    const qb = lineup(lg, t).QB[0];
+    if (qb && qb.id && qb.grade >= 7.5) S.add(qb.id);
+    return S;
+  }
+  // Raw value each side gives up (no fit, no margins): what the fairness rule compares.
+  function dealValues(lg, D) {
+    const proj = pickProj(lg), v = (ids, ks) => ids.reduce((s, id) => s + tradeValue(lg, lg.players[id]), 0) + ks.reduce((s, k) => s + pickValue(lg, k, proj), 0);
+    return { give: v(D.give, D.gp), get: v(D.get, D.tp) };
+  }
+  const LOP = 0.5, LOP_SLACK = 3;
+  // Why a deal can't happen even if both sides want it: "lopsided" (one side gets under half of what it gives), or the
+  // cap: "capYou" (D.from) / "capThem" (D.to, checked only when cutB is given: the receiver's own releases count).
+  function dealProblem(lg, D, cutB) {
+    const v = dealValues(lg, D);
+    if (Math.min(v.give, v.get) + LOP_SLACK < LOP * Math.max(v.give, v.get)) return "lopsided";
+    if (!capOn(lg)) return null;
+    const c = dealCap(lg, D, cutB || []);
+    if (!c.okA) return "capYou";
+    if (cutB !== undefined && !c.okB) return "capThem";
+    return null;
+  }
+  // Each side's payroll before and after; ok = under the cap afterwards, or no higher than before.
+  function dealCap(lg, D, cutB) {
+    const a0 = payroll(lg, D.from), b0 = payroll(lg, D.to), gv = salOf(lg, D.give), gt = salOf(lg, D.get);
+    const a1 = r1(a0 - gv + gt - salOf(lg, D.cut || [])), b1 = r1(b0 - gt + gv - salOf(lg, cutB || []));
+    return { a0, a1, b0, b1, okA: a1 <= CAP || a1 <= a0, okB: b1 <= CAP || b1 <= b0 };
+  }
+  // The trade screen's meter, "How likely they say yes". A computer team: 100 = yes (its answer is never random, the
+  // meter shows how close the offer is). A person decides for themselves: a guess from how fair the deal looks to them.
+  function tradeOdds(lg, D, cutB) {
+    const prob = dealProblem(lg, D, cutB), v = tradeVerdict(lg, D), r = v.gain / Math.max(0.01, v.need);
+    if (prob) return { pct: 0, ok: false, prob, v };
+    if (!isHuman(lg, D.to)) return { pct: v.ok ? 100 : clamp(Math.round(95 * r * r), 1, 95), ok: v.ok, v };
+    return { pct: clamp(Math.round(100 / (1 + Math.exp(-(r - 0.9) * 7))), 3, 97), ok: true, v };
+  }
+
+  function newsWk(lg) { return lg.phase === "season" ? lg.week : lg.phase === "playoffs" ? 19 + lg.playoffs.round : 24; }
+  function tx(lg, e) { lg.tx = (lg.tx || []).concat({ y: lg.year, wk: newsWk(lg), ...e }).slice(-120); }
+  function doTrade(lg, D, cutA, cutB) {
+    const A = lg.teams[D.from], B = lg.teams[D.to];
+    const move = (id, f, t) => { f.roster = f.roster.filter((x) => x !== id); t.roster.push(id); lg.players[id].team = t.i; };
+    for (const id of D.give) move(id, A, B);
+    for (const id of D.get) move(id, B, A);
+    if (D.gp.length || D.tp.length) {
+      lg.pickOwn = { ...(lg.pickOwn || {}) };
+      for (const k of D.gp) lg.pickOwn[k] = B.i;
+      for (const k of D.tp) lg.pickOwn[k] = A.i;
+      for (const k of [...D.gp, ...D.tp]) if (lg.pickOwn[k] === parsePick(k).t) delete lg.pickOwn[k];
+    }
+    for (const id of [...(cutA || []), ...(cutB || [])]) release(lg, lg.players[id]);
+    for (const t of [A, B]) if (!isHuman(lg, t.i)) fillTeam(lg, t); // an AI team signs or releases to stay at 53
+    tx(lg, { k: "trade", a: A.i, b: B.i, ag: D.get, bg: D.give, ap: D.tp, bp: D.gp, cut: [...(cutA || []), ...(cutB || [])] });
+    const what = (ids, ks) => [...ids.map((id) => lg.players[id].name), ...ks.map((k) => pickName(lg, k))].join(", ");
+    news(lg, { k: "trade", t: A.i, t2: B.i, pr: 7, wk: newsWk(lg), h: `Trade: ${teamName(A)} and ${teamName(B)} make a deal`,
+      b: `${teamName(A)} gets ${what(D.get, D.tp)}. ${teamName(B)} gets ${what(D.give, D.gp)}.` });
+  }
+  function signFA(lg, T, m) {
+    const p = lg.players[m.p], t = lg.teams[T], yrs = m.yrs == null ? 1 : m.yrs, cut = m.cut == null ? null : String(m.cut);
+    if (!signOpen(lg) || !t || !p || p.gone || p.team !== -1 || !lg.fa.includes(p.id) || ![1, 2, 3].includes(yrs)) return false;
+    if (t.roster.length >= ROSTER ? !cut || !t.roster.includes(cut) : cut != null) return false;
+    let sal = null;
+    if (capOn(lg)) { // salary cap: at least his floor (90% of his ask), and it has to fit (the minimum always does)
+      sal = r1(Number(m.sal));
+      if (!(sal >= faFloor(lg, p) && sal <= 80)) return false;
+      if (sal > MIN_SAL && payroll(lg, T) - salOf(lg, cut ? [cut] : []) + sal > CAP) return false;
+    }
+    if (cut) release(lg, lg.players[cut]);
+    lg.fa = lg.fa.filter((x) => x !== p.id);
+    p.team = T; p.yrs = yrs + (lg.phase === "done" ? 1 : 0); t.roster.push(p.id); // after the Final, a one-year deal covers next season
+    if (sal != null) p.sal = sal;
+    tx(lg, { k: "sign", t: T, p: p.id, cut, ...(sal != null ? { sal } : {}) });
+    news(lg, { k: "sign", t: T, p: p.id, pr: 3 + Math.max(0, p.grade - 6), wk: newsWk(lg), h: `${teamName(t)} signs ${p.name}`,
+      b: `The free agent ${POS_ONE[p.g]} joins on a ${yrs}-year deal${sal != null ? ` at ${money(sal)} a year` : ""}${cut ? `; ${lg.players[cut].name} is released` : ""}.` });
+    return true;
+  }
+  // The n players a team would let go first (never taking a position below its minimum); skip = players already leaving.
+  function releaseSuggest(lg, t, n, skip) {
+    const sk = new Set(skip || []), c = countBy(lg, t), out = [];
+    for (const id of sk) { const p = lg.players[id]; if (p && p.team === t) c[p.g]--; }
+    const ros = lg.teams[t].roster.filter((id) => !sk.has(id)).map((id) => lg.players[id]).sort((a, b) => keepValue(a) - keepValue(b));
+    for (const p of ros) { if (out.length >= n) break; if (c[p.g] <= MINPOS[p.g]) continue; out.push(p.id); c[p.g]--; }
+    return out;
+  }
+  function freeAgents(lg) { return lg.fa.map((id) => lg.players[id]).filter((p) => p && !p.gone && p.team === -1); }
+  // A person's open offers: sent by them and sent to them.
+  function offersOf(lg, t) { const all = Object.values(lg.offers || {}); return { out: all.filter((o) => o.from === t), in: all.filter((o) => o.to === t) }; }
+
   // ---- Locker room (build B): fans, morale, news ----
   // Everything here is worked out from the games and the moves, with labelled draws, so it replays like the rest.
   // SAFETY RULE: players carry real names, so every story and fan post is about football inside the sim only
   // (results, snaps, contracts, trade wishes, sideline frustration after a loss). The only exception is the made-up
-  // off-field stories below, which keep to absurd stuff and football drama and never touch anyone's personal life.
+  // football preparation stories below; they never touch anyone's personal life.
   // Every story is labelled simulated by the page. Morale only touches play and re-signing in leagues made with
   // build B (settings.lr), so a save from before replays to the identical league.
   const LR = { mor: 0.03, keep: 40 };
 
   // ---- Off-field stories (Sam, 2026-10-28): random locker-room news, made up, never tied to or taken from real news. ----
-  // Two kinds only: absurd stuff nobody could mistake for news, and football drama (holdouts, beef with the coaches,
-  // skipped practice, contract demands, odd little injuries that cost no time, sideline blowups). NEVER on anyone:
+  // Believable football preparation, role discussions and contract talks only. No comic scenarios, invented
+  // medical incidents or discipline that contradicts a player's state. NEVER on anyone:
   // arrests, fights between people, drugs, domestic matters, cheating, or anything about a player's personal life.
   // Pure news: no draw here touches the games, moods or rosters, so every save replays to the identical league.
   // On since Sam said "ship it" (2026-10-28); setOffField(false) turns it off.
@@ -1444,45 +1836,47 @@
   const setOffField = (on) => { OFF_FIELD = !!on; };
   // [headline, body, when] with {n} the player, {t} his team, {pos} his position. when(p, ctx) says if it fits.
   const ANY = () => true, LOST = (p, c) => c.lost, DEAL = (p) => p.yrs <= 1 && p.grade >= 6.5, SKILL = (p) => ["WR", "RB", "TE"].includes(p.g);
+  const BALL = (p) => ["QB", "WR", "RB", "TE"].includes(p.g), OFFN = (p) => OFF_G.has(p.g); // gets the ball / plays offense
+  // Keep the legacy OFF_ABSURD export for save/test consumers; this pool is now football practice only.
   const OFF_ABSURD = [
-    ["{n} challenges the practice-field goose to a fight", "Witnesses say the goose won on points. Both are expected at practice Wednesday.", ANY],
-    ["{n} gets lost in a corn maze on the {t} team outing", "Found two hours later by the equipment staff, holding a map he had drawn himself.", ANY],
-    ["{n} demands a trade over the cafeteria food", "Four straight days of beige casserole was the last straw. {t} has hired a second chef.", ANY],
-    ["{n} insists he can kick a 70-yard field goal", "The kicker has asked him to stop trying it during warmups. He has not stopped.", (p) => p.g !== "K" && p.g !== "P"],
-    ["{n} locks himself in the cold-tub room", "He was in there 40 minutes. Says it was the best recovery session of his life.", ANY],
-    ["{n} reveals he has named every football in the building", "There are 41 of them. One is named Kevin, and he won't say why.", ANY],
-    ["{n} shows up to the walkthrough in full medieval armor", "He says he misread the dress code. The coaches let him run the install anyway.", ANY],
-    ["{n} starts a feud with the stadium vending machine", "It ate his dollar twice. He has filed a formal complaint with team operations.", ANY],
-    ["{n} tries to race the {t} team bus to the airport on foot", "He lost by eleven minutes but says he was gaining on it.", ANY],
-    ["{n} says a seagull stole his game-plan sheet", "Team staff confirm the seagull. The play sheet has not been recovered.", ANY],
-    ["{n} spends practice teaching the {t} mascot a spin move", "The mascot is a quick learner. The special teams coach wants him on kick returns.", ANY],
-    ["{n} gets stuck in the inflatable tunnel before kickoff", "Teammates freed him in time for the anthem. The tunnel has been retired.", ANY],
-    ["{n} sets off the sprinklers during film study", "Nobody is sure how. The film room is drying out.", ANY],
-    ["{n} challenges the head coach to a hot-dog-eating contest", "The coach accepted and won, 9 to 7. He has demanded a rematch.", ANY],
-    ["{n} will only wear mismatched cleats now", "One red, one green, for luck. The equipment manager has stopped asking.", ANY],
-    ["{n} claims the {t} practice turf hums at night", "He stayed late twice to listen. The grounds crew say it's the sprinkler pump.", ANY],
-    ["{n} loses the locker-room ping-pong final to the long snapper", "He has asked for best of seven. The long snapper has retired from ping-pong, undefeated.", ANY],
-    ["{n} adopts a lucky traffic cone from practice", "It now travels with the team and has its own seat on the plane.", ANY],
-    ["{n} tries to sign the team's punting net to a contract", "The front office says the net is not eligible. He says the net is the best catcher on the roster.", ANY],
-    ["{n} brings a 40-foot sub sandwich to the team meeting", "The meeting ran long. Nobody complained.", ANY],
+    ["{n} stays after practice for extra technique work", "The {t} coaches are working with the {pos} on the details of his assignment for the next game.", ANY],
+    ["{n} leads an extra film session with his position group", "The group reviewed the next opponent's tendencies and the adjustments {t} plans to make.", ANY],
+    ["{n} works on communication during the {t} walkthrough", "Coaches focused on getting everyone aligned before the snap and checking assignments.", ANY],
+    ["{n} spends extra time on route timing", "The {pos} and his quarterback stayed after practice to work through the timing of their routes.", SKILL],
+    ["{n} reviews pressure looks with the coaching staff", "The quarterback spent extra film time on protection checks and getting the ball out against pressure.", (p) => p.g === "QB"],
+    ["{n} works on pass-protection technique", "The offensive line coach focused on footwork and handling the next opponent's pass rush.", (p) => p.g === "OL"],
+    ["{n} gets extra work on tackling fundamentals", "The {t} defensive staff emphasized leverage and finishing tackles in position drills.", (p) => !OFF_G.has(p.g) && p.g !== "K" && p.g !== "P"],
+    ["{n} focuses on ball security in practice", "The {pos} worked through ball-security drills as {t} prepares for its next game.", BALL],
+    ["{n} works with the special-teams unit on field goals", "The kicker, holder and snapper spent extra time on the timing of the operation.", (p) => p.g === "K"],
+    ["{n} works on directional punting", "The punt unit practiced placement and coverage against the next opponent's return setup.", (p) => p.g === "P"],
+    ["{n} reviews his role in the weekly game plan", "The {pos} met with his position coach to go over assignments and situational responsibilities.", ANY],
+    ["{n} helps a teammate prepare for the next opponent", "The two compared film notes after their position meeting and worked through the week's assignments.", ANY],
+    ["{n} emphasizes a faster start for {t}", "He says the team needs to execute its assignments from the opening series.", ANY],
+    ["{n} focuses on third-down execution", "The {t} staff spent part of the walkthrough reviewing the situations that could decide the next game.", ANY],
+    ["{n} reviews last week's tape with his position coach", "The meeting covered plays to build on and assignments to clean up before the next game.", ANY],
+    ["{n} takes extra walkthrough reps", "The {pos} worked through the week's adjustments with the {t} coaching staff.", ANY],
+    ["{n} puts the focus on communication", "He wants the unit to make its checks clearly and avoid assignment errors in the next game.", ANY],
+    ["{n} works on situational awareness", "The {t} walkthrough covered down-and-distance responsibilities and late-game situations.", ANY],
+    ["{n} studies the next opponent's personnel", "The {pos} reviewed matchup notes with his coaches before the week's final practice.", ANY],
+    ["{n} stays focused on preparation", "He says the priority is carrying the week's practice work into the next game.", ANY],
   ];
   const OFF_DRAMA = [
-    ["{n} sits out practice in a contract standoff", "He's at the facility but won't put on pads until {t} talks about an extension. He's expected to play Sunday.", DEAL],
-    ["{n}'s agent: pay him or trade him", "The {pos} is in the last stretch of his deal and wants {t} to move before the season ends.", DEAL],
-    ["{n} and the {t} coaching staff aren't speaking", "It started over a red-zone play call that didn't go to him. Both sides say it will get sorted out.", ANY],
-    ["{n} skips the team walkthrough", "He says his alarm didn't go off. The head coach was not amused, but he'll play Sunday.", ANY],
-    ["{n} skips practice, says he already knows the plays", "He was back the next day. The coaches made him run the scout team.", ANY],
-    ["{n}'s sideline rant goes viral", "Cameras caught him demanding the ball after a bad loss. He says it's football and he'd do it again.", LOST],
-    ["{n} slams his helmet on the bench in a loss", "The clip has a few million views. The helmet is fine; the bench is not.", LOST],
-    ["{n} says he needs the ball more", "After a quiet week, the {pos} says he is open on every play and wants the coaches to notice.", SKILL],
-    ["{n} calls the {t} offense too vanilla", "He wants more trick plays. The offensive coordinator says the playbook is fine, thanks.", ANY],
-    ["{n} late to the team flight", "The plane waited six minutes. He's been fined and has to bring breakfast for the whole position room.", ANY],
-    ["{n} tweaks his back sneezing", "Listed as probable. He says it was a very big sneeze.", ANY],
-    ["{n} jams a finger opening a sports drink", "Taped up and expected to play. The {t} trainers have started opening his bottles for him.", ANY],
-    ["{n} pulls a muscle celebrating a teammate's touchdown", "He went too big on the celebration. No time missed; he's been told to tone it down.", ANY],
-    ["{n} in a standoff with {t} over his practice reps", "He wants fewer reps midweek to stay fresh. The coaches want more. It's a negotiation.", ANY],
-    ["{n} feuding with a teammate over the locker by the window", "Both say they had it first. The equipment staff has proposed a time-share.", ANY],
-    ["{n} fined by {t} for missing a team meeting", "He says he was in the wrong building. It was the right building.", ANY],
+    ["{n} wants clarity on his next contract", "With his deal nearing its end, the {pos} wants to know whether {t} plans to discuss an extension.", DEAL],
+    ["{n}'s agent seeks extension talks", "The {pos} is in the final year of his deal. His agent wants {t} to discuss his future before the offseason.", DEAL],
+    ["{n} discusses his role in the red-zone plan", "He met with the {t} coaches about how he fits into their red-zone approach.", BALL],
+    ["{n} meets with his position coach after practice", "They reviewed his responsibilities in the weekly plan and areas to improve.", ANY],
+    ["{n} takes extra scout-team reps", "The coaches used the session to reinforce assignments and prepare the unit for the next opponent.", ANY],
+    ["{n} wants a bigger impact after the loss", "He says he wants to help {t} respond. The coaches are reviewing how to use him in the next game.", (p, c) => c.lost && BALL(p)],
+    ["{n} frustrated after {t} loss", "He says the team needs to correct its mistakes in practice and respond in the next game.", LOST],
+    ["{n} discusses opportunities with the coaching staff", "The {pos} asked how he can contribute more within the weekly game plan.", SKILL],
+    ["{n} calls for cleaner offensive execution", "He says {t} needs to communicate better and carry out the play call consistently.", OFFN],
+    ["{n} takes a leadership role in the team meeting", "He emphasized preparation and accountability as {t} gets ready for its next opponent.", ANY],
+    ["{n} works with the training staff on recovery", "The {pos} completed his recovery routine between practices. There is no change to his availability.", ANY],
+    ["{n} focuses on conditioning between games", "The {t} staff is helping him manage his workload through the regular season.", ANY],
+    ["{n} reviews his practice workload with coaches", "The staff is balancing preparation and recovery ahead of the next game. His game status is unchanged.", ANY],
+    ["{n} discusses practice reps with his position coach", "They reviewed how to balance individual work, unit preparation and recovery during the week.", ANY],
+    ["{n} and a teammate review their communication", "The pair worked through assignment checks with their position coach after the team meeting.", ANY],
+    ["{n} stresses attention to detail in the team meeting", "He says the small assignment errors need to be cleaned up before the next game.", ANY],
   ];
   function offFieldNews(lg, games, N) {
     const wk = lg.week, R = rng(lg.seed, "offfield", lg.year, wk), lost = new Set();
@@ -1498,7 +1892,7 @@
       if (!pool.length) continue;
       const p = R.pick(pool), list = R() < 0.5 ? OFF_ABSURD : OFF_DRAMA, ctx = { lost: lost.has(t) };
       const fit = list.filter((x) => x[2](p, ctx)); if (!fit.length) continue;
-      const [h, b] = R.pick(fit), fill = (x) => x.replace(/\{n\}/g, p.name).replace(/\{t\}/g, teamName(T)).replace(/\{pos\}/g, GROUP_NAME[p.g].toLowerCase());
+      const [h, b] = R.pick(fit), fill = (x) => x.replace(/\{n\}/g, p.name).replace(/\{t\}/g, teamName(T)).replace(/\{pos\}/g, POS_ONE[p.g]);
       used[p.id] = 1;
       N.push({ k: "off", t, p: p.id, pr: mine ? 6 : 2 + R() * 2, h: fill(h), b: fill(b) });
     }
@@ -1548,7 +1942,7 @@
       if (p.yrs !== 1 || p.g === "K" || p.g === "P" || p.grade < 7.5 || p.inj || moodOf(lg, pid) >= 55 || rng(lg.seed, "hold", lg.year, pid)() > 0.3) continue;
       p.hold = 1; (lg.why[pid] = lg.why[pid] || []).unshift("hold");
       news(lg, { k: "hold", t: t.i, p: pid, pr: t.i === lg.user ? 9 : 5 + (p.grade - 7.5),
-        h: `${p.name} holds out for a new deal`, b: `The ${GROUP_NAME[p.g].toLowerCase()} is in the last year of his contract and won't play week 1 for ${teamName(t)} without a new one.` });
+        h: `${p.name} holds out for a new deal`, b: `The ${POS_ONE[p.g]} is in the last year of his contract and won't play week 1 for ${teamName(t)} without a new one.` });
     }
   }
   function news(lg, n) { lg.news.push({ y: lg.year, wk: n.wk != null ? n.wk : lg.week, ph: lg.phase, me: n.t === lg.user || n.t2 === lg.user, ...n }); }
@@ -1761,7 +2155,8 @@
       if (!(p.grade >= 7.5 || (mine && x.w >= 3))) continue;
       N.push({ k: "inj", t: x.t, p: x.p, pr: (x.w >= 30 ? 4 : x.w >= 3 ? 2.5 : 1) + (p.grade - 7) / 2,
         h: x.w >= 30 ? `${p.name} out for the season` : `${p.name} out ${x.w === 1 ? "a week" : `${x.w} weeks`}`,
-        b: `${tn(x.t)} loses its ${GROUP_NAME[p.g].toLowerCase()} to an injury in week ${x.wk}.` });
+        b: x.how ? `${tn(x.t)}'s ${POS_ONE[p.g]} went down ${x.how} ${x.q <= 4 ? `in the ${nth[x.q]} quarter` : "in overtime"} of the week ${x.wk} game.`
+          : `${tn(x.t)} loses its ${POS_ONE[p.g]} to an injury in week ${x.wk}.` });
     }
     // Morale stories: once per player per kind per season.
     const flag = (pid, k) => { const f = lg.flags[pid] || (lg.flags[pid] = {}); if (f[k]) return false; f[k] = 1; return true; };
@@ -1786,7 +2181,7 @@
         const star = T.roster.map((id) => lg.players[id]).filter((p) => !p.inj && ["QB", "WR", "RB", "TE"].includes(p.g) && lg.starts[p.id])
           .sort((a, b) => b.grade - a.grade)[0];
         if (star && moodOf(lg, star.id) < 48 && star.grade >= 6.5 && flag(star.id, "side"))
-          N.push({ k: "side", t, p: star.id, pr: mine ? 7 : 2.5, h: `${star.name} frustrated on the sideline in ${th}-${my} loss`, b: `${tn(t)} fell to ${tn(t === g.h ? g.a : g.h)}, and its ${GROUP_NAME[star.g].toLowerCase()} let it show on the bench.` });
+          N.push({ k: "side", t, p: star.id, pr: mine ? 7 : 2.5, h: `${star.name} frustrated on the sideline in ${th}-${my} loss`, b: `${tn(t)} fell to ${tn(t === g.h ? g.a : g.h)}, and its ${POS_ONE[star.g]} let it show on the bench.` });
       }
     }
     if (OFF_FIELD && !po) offFieldNews(lg, games, N);
@@ -1863,5 +2258,8 @@
     REAL_NAMES, fakeName, setPack, SAVE_V, PLAN0, PM, cleanPlan, aiPlan, planFor, simGame, previewGame, playoffGames, nextGame, short,
     live: { times: liveTimes, at: liveAt, HALF_MS, MS: LIVE_MS },
     moodOf, MOOD_WORD, WHY, moraleEdge, lrOn, setOffField, get OFF_FIELD() { return OFF_FIELD; }, OFF_ABSURD, OFF_DRAMA,
+    tradeOpen, signOpen, tradeDeadline, dealOf, tradeVerdict, tradeValue, picksOf, pickName, parsePick, pickHolder, pickYears, releaseSuggest,
+    freeAgents, offersOf, keepValue, TRADE_MAX,
+    CAP, MIN_SAL, capOn, askSalary, faFloor, payroll, money, dealProblem, dealCap, dealValues, tradeOdds, untouchables, rebuilding,
   };
 });

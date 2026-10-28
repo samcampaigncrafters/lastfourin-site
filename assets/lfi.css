@@ -468,7 +468,29 @@ body { color: var(--ink); }
 .mmenu .mm-soon > span { font-size: 12.5px; color: var(--muted); font-weight: 500; }
 [data-theme="light"] .nav-leagues { background: var(--card); }
 @media (max-width: 1240px) { .nav-links .nav-home, .nav-links .dd-btn { padding: 0 8px; font-size: 16px; } .brand { padding-right: 8px; } }
-@media (max-width: 1100px) { .nav-links, .nav-leagues { display: none; } .mbtn { display: grid; } }
+/* Keep direct dropdowns in split app windows; use the menu button only at phone widths. */
+@media (min-width: 901px) and (max-width: 1100px) {
+  .nav-links { display: flex; margin-left: 0; }
+  .nav-leagues { display: block; }
+  .nav-links .nav-home, .nav-links .dd-btn { padding: 0 6px; font-size: 14px; }
+  .nav-in { gap: 6px; padding-right: 12px; }
+  .brand { padding-left: 12px; padding-right: 4px; }
+  .nav-r { gap: 6px; }
+  .mbtn { display: none; }
+}
+@media (min-width: 641px) and (max-width: 900px) {
+  .nav-in { height: auto; min-height: 64px; flex-wrap: wrap; gap: 0; padding-right: 12px; }
+  .brand, .nav-r { height: 64px; }
+  .nav-links { display: flex; order: 3; flex-basis: 100%; margin-left: 0; justify-content: center; }
+  .nav-links .nav-home, .nav-links .dd-btn { min-height: 40px; padding: 0 7px; font-size: 14px; }
+  .nav-leagues { display: block; }
+  .nav-lg-in { justify-content: center; padding-left: 0; }
+  .nav-lg-in::before { display: none; }
+  .nav-leagues .dd-btn { padding: 0 8px; font-size: 14px; }
+  .mbtn { display: none; }
+  .nav-links .dd:last-of-type .dd-panel, .nav-lg-in .dd:nth-last-child(-n+2) .dd-panel { left: auto; right: 0; }
+}
+@media (max-width: 640px) { .nav-links, .nav-leagues { display: none; } .mbtn { display: grid; } }
 
 /* Score strip */
 .strip { background: #120b2e; border-bottom: 1px solid var(--line); }

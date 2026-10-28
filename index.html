@@ -324,10 +324,10 @@ main.home { padding-bottom: 64px; }
     const se = hot ? "⚡" : STE[x.st], dot = se ? `<span class="em" aria-hidden="true">${se}</span> ` : "<i></i>"; // status emoji in place of the plain dot
     return `<a class="t${hot ? " hot" : ""}" href="${x.url}">${head}<span class="st">${dot}${st}</span></span></a>`;
   }
-  const FRANCHISE = { url: "/franchise/", t: "Franchise Simulator", sh: "Franchise", d: "Build your team, play the season and run the offseason.", st: "Private access", ic: "football" };
+  const FRANCHISE = { url: "/franchise/?new", t: "Franchise Simulator", sh: "Franchise", d: "Build your team, play the season and run the offseason.", st: "Private access", ic: "football" };
   let franchiseAllowed = false, franchiseUser, franchiseCheck = 0;
   function renderTiles() {
-    $("tiles").innerHTML = (franchiseAllowed ? [FRANCHISE, ...TILES] : TILES).map(tile).join("");
+    $("tiles").innerHTML = (franchiseAllowed ? [...TILES, FRANCHISE] : TILES).map(tile).join("");
   }
   renderTiles();
 

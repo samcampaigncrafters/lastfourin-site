@@ -41,11 +41,27 @@
   .gr.sm { width: 36px; height: 30px; font-size: 16px; }
   .prow { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 12px; border-top: 1px solid var(--line); }
   .prow:first-child { border-top: 0; }
+  .pick-player { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .player-badge { display: inline-flex; align-items: center; gap: 5px; min-width: 0; flex: none; }
+  .pface { position: relative; display: inline-grid; place-items: center; width: 44px; height: 48px; flex: none; overflow: hidden; border-radius: 7px; background: var(--card-2); border: 1px solid var(--line-2); color: var(--muted); font-weight: 800; font-size: 13px; }
+  .pface img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .pface.sm { width: 30px; height: 32px; font-size: 10px; }
+  .prow:has(.player-badge) { grid-template-columns: 93px minmax(0, 1fr) auto; }
+  .chk:has(.player-badge) { grid-template-columns: 26px 93px minmax(0, 1fr) auto; }
+  .lrow:has(.player-badge) { grid-template-columns: 93px minmax(0, 1fr) auto; }
+  .ticker div:has(.player-badge) { grid-template-columns: 34px 71px minmax(0, 1fr); }
+  @media (max-width: 560px) {
+    .player-badge { gap: 4px; }
+    .pface { width: 32px; height: 40px; }
+    .player-badge .gr { width: 34px; height: 34px; font-size: 17px; }
+    .prow:has(.player-badge), .lrow:has(.player-badge) { grid-template-columns: 70px minmax(0, 1fr) auto; gap: 7px; }
+    .chk:has(.player-badge) { grid-template-columns: 22px 70px minmax(0, 1fr) auto; gap: 6px; }
+  }
   .pn { min-width: 0; }
   .pn b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pn span { display: block; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pn i { font-style: normal; color: var(--ink-2); }
-  .clock { position: sticky; top: 60px; z-index: 12; background: var(--brand); color: #fff; border: 1px solid var(--line-2); border-radius: var(--r); padding: 12px 14px; margin-bottom: 14px;
+  .clock { position: sticky; top: 68px; z-index: 12; background: var(--brand); color: #fff; border: 1px solid var(--line-2); border-radius: var(--r); padding: 12px 14px; margin-bottom: 14px;
            display: flex; gap: 10px 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
   .clock .disp { font-size: 24px; }
   .clock small { display: block; color: var(--on-brand-2); font-weight: 700; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
@@ -161,6 +177,12 @@
   .lrow.hurt { opacity: .5; }
   .lrow small { font-weight: 800; font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
   .lrow.st small { color: var(--ink); }
+  @media (max-width: 560px) {
+    .chk:has(.player-badge) { grid-template-columns: 22px 70px minmax(0, 1fr) auto; gap: 6px; }
+    .lrow:has(.player-badge) { grid-template-columns: 70px minmax(0, 1fr) auto; gap: 7px; }
+  }
+  @media (min-width: 641px) and (max-width: 900px) { .clock { top: 104px; } }
+  @media (max-width: 640px) { .clock { top: 64px; } }
   /* Gamecast: score bug, field, drive chart, play list. Original purple look. */
   .lv { display: grid; gap: 12px; }
   .gcw { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; align-items: start; }
@@ -239,7 +261,7 @@
   <div class="head">
     <div>
       <div class="kicker" id="kick">NFL · Single player</div>
-      <h1 class="disp" id="title">Franchise Simulator</h1>
+      <h1 class="disp" id="title" style="display:flex;align-items:center;gap:12px"><img id="tlogo" alt="" hidden referrerpolicy="no-referrer" style="width:56px;height:56px;object-fit:contain;flex:none"><span id="titleT">Franchise Simulator</span></h1>
       <p id="lede">Redraft every current NFL player into a new franchise, or take over a real roster from any season since 2002. Play the season and the playoffs, then run the offseason. Saved to your account, so it opens in any browser you sign in on.</p>
       <p id="allF" hidden style="margin-top:6px"><a class="lnk" href="/franchise/?new">All my franchises</a></p>
     </div>
@@ -256,10 +278,11 @@
 <script src="/assets/lfi.js"></script>
 <script src="/assets/cloud.js"></script>
 <script src="/franchise/franchise-engine.js"></script>
+<script src="/franchise/sim-tools.js"></script>
 <script>
 (function () {
   const { $, esc, toast } = LFI;
-  const E = window.FranchiseEngine;
+  const E = window.FranchiseEngine, S = window.FranchiseSim;
   let DATA = null, PACK = null;
   const KEY = "lfi-franchise-v1";
   // Real Rosters data is loaded only when needed: the list of seasons, then one season's file and the drafts.
@@ -377,10 +400,195 @@
     if (!same) queueSync(sv.seed);
   }
   function move(m) {
+    if (!ML && lg && lg.settings.humans) { toast("The league is syncing. Try that again in a moment."); return false; }
     if (ML) { const p = mlSend(m); render(); p.then(() => { if (ML && lg && !live) render(); }); return true; }
     if (!E.apply(lg, m)) { toast("That move isn't allowed right now."); return false; }
     persist(); render(); return true;
   }
+
+  // ---- Season reveal: one saved week at a time, using the same moves as manual play. ----
+  let reveal = null, outlookCache = null;
+  let simPrefs; try { simPrefs = JSON.parse(localStorage.getItem("bubble-sim-prefs")) || {}; } catch { simPrefs = {}; }
+  simPrefs = { stop: true, fast: false, ...simPrefs };
+  const saveSimPrefs = () => { try { localStorage.setItem("bubble-sim-prefs", JSON.stringify(simPrefs)); } catch {} };
+  function getOutlook() {
+    const key = [lg.seed, lg.year, lg.week, lg.phase, lg.moves.length, lg.user].join("|");
+    if (!outlookCache || outlookCache.key !== key) outlookCache = { key, value: S.outlook(E, lg) };
+    return outlookCache.value;
+  }
+  const seenKey = (M) => `bubble-franchise-seen-${LFI.cloud && LFI.cloud.user ? LFI.cloud.user.id : "local"}-${M.id}`;
+  function lastSeen(M) { try { const x = localStorage.getItem(seenKey(M)); return x == null ? null : Number(x); } catch { return null; } }
+  function markSeen(M) { try { localStorage.setItem(seenKey(M), String(M.next - 1)); } catch {} }
+  function oddsHtml() {
+    const f = getOutlook();
+    return `<p style="margin:0"><b>🏈 Playoff field: ${f.pct}%</b>${f.samples ? ` <span class="muted">· ${f.samples} simulated finishes, estimate only</span>` : ` <span class="muted">· ${f.pct ? "Qualified" : "Missed the field"}</span>`}</p>
+      ${f.watch ? `<p style="margin:6px 0 0"><b>🫧 ${esc(f.watch)}</b> Win: ${f.win}%; loss: ${f.loss}%.</p>` : ""}`;
+  }
+  function simControls() {
+    const p = lg.pilot && lg.pilot[lg.user], active = p && p.until > lg.week && lg.phase === "season";
+    const n = ML ? S.friendStop(E, lg) : 0;
+    return `<section class="card" style="margin-bottom:14px"><div class="card-b">${oddsHtml()}
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px"><input type="checkbox" id="simStop" ${simPrefs.stop ? "checked" : ""}>Stop for big moments</label>
+      ${ML && lg.phase === "season" ? `<div class="actbar" style="margin:12px 0 0">${active
+        ? `<button class="btn" id="pilotOff">Stop autopilot</button><span>Auto-readying through week ${p.until}.</span>`
+        : `<button class="btn" id="pilotBtn" ${n ? "" : "disabled"}>Sim until my next friend game</button>`}</div>
+        <p class="empty" style="margin:8px 0 0">${n ? (simPrefs.stop ? "Stops on: keep this page open. Readies you one week at a time." : "Stops off: stays ready while you're away.") : "Your friend game is next. Both owners choose when they are ready."}</p>
+        <details style="margin-top:8px"><summary>How autopilot works</summary><p class="empty">Keeps your lineup and plan; readies your team only. Everyone shares one league week. With big-moment stops on, keep this page open. Turn stops off to stay ready while away, through the week before your next friend game (or the regular-season end). The weekly deadline still applies.</p></details>` : ""}
+      </div></section>`;
+  }
+  async function pilotStart() {
+    if (!ML || reveal) return;
+    const n = S.friendStop(E, lg); if (!n) return;
+    if (simPrefs.stop && getOutlook().watch) { toast("Big game ahead. Choose your plan, then ready up yourself."); return; }
+    if (await mlSend({ t: "pilot", n: simPrefs.stop ? 1 : n, until: lg.week + n, stop: simPrefs.stop })) {
+      ML.last = 0; render(); await mlDefaults();
+    }
+  }
+  async function pilotOff() {
+    if (ML && lg) { await mlSend({ t: "pilot", n: 0, until: lg.week }); if (ML) { ML.last = 0; if (!reveal) render(); } }
+  }
+  function beginReveal(n, remote) {
+    if (reveal) return;
+    reveal = { left: n, remote: remote ? remote.slice() : null, owner: ML, league: lg,
+      paused: false, stage: "next", entries: [], queuedNews: [], timer: null, warned: new Set(), count: 0 };
+    revealTick();
+  }
+  function endReveal(draw = true) {
+    const r = reveal; if (!r) return;
+    clearTimeout(r.timer); reveal = null;
+    if (draw) { tab = "week"; render(); if (ML) { ML.last = 0; mlTick(); } }
+  }
+  function revealSchedule(fn, ms) {
+    const r = reveal; clearTimeout(r.timer);
+    r.next = fn; if (!r.paused) r.timer = setTimeout(() => { if (reveal === r) fn(); }, simPrefs.fast ? Math.min(ms, 120) : ms);
+  }
+  function revealTick() {
+    const r = reveal; if (!r || r.league !== lg || r.owner !== ML) return endReveal();
+    if (r.remote) {
+      while (r.remote.length && r.remote[0].m.t !== "week") {
+        const old = (lg.news || []).length, x = r.remote.shift();
+        if (x.s !== ML.next || !E.apply(lg, x.m)) return revealFailure(); ML.next = x.s + 1;
+        r.queuedNews.push(...(lg.news || []).slice(old));
+      }
+      if (!r.remote.length) {
+        if (r.queuedNews.length) {
+          r.major = S.major(E, lg, r.queuedNews); r.news = [...new Set([...r.major, ...S.headlines(r.queuedNews)])];
+          r.queuedNews = []; return revealNews();
+        }
+        markSeen(ML); return endReveal();
+      }
+    } else if (!r.left || !["season", "playoffs"].includes(lg.phase)) return endReveal();
+    const f = getOutlook(), key = `${lg.year}-${lg.phase}-${lg.week}-${lg.playoffs && lg.playoffs.round}`;
+    if (!r.remote && simPrefs.stop && f.watch && !r.warned.has(key)) {
+      r.warned.add(key); r.paused = true; r.stage = "warning"; r.message = f.watch;
+      r.next = revealTick; return render();
+    }
+    const g = E.nextGame(lg); r.game = g; r.label = lg.phase === "season" ? `Week ${lg.week + 1}` : E.ROUNDS[lg.playoffs.round];
+    r.stage = "matchup"; r.message = g ? `${g.h === lg.user ? "vs" : "at"} ${E.teamName(team(g.h === lg.user ? g.a : g.h))}` : "Bye week · the rest of the league plays";
+    render(); revealSchedule(revealWeek, 850);
+  }
+  function revealFailure() {
+    toast("Couldn't match the league's moves. Reloading its saved state."); endReveal(false); if (ML) mlResync(); else render();
+  }
+  async function revealWeek() {
+    const r = reveal; if (!r) return;
+    const old = (lg.news || []).length;
+    if (r.remote) {
+      const x = r.remote.shift(); if (x.s !== ML.next || !E.apply(lg, x.m)) return revealFailure(); ML.next = x.s + 1;
+    } else {
+      if (ML) { if (!(await mlSend({ t: "week" }))) return endReveal(); }
+      else { if (!E.apply(lg, { t: "week" })) return endReveal(); persist(); }
+      if (reveal !== r) return;
+      r.left--;
+    }
+    r.count++;
+    const news = r.queuedNews.concat((lg.news || []).slice(old)), major = S.major(E, lg, news);
+    r.queuedNews = [];
+    r.news = [...new Set([...major, ...S.headlines(news)])]; r.major = major;
+    const g = r.game && (r.game.po != null ? lg.playoffs.games.find((x) => x.wk === r.game.wk && x.h === r.game.h && x.a === r.game.a) : r.game);
+    r.result = g && g.done ? g : null; r.stage = "result";
+    r.entries.unshift({ label: r.label, game: r.result, text: r.message }); r.entries = r.entries.slice(0, 22);
+    if (ML) markSeen(ML);
+    render(); revealSchedule(revealNews, 1550);
+  }
+  function revealNews() {
+    const r = reveal; if (!r) return;
+    if (r.news && r.news.length) {
+      r.stage = "news"; r.message = r.news.shift();
+      if (simPrefs.stop && r.major.includes(r.message)) {
+        r.paused = true;
+        // A stop-enabled pilot only readies one week, so it cannot race ahead while you make a choice.
+        const p = lg.pilot && lg.pilot[lg.user];
+        if (ML && p && p.stop && p.until > lg.week) pilotOff();
+      }
+      render(); revealSchedule(revealNews, 3000);
+    } else revealTick();
+  }
+  function revealView() {
+    const r = reveal; if (!r) return;
+    const focused = document.activeElement && document.activeElement.id;
+    head(`${E.teamName(team(lg.user))} · ${lg.year}`, "Season live 🎬", "Every score and story here is simulated.");
+    const msg = r.stage === "news" ? `<b>${esc(r.message.h)}</b><p>${esc(r.message.b)}</p>`
+      : `<div class="disp" style="font-size:28px">${esc(r.label || "Big moment")}</div><p>${esc(r.message || "")}</p>`;
+    const g = r.result, score = g ? `${g.h === lg.user ? g.hs : g.as}–${g.h === lg.user ? g.as : g.hs}` : "Bye";
+    const won = g && (g.h === lg.user ? g.hs - g.as : g.as - g.hs);
+    $("body").innerHTML = `<div class="grid2"><div class="stack"><section class="card ask"><div class="card-b">
+      <div id="revealStatus" role="status" aria-live="polite">${r.stage === "result" ? `<div class="kicker">${esc(r.label)}</div><div class="disp" style="font-size:42px">${g ? won > 0 ? "W" : won < 0 ? "L" : "T" : "Bye"} ${score}</div><p>${esc(r.message)}</p>` : msg}</div>
+      <p><b>Record: ${E.record(lg, lg.user)}</b>${r.paused ? " · Paused" : ""}</p>
+      <div class="actbar"><button class="btn gold" id="revealPause">${r.paused ? "Resume" : "Pause"}</button>
+      <button class="btn" id="revealFast" aria-pressed="${!!simPrefs.fast}">${simPrefs.fast ? "Normal pace" : "Faster"}</button>
+      <button class="btn" id="revealSkip">Skip to end</button><button class="btn" id="revealExit">${r.remote ? "Back to league" : "Stop & manage"}</button></div>
+      <label><input type="checkbox" id="revealStops" ${simPrefs.stop ? "checked" : ""}> Stop for big moments</label>
+      ${r.remote ? `<p class="empty">Catching up on shared weeks already played. Pausing this reveal does not pause the league or its deadline.</p>` : ""}
+      </div></section><section class="card"><div class="card-h"><h2 class="disp">Your season so far</h2></div>
+      ${r.entries.map((e) => e.game ? scoreRow(e.game) : `<p class="empty" style="padding:12px">${esc(e.label)} · Bye</p>`).join("") || `<p class="empty" style="padding:12px">The next matchup is coming up…</p>`}</section></div>
+      <div class="side"><section class="card"><div class="card-b">${oddsHtml()}</div></section>${miniStand()}</div></div>`;
+    $("body").onchange = (e) => { if (e.target.id === "revealStops") { simPrefs.stop = e.target.checked; saveSimPrefs(); } };
+    $("body").onclick = (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      if (b.id === "revealPause") { r.paused = !r.paused; clearTimeout(r.timer); render(); if (!r.paused && r.next) revealSchedule(r.next, 0); }
+      else if (b.id === "revealFast") { simPrefs.fast = !simPrefs.fast; saveSimPrefs(); render(); }
+      else if (b.id === "revealSkip" || (b.id === "revealExit" && r.remote)) revealSkip();
+      else if (b.id === "revealExit") endReveal();
+      else if (b.dataset.g) boxScore(b.dataset.g);
+    };
+    if (focused && $(focused)) $(focused).focus({ preventScroll: true });
+  }
+  function revealSkip() {
+    const r = reveal; if (!r) return;
+    clearTimeout(r.timer);
+    if (r.remote) {
+      for (const x of r.remote) { if (x.s !== ML.next || !E.apply(lg, x.m)) return revealFailure(); ML.next = x.s + 1; }
+      markSeen(ML);
+      const p = lg.pilot && lg.pilot[lg.user];
+      if (simPrefs.stop && p && p.stop) pilotOff(); // skips the stories, so take no further automatic decisions
+    } else {
+      if (simPrefs.stop && r.major && r.major.length) { toast(r.major[0].h); return endReveal(); }
+      // Skip the animation, retain safety stops. Resume explicitly to play a flagged week.
+      let guard = 0;
+      while (r.left > 0 && ["season", "playoffs"].includes(lg.phase) && guard++ < 22) {
+        const f = getOutlook(), key = `${lg.year}-${lg.phase}-${lg.week}-${lg.playoffs && lg.playoffs.round}`;
+        if (simPrefs.stop && f.watch) { toast(f.watch); break; }
+        const old = (lg.news || []).length;
+        if (ML) break; // skipping a reveal never sends extra shared-league weeks
+        if (!E.apply(lg, { t: "week" })) break;
+        r.left--; persist();
+        const big = S.major(E, lg, (lg.news || []).slice(old));
+        if (simPrefs.stop && big.length) { toast(big[0].h); break; }
+      }
+    }
+    endReveal();
+  }
+
+  // Photos come only from the permission-checked private pack, never a public ID map.
+  function playerFace(p, small = false) {
+    const url = E.REAL_NAMES && !p.gen && PACK && PACK.headshots && PACK.headshots[p.id];
+    let valid = false;
+    try { const u = new URL(url); valid = u.protocol === "https:" && ["static.www.nfl.com", "a.espncdn.com"].includes(u.hostname); } catch {}
+    const initials = p.name.split(/\s+/).filter(Boolean).map((x) => x[0]).slice(0, 2).join("");
+    return `<span class="pface${small ? " sm" : ""}" aria-hidden="true"><span>${esc(initials)}</span>${valid ? `<img src="${esc(url)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}</span>`;
+  }
+  const playerBadge = (p, small = false) => `<span class="player-badge">${playerFace(p, small)}${grade(p.grade, small)}</span>`;
 
   // ---- Small pieces ----
   const team = (i) => lg.teams[i];
@@ -396,16 +604,19 @@
   const plabel = (p) => `${esc(posName(p))} · ${p.age.toFixed(0)}${p.real ? ` · was ${esc(realTeam(p.real))}` : p.gen || p.rk ? " · rookie" : ""}${p.inj ? ` · <i>out ${p.inj >= 30 ? "for the season" : p.inj + " wk"}</i>` : p.hold ? " · <i>holding out</i>" : ""}`;
   const ord = (n) => { const s = ["th", "st", "nd", "rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
   function overlay(kicker, title, html) {
-    $("ovK").textContent = kicker; $("ovH").textContent = title; $("ovB").innerHTML = html;
+    $("ovK").textContent = kicker; $("ovH").textContent = title; $("ovB").innerHTML = html; $("ovB").onclick = null;
     $("ov").hidden = false; document.body.style.overflow = "hidden";
   }
   function closeOv() { $("ov").hidden = true; document.body.style.overflow = ""; }
   $("ov").addEventListener("click", (e) => { if (e.target.id === "ov" || e.target.closest("[data-x]")) closeOv(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("ov").hidden) closeOv(); });
-  function head(kick, title, lede) { $("kick").textContent = kick; $("title").textContent = title; $("lede").textContent = lede || ""; $("lede").hidden = !lede; $("allF").hidden = !lg && !ML; }
+  // The user's team logo beside the title on every in-game screen (Sam 2026-10-28); logos come with the private pack.
+  function head(kick, title, lede) { $("kick").textContent = kick; $("titleT").textContent = title;
+    const lu = lg && lg.teams[lg.user] ? E.teamLogo(lg.teams[lg.user]) : ""; $("tlogo").hidden = !lu; if (lu && $("tlogo").getAttribute("src") !== lu) $("tlogo").src = lu; $("lede").textContent = lede || ""; $("lede").hidden = !lede; $("allF").hidden = !lg && !ML; }
 
   // ---- Start screen: save slots ----
   function home(noSync) {
+    endReveal(false);
     stopMl(); lg = null; slot = -1;
     if (location.search.includes("league=")) history.replaceState(null, "", "/franchise/?new");
     head("NFL · Single player", "Franchise Simulator", "Redraft every current NFL player into a new franchise, or take over a real roster from any season since 2002. Play the season and the playoffs, then run the offseason. Saved to your account, so it opens in any browser you sign in on.");
@@ -430,6 +641,7 @@
       const b = e.target.closest("button"); if (!b) return;
       if (b.dataset.mlnew != null) return mlSetup();
       if (b.dataset.ml) return mlOpen(b.dataset.ml);
+      if (b.dataset.mlDelete) return mlDeleteConfirm(b.dataset.mlDelete, b.dataset.leagueName);
       if (b.dataset.new) setup(+b.dataset.new);
       if (b.dataset.open) open(+b.dataset.open);
       if (b.dataset.dl) download(+b.dataset.dl);
@@ -465,11 +677,14 @@
     a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
   function open(i) {
+    endReveal(false);
     const sv = store.read().slots[i]; if (!sv) return home();
     $("body").innerHTML = `<p class="empty">Loading your franchise…</p>`;
     (isReal(sv) ? realData(sv.settings.year) : Promise.resolve(DATA)).then((data) => {
       try {
         lg = E.replay(data, sv); slot = i;
+        E.apply(lg, { t: "inj2" });
+        E.apply(lg, { t: "realRookies" }); // future drafts use actual players; past moves stay unchanged // a save from before 2026-10-28: injuries only on plays the player is in, from here on
         if (!sv.v || sv.v < E.SAVE_V) toast("This save is from before play-by-play games. It loads fine, but its games now replay with the new engine, so some results may come out different.");
         else if (sv.data && sv.data !== data.built) toast("Player data was updated since this save. Results may differ a little.");
         tab = lg.phase === "season" || lg.phase === "playoffs" ? "week" : tab;
@@ -480,7 +695,7 @@
 
   // ---- New franchise: pick a mode ----
   function setup(i) {
-    head("New franchise", "Pick a mode", "Two ways to build a franchise. Both play the same seasons and offseasons, forever.");
+    head("New franchise", "Pick a mode", "Two ways to build a franchise. Both use actual rookie classes. If the next real class is unavailable, your saved league pauses at that draft.");
     $("body").innerHTML = `<section class="card"><div class="card-b"><div class="modes">
       <button type="button" class="mode" data-mode="redraft"><b class="tag">Draft from scratch</b><span class="disp">The Redraft</span><span>Every current NFL player goes back into one pool. All 32 franchises snake-draft new 53-man rosters, and you pick yours.</span></button>
       <button type="button" class="mode" data-mode="real"><b class="tag">Take over a team</b><span class="disp">Real Rosters</span><span>Pick a season from 2002 on and a team. Every team starts with its real roster and that year's real schedule, then the real drafts that followed.</span></button>
@@ -519,7 +734,7 @@
         $("goBtn").disabled = true; $("goBtn").textContent = "Loading the rosters…";
         realData(y).then((data) => {
           const seed = Math.random().toString(36).slice(2, 10);
-          lg = E.create(data, { seed, mode: "real", team: pickT, hindsight: $("fHind").checked, lr: 1 });
+          lg = E.create(data, { seed, mode: "real", team: pickT, hindsight: $("fHind").checked, lr: 1, cap: 1, inj2: 1, realRookies: 1 });
           slot = i; tab = "week"; posF = "ALL"; q = ""; persist(); render();
         }, () => { toast("Couldn't load that season's players. Check your connection and try again."); $("goBtn").disabled = false; $("goBtn").textContent = `Start the ${y} season`; });
       };
@@ -549,7 +764,7 @@
       $("goBtn").disabled = true; $("goBtn").textContent = "Setting up…";
       setTimeout(() => {
         const seed = Math.random().toString(36).slice(2, 10);
-        lg = E.create(DATA, { seed, team: pickT, slot: +$("fSlot").value, userRounds: +$("fRounds").value, lr: 1 });
+        lg = E.create(DATA, { seed, team: pickT, slot: +$("fSlot").value, userRounds: +$("fRounds").value, lr: 1, cap: 1, inj2: 1, realRookies: 1 });
         slot = i; tab = "week"; posF = "ALL"; q = ""; persist(); render();
       }, 20);
     };
@@ -557,12 +772,19 @@
 
   // ---- Router ----
   function render() {
+    if (reveal) return revealView();
     if (ML && ML.info.status === "lobby") return lobbyView();
     if (!lg) return home();
     $("body").onclick = null;
     const t = team(lg.user), name = E.teamName(t);
+    if (movesOpen && (lg.phase === "done" || lg.phase === "resign")) { movesView(); if (ML) mlClock(); return; }
+    movesOpen = false;
     if (lg.phase === "redraft") draftRoom(name, "The Redraft");
     else if (lg.phase === "rookie") draftRoom(`${name} · ${lg.year} offseason`, "Rookie draft");
+    else if (lg.phase === "rookie-data") {
+      head(`${name} · ${lg.year} offseason`, "Real rookie class unavailable", "Your league is saved. It pauses here until the actual rookie data is available, so no fictional players are added.");
+      $("body").innerHTML = `<section class="card"><div class="card-b"><p>The real ${lg.year} class is not available for this league.${lg.pendingRookieDraft ? " Picks already made in the older draft stay recorded; its remaining fictional picks are paused." : ""}</p><p>No generated replacement class will be used.</p><a class="btn" href="/franchise/?new">All my franchises</a></div></section>`;
+    }
     else if (lg.phase === "resign") resignView();
     else if (lg.phase === "cuts") cutsView();
     else if (lg.phase === "done") doneView(); else seasonView();
@@ -615,14 +837,14 @@
           <input class="search" id="q" type="search" placeholder="Search a player" value="${esc(q)}" autocomplete="off">
           <div class="seg" style="margin-top:10px"><button type="button" data-sort="board" aria-pressed="${boardSort === "board"}">Our board</button><button type="button" data-sort="grade" aria-pressed="${boardSort === "grade"}">Best OVR now</button>${rookie ? `<button type="button" data-sort="ceil" aria-pressed="${boardSort === "ceil"}">Highest ceiling</button>` : ""}</div>
         </div>
-        <div id="board">${pool.slice(0, showN).map((p) => `<div class="prow">${grade(p.grade)}
+        <div id="board">${pool.slice(0, showN).map((p) => `<div class="prow">${playerBadge(p)}
           <div class="pn"><b>${esc(p.name)}</b><span>${plabel(p)}${rookie ? ` · ceiling ${ovr(p.ceil)}` : ""}</span>${p.line ? `<span>${esc(p.line)}</span>` : ""}</div>
           <button class="btn ${onClock ? "gold" : ""}" data-pick="${esc(p.id)}" ${onClock ? "" : "disabled"}>Draft</button></div>`).join("") || `<p class="empty" style="padding:12px">Nobody left here.</p>`}
         ${pool.length > showN ? `<div style="padding:12px"><button class="btn block" id="moreBtn">Show more (${pool.length - showN} left)</button></div>` : ""}</div></section>
       </div>
       <div class="side">
-        <section class="card"><div class="card-h"><h2 class="disp">Latest picks</h2></div><div class="ticker">${recent.map(([tm, id]) => { const p = lg.players[id]; return `<div><em>${ord(d.picks.indexOf(recent.find((x) => x[1] === id)) + 1)}</em>${chip(tm)}<span><b>${esc(p.name)}</b> <span class="muted">${esc(posName(p))} ${ovr(p.grade)}${ML && ownerOf(tm) ? ` · ${esc(whoName(tm))}` : ""}</span></span></div>`; }).join("") || `<p class="empty" style="padding:12px">No picks yet.</p>`}</div></section>
-        <section class="card"><div class="card-h"><h2 class="disp">Your picks</h2><span class="muted" style="font-weight:700">${mine} on roster</span></div><div class="ticker">${minePicks.slice().reverse().map((p) => `<div><em>${esc(posName(p))}</em>${grade(p.grade, 1)}<span><b>${esc(p.name)}</b></span></div>`).join("") || `<p class="empty" style="padding:12px">Your first pick is coming.</p>`}</div></section>
+        <section class="card"><div class="card-h"><h2 class="disp">Latest picks</h2></div><div class="ticker">${recent.map(([tm, id]) => { const p = lg.players[id]; return `<div><em>${ord(d.picks.indexOf(recent.find((x) => x[1] === id)) + 1)}</em>${chip(tm)}<span class="pick-player">${playerFace(p, true)}<span><b>${esc(p.name)}</b> <span class="muted">${esc(posName(p))} ${ovr(p.grade)}${ML && ownerOf(tm) ? ` · ${esc(whoName(tm))}` : ""}</span></span></span></div>`; }).join("") || `<p class="empty" style="padding:12px">No picks yet.</p>`}</div></section>
+        <section class="card"><div class="card-h"><h2 class="disp">Your picks</h2><span class="muted" style="font-weight:700">${mine} on roster</span></div><div class="ticker">${minePicks.slice().reverse().map((p) => `<div><em>${esc(posName(p))}</em>${playerBadge(p, true)}<span><b>${esc(p.name)}</b></span></div>`).join("") || `<p class="empty" style="padding:12px">Your first pick is coming.</p>`}</div></section>
       </div></div>`;
     $("body").onclick = (e) => {
       const b = e.target.closest("button"); if (!b) return;
@@ -658,12 +880,12 @@
     const my = E.userGames(lg), next = my.find((g) => !g.done);
     head(`${E.teamName(t)} · ${lg.year} season`, po ? "Playoffs" : lg.week === 0 ? "Season preview" : `Week ${lg.week} done`, "");
     const btn = ML ? readyBtn(po ? `the ${E.ROUNDS[P.round]}` : `week ${nextWk}`)
-      : po ? `<button class="btn gold" id="wkBtn">Play the ${E.ROUNDS[P.round]}</button>`
-      : `<button class="btn gold" id="wkBtn">Play week ${nextWk}</button><button class="btn" id="seasonBtn">Sim to the end of the season</button>`;
-    const tabs = [["week", po ? "Playoffs" : "This week"], ["locker", "Locker room"], ["plan", "Game plan"], ["lineup", "Lineup"], ["sched", "My schedule"], ["stand", "Standings"], ["team", "My team"], ["lead", "Leaders"]];
+      : po ? `<button class="btn gold" id="wkBtn">Play the ${E.ROUNDS[P.round]}</button><button class="btn" id="seasonBtn">Reveal the rest of the playoffs</button>`
+      : `<button class="btn gold" id="wkBtn">Play week ${nextWk}</button><button class="btn" id="threeBtn">Sim 3 weeks</button><button class="btn" id="seasonBtn">Sim to playoffs</button>`;
+    const tabs = [["week", po ? "Playoffs" : "This week"], ["locker", "Locker room"], ["plan", "Game plan"], ["lineup", "Lineup"], ["moves", `Trades &amp; FA${offersIn() ? ` (${offersIn()})` : ""}`], ["sched", "My schedule"], ["stand", "Standings"], ["team", "My team"], ["lead", "Leaders"]];
     $("body").innerHTML = `<div class="clock"><div><small>${E.teamName(t)} · ${E.record(lg, lg.user)}</small><div class="disp">${po ? E.ROUNDS[P.round] : `Week ${Math.min(nextWk, weeks())} of ${weeks()}`}</div>${ML ? `<small id="mlClock"></small>${ownersBar(true)}` : ""}</div><div class="actbar" style="margin:0">${btn}</div></div>
       <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-tab="${k}" aria-selected="${tab === k}">${l}</button>`).join("")}</div>
-      <div id="tabBody"></div>`;
+      ${simControls()}<div id="tabBody"></div>`;
     const body = $("tabBody");
     if (tab === "week") body.innerHTML = po ? playoffsHtml() : weekHtml(next);
     if (tab === "sched") body.innerHTML = `<section class="card">${my.map((g) => {
@@ -677,9 +899,11 @@
     if (tab === "plan") body.innerHTML = planHtml();
     if (tab === "lineup") body.innerHTML = lineupHtml();
     if (tab === "locker") body.innerHTML = lockerHtml();
-    $("body").onchange = (e) => { if (e.target.id === "feat") setPlan({ feature: e.target.value || null }); };
+    if (tab === "moves") body.innerHTML = movesHtml();
+    $("body").onchange = (e) => { if (e.target.id === "simStop") { simPrefs.stop = e.target.checked; saveSimPrefs(); } else if (e.target.id === "feat") setPlan({ feature: e.target.value || null }); else if (tab === "moves") movesChange(e); };
     $("body").onclick = (e) => {
       const b = e.target.closest("button"); if (!b) return;
+      if (!b.dataset.tab && tab === "moves" && movesClick(b)) return;
       if (b.dataset.tab) { tab = b.dataset.tab; sel = null; render(); }
       else if (b.dataset.watch != null) watch();
       else if (b.dataset.party != null) partySetup();
@@ -695,7 +919,10 @@
       else if (b.id === "mlReady") mlReady();
       else if (b.dataset.join) joinParty(b.dataset.join);
       else if (b.id === "wkBtn") { move({ t: "week" }); }
-      else if (b.id === "seasonBtn") { b.disabled = true; b.textContent = "Simming…"; setTimeout(() => { move({ t: "season" }); }, 20); }
+      else if (b.id === "seasonBtn") beginReveal(lg.phase === "season" ? weeks() - lg.week : 4 - lg.playoffs.round);
+      else if (b.id === "threeBtn") beginReveal(Math.min(3, weeks() - lg.week));
+      else if (b.id === "pilotBtn") pilotStart();
+      else if (b.id === "pilotOff") pilotOff();
     };
   }
   function weekHtml(next) {
@@ -789,7 +1016,7 @@
     const starters = new Set(E.GROUPS.flatMap((g) => L[g].map((p) => p.id)));
     return `<section class="card"><div class="card-b"><div class="unit">${UN.map(([k, v]) => `<div><small>${k}</small><b>${ovr(v)}</b></div>`).join("")}</div></div></section>
       ${E.GROUPS.map((g) => { const ps = ros.filter((p) => p.g === g).sort((a, b) => b.grade - a.grade); return ps.length ? `<section class="card" style="margin-top:12px"><div class="card-h"><h2 class="disp" style="font-size:20px">${E.GROUP_NAME[g]}</h2></div>
-        ${ps.map((p) => `<div class="prow">${grade(p.grade)}<div class="pn"><b>${esc(p.name)}${starters.has(p.id) ? ' <span class="pill" style="background:var(--accent-soft)">Starter</span>' : ""}</b><span>${plabel(p)} · ${p.yrs} yr${p.yrs === 1 ? "" : "s"} left</span></div><span class="muted" style="font-weight:700">${statLine(p.id)}</span></div>`).join("")}</section>` : ""; }).join("")}`;
+        ${ps.map((p) => `<div class="prow">${playerBadge(p)}<div class="pn"><b>${esc(p.name)}${starters.has(p.id) ? ' <span class="pill" style="background:var(--accent-soft)">Starter</span>' : ""}</b><span>${plabel(p)} · ${p.yrs} yr${p.yrs === 1 ? "" : "s"} left</span></div><span class="muted" style="font-weight:700">${statLine(p.id)}</span></div>`).join("")}</section>` : ""; }).join("")}`;
   }
   function statLine(id) {
     const s = lg.stats[id]; if (!s) return "";
@@ -802,7 +1029,11 @@
     if (s.tk) return `${s.tk} tackles`;
     return "";
   }
-  function teamOverlay(ti) { overlay(`${team(ti).conf} ${team(ti).div} · ${E.record(lg, ti)}`, E.teamName(team(ti)), teamHtml(ti)); }
+  function teamOverlay(ti) {
+    const can = ti !== lg.user && E.tradeOpen(lg) && lg.phase === "season" && !live;
+    overlay(`${team(ti).conf} ${team(ti).div} · ${E.record(lg, ti)}`, E.teamName(team(ti)), (can ? `<div class="actbar" style="margin:0 0 12px"><button class="btn gold" id="ovTrade">🔁 Trade with ${esc(E.teamName(team(ti)))}</button></div>` : "") + teamHtml(ti));
+    if (can) $("ovTrade").onclick = () => { closeOv(); TR = trNew(ti); tab = "moves"; render(); window.scrollTo(0, 0); };
+  }
   function leadersHtml() {
     const L = E.leaders(lg);
     return `<div class="tiles" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))">${Object.values(L).map((c) => `<section class="card"><div class="card-h"><h2 class="disp" style="font-size:20px">${c.label}</h2></div>
@@ -918,7 +1149,7 @@
   function injuryLine(ti) { const h = hurtOf(ti).filter((x) => x.starter); return h.length ? `Out: ${h.slice(0, 3).map((x) => esc(x.p.name)).join(", ")}${h.length > 3 ? ` and ${h.length - 3} more` : ""}.` : "No starters hurt."; }
   function injuryList(ti) {
     const h = hurtOf(ti);
-    return h.map(({ p, starter }) => `<div class="prow">${grade(p.grade)}<div class="pn"><b>${esc(p.name)}${starter ? ' <span class="pill" style="background:var(--accent-soft)">Starter</span>' : ""}</b><span>${esc(p.pos)} · ${p.age.toFixed(0)}</span></div><b style="color:var(--loss)">${p.inj >= 30 ? "Season" : `${p.inj} wk`}</b></div>`).join("")
+    return h.map(({ p, starter }) => `<div class="prow">${playerBadge(p)}<div class="pn"><b>${esc(p.name)}${starter ? ' <span class="pill" style="background:var(--accent-soft)">Starter</span>' : ""}</b><span>${esc(p.pos)} · ${p.age.toFixed(0)}</span></div><b style="color:var(--loss)">${p.inj >= 30 ? "Season" : `${p.inj} wk`}</b></div>`).join("")
       || `<p class="empty" style="padding:12px;margin:0">Nobody hurt.</p>`;
   }
   function lineupHtml() {
@@ -926,7 +1157,7 @@
     const g = E.nextGame(lg);
     const cards = E.GROUPS.map((grp) => {
       const n = E.STARTERS[grp], healthy = L.bench[grp], hurt = ros.filter((p) => p.g === grp && (p.inj || p.hold)).sort((a, b) => b.grade - a.grade);
-      const row = (p, i) => `<button type="button" class="lrow ${i < n && !p.inj ? "st" : ""} ${sel && sel.id === p.id ? "sel" : ""} ${p.inj ? "hurt" : ""}" data-lg="${grp}" data-lp="${esc(p.id)}">${grade(p.grade)}
+      const row = (p, i) => `<button type="button" class="lrow ${i < n && !p.inj ? "st" : ""} ${sel && sel.id === p.id ? "sel" : ""} ${p.inj ? "hurt" : ""}" data-lg="${grp}" data-lp="${esc(p.id)}">${playerBadge(p)}
         <span class="pn"><b>${esc(p.name)}</b><span>${esc(p.pos)} · ${p.age.toFixed(0)} · ${face(E.moodOf(lg, p.id))}${p.inj ? ` · <i>out ${p.inj >= 30 ? "for the season" : p.inj + " wk"}</i>` : p.hold ? " · <i>holding out</i>" : ""}</span></span>
         <small>${p.inj ? "Hurt" : p.hold ? "Holdout" : i < n ? (n > 1 ? `Starter ${i + 1}` : "Starter") : "Backup"}</small></button>`;
       return `<section class="card" style="margin-top:12px"><div class="card-h"><h2 class="disp" style="font-size:20px">${E.GROUP_NAME[grp]}</h2>${custom[grp] ? `<button class="btn" data-auto="${grp}">Back to best OVR</button>` : `<span class="muted" style="font-weight:700">Best OVR starts</span>`}</div>
@@ -947,6 +1178,215 @@
     sel = null;
     move({ t: "depth", g: grp, ids: order.slice(0, E.STARTERS[grp]) });
   }
+
+  // ---- Trades and free agents (build 4) ----
+  // Build a trade with any team: a computer team answers at once from the engine's value model (shown while you build
+  // it); in a friends league another owner gets an offer to accept or decline. Free agents sign any time outside a draft
+  // or the cut to 53. Everything goes through move(), so it is a move in the save or the league's log like the rest.
+  let TR = null, movesOpen = false;
+  const FAo = { pos: "ALL", yrs: 1, n: 25, cut: null };
+  const trNew = (to) => ({ seed: lg.seed, to, give: new Set(), get: new Set(), gp: new Set(), tp: new Set(), cut: null, cutFor: 0, pos: "ALL", side: "get" });
+  const posLabel = (g) => (g === "ED" ? "Edge" : g === "PK" ? "Picks" : g);
+  const yrsTxt = (p) => (p.yrs >= 1 ? `${p.yrs} yr${p.yrs === 1 ? "" : "s"} left` : "contract ending");
+  const wkLabel = (wk) => wk === 0 ? "Preseason" : wk <= 18 ? `Week ${wk}` : wk <= 22 ? E.ROUNDS[wk - 19] : wk === 23 ? "Awards" : "Offseason";
+  const offersIn = () => (ML && lg ? E.offersOf(lg, lg.user).in.length : 0);
+  const offerCode = () => (Date.now().toString(36) + Math.random().toString(36).slice(2)).replace(/[^a-z0-9]/g, "").slice(-10);
+  function trOver() { return team(lg.user).roster.length - TR.give.size + TR.get.size - E.ROSTER; }
+  // Who you'd release to stay at 53: our suggestion, which you can change (tick exactly as many as needed).
+  function trCuts() {
+    const over = trOver(); if (over <= 0) return [];
+    if (!TR.cut || TR.cutFor !== over || [...TR.cut].some((id) => TR.give.has(id) || !team(lg.user).roster.includes(id))) {
+      TR.cut = new Set(E.releaseSuggest(lg, lg.user, over, [...TR.give])); TR.cutFor = over;
+    }
+    return [...TR.cut];
+  }
+  const trMove = () => ({ to: TR.to, give: [...TR.give], get: [...TR.get], gp: [...TR.gp], tp: [...TR.tp], cut: trCuts() });
+  const dealWords = (ids, ks) => [...ids.map((id) => { const p = lg.players[id]; return p ? `${esc(p.name)} <span class="muted">${esc(p.pos)} ${ovr(p.grade)}</span>` : ""; }),
+    ...ks.map((k) => esc(E.pickName(lg, k)))].filter(Boolean).join(", ") || "nothing";
+  const roundBadge = (k) => { const r = E.parsePick(k).r; return `<span class="gr">${r}${["", "st", "nd", "rd"][r] || "th"}</span>`; };
+  // Salary cap leagues (settings.cap): money on every row, the payroll against the cap, an ask for every free agent.
+  const capOn = () => !!lg && E.capOn(lg);
+  const salTxt = (p) => (capOn() && p.sal != null ? ` · ${E.money(p.sal)}` : "");
+  function payLine(t, after) {
+    if (!capOn()) return "";
+    const now = E.payroll(lg, t), x = after == null ? now : Math.round(after * 10) / 10, room = E.CAP - x;
+    return `<p class="muted" style="margin:8px 0 0;font-weight:700">💰 Payroll ${E.money(x)}${x !== now ? ` (now ${E.money(now)})` : ""} of the ${E.money(E.CAP)} cap · ${room >= 0 ? `${E.money(room)} room` : `<span style="color:var(--loss)">${E.money(-room)} over</span>`}</p>`;
+  }
+  const probWords = (k, mine) => k === "lopsided" ? "Too lopsided: one side would get less than half of what it gives, so the league won't allow it."
+    : (k === "capYou") === !!mine ? "It would put you over the salary cap." : "It would put the other team over the salary cap.";
+
+  function movesHtml() {
+    if (TR && TR.seed !== lg.seed) TR = null;
+    const open = E.tradeOpen(lg), dl = E.tradeDeadline(lg);
+    const status = open ? (lg.phase === "season" ? `Trades are open until the deadline after week ${dl}.` : "Trades are open for the offseason.")
+      : lg.phase === "season" ? `The trade deadline passed after week ${dl}. Trades open again once the season is over.`
+      : lg.phase === "playoffs" ? "No trades in the playoffs. They open again once the season is over." : "Trades are closed right now.";
+    return `<div class="grid2"><div class="stack">${offersCard()}${tradeCard(open, status)}</div><div class="side">${faCard(E.signOpen(lg))}${txCard()}</div></div>`;
+  }
+  function offersCard() {
+    if (!ML) return "";
+    const O = E.offersOf(lg, lg.user);
+    if (!O.in.length && !O.out.length) return "";
+    const row = (o, inc) => {
+      const need = inc ? team(lg.user).roster.length - o.get.length + o.give.length - E.ROSTER : 0, cut = need > 0 ? E.releaseSuggest(lg, lg.user, need, o.get) : [];
+      const D = E.dealOf(lg, o.from, { ...o, team: o.from }), prob = D ? E.dealProblem(lg, D, inc ? cut : undefined) : null, od = !inc && D && !prob ? E.tradeOdds(lg, D) : null;
+      return `<div class="card-b" style="border-top:1px solid var(--line)"><p style="margin:0 0 8px;font-weight:800">${inc ? `${chip(o.from)} ${esc(whoName(o.from))} offers you a trade` : `To ${chip(o.to)} ${esc(whoName(o.to))}: waiting for an answer`}</p>
+        <p style="margin:0 0 4px"><b>You get:</b> ${inc ? dealWords(o.give, o.gp) : dealWords(o.get, o.tp)}</p><p style="margin:0 0 8px"><b>You give:</b> ${inc ? dealWords(o.get, o.tp) : dealWords(o.give, o.gp)}</p>
+        ${cut.length ? `<p class="empty" style="margin:0 0 8px">To stay at 53 you'd release ${cut.map((id) => esc(lg.players[id].name)).join(", ")}.</p>` : ""}
+        ${prob ? `<p style="margin:0 0 8px;font-weight:800">🚫 Can't go through now. ${probWords(prob, !inc)}</p>` : ""}${od ? `<p style="margin:0 0 6px;font-weight:700">How likely they say yes: ${od.pct}%</p><div style="margin:0 0 10px">${meter(od.pct)}</div>` : ""}${inc && capOn() && D ? payLine(lg.user, E.dealCap(lg, D, cut).b1).replace("margin:8px 0 0", "margin:0 0 8px") : ""}
+        <div class="actbar" style="margin:0">${inc ? `<button class="btn gold" data-acc="${esc(o.id)}" ${prob ? "disabled" : ""}>Accept</button><button class="btn" data-dec="${esc(o.id)}">Decline</button>` : `<button class="btn" data-wd="${esc(o.id)}">Withdraw</button>`}</div></div>`;
+    };
+    return `<section class="card" style="border-top:5px solid var(--accent)"><div class="card-h"><h2 class="disp">🤝 Trade offers</h2></div>${O.in.map((o) => row(o, true)).join("")}${O.out.map((o) => row(o, false)).join("")}</section>`;
+  }
+  function tradeCard(open, status) {
+    const me = lg.user;
+    const opts = lg.teams.filter((t) => t.i !== me).sort((a, b) => E.teamName(a).localeCompare(E.teamName(b)))
+      .map((t) => `<option value="${t.i}" ${TR && TR.to === t.i ? "selected" : ""}>${esc(E.teamName(t))} (${E.record(lg, t.i)})${ML && ownerOf(t.i) ? ` · ${esc(whoName(t.i))}` : ""}</option>`).join("");
+    const top = `<section class="card"><div class="card-h"><h2 class="disp">🔁 Make a trade</h2></div><div class="card-b">
+      <p style="margin:0">${esc(status)}${open ? " Trade players and picks from the next two drafts. Computer teams only say yes to a deal that's good for them." : ""}</p>
+      ${open ? `<div class="field" style="margin-bottom:0"><label for="trTo">Trade with</label><select id="trTo"><option value="">Pick a team</option>${opts}</select></div>` : ""}</div>`;
+    if (!open || !TR) return top + `</section>`;
+    const human = E.isHuman(lg, TR.to), side = TR.side, pos = TR.pos, reb = !human && E.rebuilding(lg, TR.to), U = !human && side === "get" ? E.untouchables(lg, TR.to) : new Set();
+    const t = side === "get" ? TR.to : me, set = side === "get" ? TR.get : TR.give, pset = side === "get" ? TR.tp : TR.gp;
+    const seg = `<div class="seg" style="margin:0 0 8px"><button type="button" data-trside="get" aria-pressed="${side === "get"}">They give (${TR.get.size + TR.tp.size})</button><button type="button" data-trside="give" aria-pressed="${side === "give"}">You give (${TR.give.size + TR.gp.size})</button></div>
+      <div class="seg">${["ALL", "PK", ...E.GROUPS].map((g) => `<button type="button" data-trpos="${g}" aria-pressed="${pos === g}">${g === "ALL" ? "All" : posLabel(g)}</button>`).join("")}</div>
+      ${reb ? `<p class="empty" style="margin:8px 0 0">📉 They're rebuilding: nobody is untouchable, and they'll move veterans for picks.</p>` : U.size ? `<p class="empty" style="margin:8px 0 0">🔒 Untouchable: their best players. They'll only move one for a lot more.</p>` : ""}`;
+    const rows = pos === "PK" ? E.picksOf(lg, t).map((k) => `<label class="chk ${pset.has(k) ? "" : "off"}"><input type="checkbox" data-tr="${side === "get" ? "tp" : "gp"}" data-id="${esc(k)}" ${pset.has(k) ? "checked" : ""}>${roundBadge(k)}<span class="pn"><b>${esc(E.pickName(lg, k))}</b></span><span></span></label>`)
+      : team(t).roster.map((id) => lg.players[id]).filter((p) => pos === "ALL" || p.g === pos).sort((a, b) => b.grade - a.grade)
+        .map((p) => p.yrs >= 1 ? `<label class="chk ${set.has(p.id) ? "" : "off"}"><input type="checkbox" data-tr="${side}" data-id="${esc(p.id)}" ${set.has(p.id) ? "checked" : ""}>${playerBadge(p)}<span class="pn"><b>${esc(p.name)}</b><span>${plabel(p)} · ${yrsTxt(p)}${salTxt(p)}</span></span><span class="muted" style="font-weight:700">${U.has(p.id) ? "🔒 " : ""}${posLabel(p.g)}</span></label>`
+          : `<label class="chk off"><input type="checkbox" disabled>${playerBadge(p)}<span class="pn"><b>${esc(p.name)}</b><span>${plabel(p)} · contract ending</span></span><span class="muted" style="font-weight:700">${posLabel(p.g)}</span></label>`);
+    // The deal so far, how they see it, and who you'd release.
+    const any = TR.give.size + TR.gp.size + TR.get.size + TR.tp.size, D = any ? E.dealOf(lg, me, trMove()) : null, over = trOver();
+    let verdict = "", go = false;
+    if (D) {
+      // "How likely they say yes": a computer team answers by its value model (100 = yes); a person decides, so it's a guess.
+      const o = E.tradeOdds(lg, D), pct = o.prob ? 0 : o.pct;
+      go = !o.prob && (human || o.ok);
+      const words = o.prob ? `🚫 ${probWords(o.prob, true)}`
+        : human ? `${pct >= 65 ? "👍 Looks fair. They'll probably say yes" : pct >= 35 ? "🤔 Could go either way" : "👎 They'll probably say no"}. ${esc(whoName(TR.to))} decides.`
+        : o.ok ? "✅ They'd say yes" : pct >= 70 ? "🤏 Close. They want a bit more" : "❌ Not close. They want a lot more";
+      const un = !o.prob && o.v.untouch.length ? `<p class="empty" style="margin:6px 0 0">🔒 ${o.v.untouch.map((id) => esc(lg.players[id].name)).join(" and ")} ${o.v.untouch.length > 1 ? "are" : "is"} untouchable, so the price is half again higher.</p>` : "";
+      verdict = `<p style="margin:10px 0 6px;font-weight:800">How likely they say yes: ${o.prob ? "no chance" : `${pct}%`}</p>${meter(pct)}<p style="margin:8px 0 0;font-weight:800">${words}</p>${un}${capOn() ? payLine(me, E.dealCap(lg, D).a1) : ""}`;
+    } else if (any) verdict = `<p class="empty" style="margin:8px 0 0">${!(TR.get.size + TR.tp.size) || !(TR.give.size + TR.gp.size) ? "Add something to both sides." : over > 0 && TR.cut && TR.cut.size !== over ? `Pick exactly ${over} to release.` : "That deal isn't possible right now."}</p>`;
+    let cutHtml = "";
+    if (over > 0) {
+      const ros = team(me).roster.filter((id) => !TR.give.has(id)).map((id) => lg.players[id]).sort((a, b) => E.keepValue(a) - E.keepValue(b));
+      const show = ros.filter((p, i) => i < 14 || TR.cut.has(p.id));
+      cutHtml = `<div class="card-b" style="border-top:1px solid var(--line);padding-bottom:0"><p style="margin:0;font-weight:800">You'd have ${E.ROSTER + over} players: release ${over}. We ticked who we'd let go.</p></div>
+        ${show.map((p) => `<label class="chk ${TR.cut.has(p.id) ? "" : "off"}"><input type="checkbox" data-trcut="${esc(p.id)}" ${TR.cut.has(p.id) ? "checked" : ""}>${playerBadge(p)}<span class="pn"><b>${esc(p.name)}</b><span>${plabel(p)}</span></span><span class="muted" style="font-weight:700">${TR.cut.has(p.id) ? "Release" : posLabel(p.g)}</span></label>`).join("")}`;
+    }
+    return `${top}<div class="card-b" style="border-top:1px solid var(--line);padding-bottom:8px">${seg}</div>
+      <div style="max-height:460px;overflow-y:auto;border-top:1px solid var(--line)">${rows.join("") || `<p class="empty" style="padding:12px;margin:0">Nobody here.</p>`}</div>
+      <div class="card-b" style="border-top:1px solid var(--line)"><p style="margin:0 0 4px"><b>You get:</b> ${dealWords([...TR.get], [...TR.tp])}</p><p style="margin:0"><b>You give:</b> ${dealWords([...TR.give], [...TR.gp])}</p>${verdict}</div>
+      ${cutHtml}
+      <div class="card-b"><div class="actbar" style="margin:0"><button class="btn gold" id="trGo" ${go ? "" : "disabled"}>${human ? `Send the offer to ${esc(whoName(TR.to))}` : "Make the trade"}</button>${any ? `<button class="btn" id="trClear">Start over</button>` : ""}</div></div></section>`;
+  }
+  function faCard(open) {
+    const head = `<div class="card-h"><h2 class="disp">✍️ Free agents</h2><span class="muted" style="font-weight:700">${team(lg.user).roster.length} of ${E.ROSTER} on your roster</span></div>`;
+    if (!open) return `<section class="card">${head}<p class="empty" style="padding:12px;margin:0">Free agents can't sign during a draft or the cut to 53.</p></section>`;
+    const me = lg.user, full = team(me).roster.length >= E.ROSTER;
+    let pool = E.freeAgents(lg);
+    if (FAo.pos !== "ALL") pool = pool.filter((p) => p.g === FAo.pos);
+    pool.sort((a, b) => b.grade - a.grade || a.age - b.age);
+    const ros = team(me).roster.map((id) => lg.players[id]).sort((a, b) => E.keepValue(a) - E.keepValue(b));
+    if (full && (!FAo.cut || !team(me).roster.includes(FAo.cut))) FAo.cut = E.releaseSuggest(lg, me, 1)[0] || ros[0].id;
+    return `<section class="card">${head}<div class="card-b" style="padding-bottom:8px">
+      <div class="seg">${["ALL", ...E.GROUPS].map((g) => `<button type="button" data-fapos="${g}" aria-pressed="${FAo.pos === g}">${g === "ALL" ? "All" : posLabel(g)}</button>`).join("")}</div>
+      ${capOn() ? payLine(me) : `<div class="seg" style="margin-top:8px">${[1, 2, 3].map((y) => `<button type="button" data-fayrs="${y}" aria-pressed="${FAo.yrs === y}">${y}-year deal</button>`).join("")}</div>`}
+      ${full ? `<div class="field" style="margin:10px 0 0"><label for="faCut">Your roster is full. To sign someone, release</label><select id="faCut">${ros.slice(0, 30).map((p) => `<option value="${esc(p.id)}" ${p.id === FAo.cut ? "selected" : ""}>${esc(p.name)} · ${esc(p.pos)} ${ovr(p.grade)}</option>`).join("")}</select></div>` : ""}</div>
+      ${pool.slice(0, FAo.n).map((p) => `<div class="prow">${playerBadge(p)}<div class="pn"><b>${esc(p.name)}</b><span>${plabel(p)}${capOn() ? ` · asks ${E.money(E.askSalary(lg, p))}` : ""}</span></div><button class="btn" data-sign="${esc(p.id)}">Sign</button></div>`).join("") || `<p class="empty" style="padding:12px;margin:0">Nobody available here.</p>`}
+      ${pool.length > FAo.n ? `<div class="card-b"><button class="btn block" data-famore="1">Show more (${pool.length - FAo.n} left)</button></div>` : ""}</section>`;
+  }
+  function txCard() {
+    const T = (lg.tx || []).slice().reverse().slice(0, 15), nm = (id) => esc(lg.players[id] ? lg.players[id].name : "");
+    const tn = (i) => esc(E.teamName(team(i)));
+    return `<section class="card"><div class="card-h"><h2 class="disp">Transactions</h2></div>${T.map((x) => x.k === "trade"
+      ? `<div class="story ${x.a === lg.user || x.b === lg.user ? "me" : ""}"><small>${x.y} · ${wkLabel(x.wk)}</small><b>Trade: ${tn(x.a)} and ${tn(x.b)}</b><p>${tn(x.a)} gets ${dealWords(x.ag, x.ap)}. ${tn(x.b)} gets ${dealWords(x.bg, x.bp)}.</p></div>`
+      : `<div class="story ${x.t === lg.user ? "me" : ""}"><small>${x.y} · ${wkLabel(x.wk)}</small><b>${tn(x.t)} signs ${nm(x.p)}${x.sal != null ? ` (${E.money(x.sal)} a year)` : ""}</b>${x.cut ? `<p>Released ${nm(x.cut)}.</p>` : ""}</div>`).join("")
+      || `<p class="empty" style="padding:12px;margin:0">No trades or signings yet.</p>`}</section>`;
+  }
+  // Salary cap leagues: signing a free agent opens an offer sheet. His ask is the suggested pay; he signs for 90% of it
+  // or more (never random, so every browser agrees), and the deal has to fit under the cap (the minimum always does).
+  function faOffer(id) {
+    const p = lg.players[id], me = lg.user, ask = E.askSalary(lg, p), floor = E.faFloor(lg, p), st = { sal: ask, yrs: FAo.yrs };
+    const draw = () => {
+      const full = team(me).roster.length >= E.ROSTER, cut = full ? FAo.cut : null, cs = cut && lg.players[cut] ? lg.players[cut].sal || 0 : 0;
+      const after = E.payroll(lg, me) - cs + st.sal, fits = st.sal <= E.MIN_SAL || after <= E.CAP, yes = st.sal >= floor;
+      const pct = yes ? 100 : Math.max(1, Math.round(100 * (st.sal / floor) ** 8));
+      $("ovB").innerHTML = `<div class="prow" style="border:0;padding:0 0 12px">${playerBadge(p)}<div class="pn"><b>${esc(p.name)}</b><span>${plabel(p)}</span></div><span></span></div>
+        <p style="margin:0 0 4px;font-weight:800">💵 Suggested pay: ${E.money(ask)} a year</p><p class="muted" style="margin:0 0 12px">He signs for ${E.money(floor)} or more.</p>
+        <div class="seg" style="align-items:center">${[[-1, "−$1M"], [-0.1, "−$0.1M"]].map(([d, l]) => `<button type="button" data-fo="${d}">${l}</button>`).join("")}<b style="flex:none;font-size:20px;padding:0 6px">${E.money(st.sal)}</b>${[[0.1, "+$0.1M"], [1, "+$1M"]].map(([d, l]) => `<button type="button" data-fo="${d}">${l}</button>`).join("")}</div>
+        <div class="seg" style="margin-top:8px">${[1, 2, 3].map((y) => `<button type="button" data-foy="${y}" aria-pressed="${st.yrs === y}">${y}-year deal</button>`).join("")}</div>
+        <p style="margin:14px 0 6px;font-weight:800">How likely he signs: ${pct}%</p>${meter(pct)}
+        <p style="margin:8px 0 0;font-weight:800">${!yes ? `❌ Too low. He wants at least ${E.money(floor)}.` : !fits ? "🚫 That puts you over the salary cap." : "✅ He'd sign."}</p>
+        ${payLine(me, after)}${cut ? `<p class="muted" style="margin:8px 0 0">Your roster is full, so ${esc(lg.players[cut].name)} is released (pick who in the free agents list).</p>` : ""}
+        <div class="actbar" style="margin:14px 0 0"><button class="btn gold" data-fogo="1" ${yes && fits ? "" : "disabled"}>Sign him: ${E.money(st.sal)} a year, ${st.yrs} yr${st.yrs > 1 ? "s" : ""}</button><button class="btn" data-x="1">Cancel</button></div>`;
+    };
+    overlay("Free agent offer", p.name, ""); draw();
+    $("ovB").onclick = (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      if (b.dataset.fo) { st.sal = Math.min(80, Math.max(E.MIN_SAL, Math.round((st.sal + +b.dataset.fo) * 10) / 10)); draw(); }
+      else if (b.dataset.foy) { st.yrs = +b.dataset.foy; FAo.yrs = st.yrs; draw(); }
+      else if (b.dataset.fogo) {
+        const cut = team(me).roster.length >= E.ROSTER ? FAo.cut : null;
+        closeOv(); FAo.cut = null;
+        if (move({ t: "sign", p: p.id, yrs: st.yrs, sal: st.sal, ...(cut ? { cut } : {}) })) toast(`${p.name} signed for ${E.money(st.sal)} a year${cut ? `; ${lg.players[cut].name} released` : ""}.`);
+      }
+    };
+  }
+  // Clicks and changes on the trades screen; true when handled.
+  function movesClick(b) {
+    const me = lg.user;
+    if (b.dataset.trpos) { TR.pos = b.dataset.trpos; render(); }
+    else if (b.dataset.trside) { TR.side = b.dataset.trside; render(); }
+    else if (b.id === "trClear") { TR = trNew(TR.to); render(); }
+    else if (b.id === "trGo") {
+      const m = trMove(), to = TR.to, human = E.isHuman(lg, to);
+      TR = trNew(to);
+      if (human) { if (move({ t: "offer", id: offerCode(), ...m })) toast(`Offer sent to ${whoName(to)}.`); }
+      else if (move({ t: "trade", ...m })) toast(`Trade done with ${E.teamName(team(to))}. Check your lineup.`);
+    }
+    else if (b.dataset.acc) {
+      const o = lg.offers && lg.offers[b.dataset.acc]; if (!o) return true;
+      const need = team(me).roster.length - o.get.length + o.give.length - E.ROSTER;
+      if (move({ t: "accept", id: o.id, cut: need > 0 ? E.releaseSuggest(lg, me, need, o.get) : [] })) toast("Trade done. Check your lineup.");
+    }
+    else if (b.dataset.dec) move({ t: "decline", id: b.dataset.dec });
+    else if (b.dataset.wd) move({ t: "withdraw", id: b.dataset.wd });
+    else if (b.dataset.fapos) { FAo.pos = b.dataset.fapos; FAo.n = 25; render(); }
+    else if (b.dataset.fayrs) { FAo.yrs = +b.dataset.fayrs; render(); }
+    else if (b.dataset.famore) { FAo.n += 25; render(); }
+    else if (b.dataset.sign && capOn()) faOffer(b.dataset.sign);
+    else if (b.dataset.sign) {
+      const p = lg.players[b.dataset.sign], full = team(me).roster.length >= E.ROSTER, cut = full ? FAo.cut : null;
+      FAo.cut = null;
+      if (move({ t: "sign", p: p.id, yrs: FAo.yrs, ...(cut ? { cut } : {}) })) toast(`${p.name} signed${cut ? `; ${lg.players[cut].name} released` : ""}.`);
+    }
+    else return false;
+    return true;
+  }
+  function movesChange(e) {
+    const el = e.target;
+    if (el.id === "trTo") { TR = el.value === "" ? null : trNew(+el.value); render(); }
+    else if (el.dataset.tr) {
+      const S = { get: TR.get, give: TR.give, gp: TR.gp, tp: TR.tp }[el.dataset.tr], plr = el.dataset.tr === "get" || el.dataset.tr === "give";
+      if (el.checked && plr && S.size >= E.TRADE_MAX) { toast(`${E.TRADE_MAX} players a side at most.`); el.checked = false; return true; }
+      el.checked ? S.add(el.dataset.id) : S.delete(el.dataset.id); render();
+    }
+    else if (el.dataset.trcut) { el.checked ? TR.cut.add(el.dataset.trcut) : TR.cut.delete(el.dataset.trcut); render(); }
+    else if (el.id === "faCut") FAo.cut = el.value;
+    else return false;
+    return true;
+  }
+  // After the Final and during contracts the trades screen opens on its own (the season tabs are gone by then).
+  function movesView() {
+    const t = team(lg.user);
+    head(`${E.teamName(t)} · ${lg.phase === "done" ? `${lg.year} season over` : `${lg.year} offseason`}`, "Trades & free agents", "");
+    $("body").innerHTML = `<div class="actbar" style="margin:0 0 12px"><button class="btn" id="mvBack">← Back</button></div>${movesHtml()}`;
+    $("body").onchange = (e) => movesChange(e);
+    $("body").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; if (b.id === "mvBack") { movesOpen = false; render(); } else movesClick(b); };
+  }
+  const movesBtn = () => { const n = offersIn(); return `<button class="btn" id="movesBtn">Trades &amp; free agents${n ? ` (${n} offer${n === 1 ? "" : "s"})` : ""}</button>`; };
 
   // ---- Live game viewer: a gamecast ----
   // The game is worked out before it starts (previewGame), then shown play by play. Which play shows is a pure
@@ -1211,7 +1651,7 @@
       return ["Fourth down", `4th &amp; ${goal ? "goal" : a.tg} at ${esc(spot)}, ${scoreWords(a)}, ${when}.`, { fg: `${117 - a.yl} yards` }];
     }
     if (a.kind === "2pt") return ["Two-point try?", `Touchdown! You're ${scoreWords(a)} before the try, ${when}.`, {}];
-    if (a.kind === "inj") return ["Banged up", `${esc(pn(a.p))} is banged up (a one or two week knock). Keep him in and he plays on a step slower, and might aggravate it: out for weeks, sometimes the season. Sit him and the backup comes in.`, { keep: "re-injury risk" }];
+    if (a.kind === "inj") return ["Banged up", `${esc(pn(a.p))} is banged up${a.how ? ` ${esc(a.how)}` : ""} (a one or two week knock). Keep him in and he plays on a step slower, and might aggravate it: out for weeks, sometimes the season. Sit him and the backup comes in.`, { keep: "re-injury risk" }];
     if (a.kind === "qb") return ["Quarterback trouble", `${esc(pn(a.p))} is ${a.cmp} of ${a.att} with ${a.int} interception${a.int === 1 ? "" : "s"} and you're ${scoreWords(a)}, ${when}. Bring in ${esc(pn(a.b))}?`, {}];
     return ["Clock running", `They're letting the clock run: ${when}, you're ${scoreWords(a)}. A timeout saves about ${a.save} seconds (${a.left} left).`, {}];
   }
@@ -1276,7 +1716,7 @@
       <section class="card" style="border-top:6px solid ${t.c1}"><div class="card-b">
         <div class="bigrec">${rec}</div><p style="font-weight:800;font-size:18px;margin:6px 0 2px">${esc(h.fate)}${h.seed ? ` · ${ord(h.seed)} seed` : ""}</p>
         <p class="empty" style="margin:0">${h.pf} points for, ${h.pa} against.</p>
-        <div class="actbar" style="margin:16px 0 0"><button class="btn gold big" id="shareBtn">Share my season</button>${ML ? readyBtn(`the ${h.year + 1} offseason`) : `<button class="btn" id="offBtn">Start the ${h.year + 1} offseason</button>`}</div>${ML ? `<small id="mlClock"></small>${ownersBar(true)}` : ""}</div></section>
+        <div class="actbar" style="margin:16px 0 0"><button class="btn gold big" id="shareBtn">Share my season</button>${ML ? readyBtn(`the ${h.year + 1} offseason`) : `<button class="btn" id="offBtn">Start the ${h.year + 1} offseason</button>`}${movesBtn()}</div>${ML ? `<small id="mlClock"></small>${ownersBar(true)}` : ""}</div></section>
       <section class="card"><div class="card-h"><h2 class="disp">The Final</h2></div>${scoreRow(lg.playoffs.games[lg.playoffs.games.length - 1], { meta: "" })}
         <div class="card-b"><p style="margin:0"><b>Champion:</b> ${esc(E.teamName(team(h.champ)))}</p>
         ${h.mvpName ? `<p style="margin:6px 0 0"><b>Most valuable player:</b> ${esc(h.mvpName)} (${esc(E.teamName(team(h.mvpTeam)))})</p>` : ""}
@@ -1287,6 +1727,7 @@
       const b = e.target.closest("button"); if (!b) return;
       if (b.dataset.g) boxScore(b.dataset.g);
       if (b.id === "offBtn") { tab = "week"; move({ t: "offseason" }); }
+      if (b.id === "movesBtn") { movesOpen = true; render(); window.scrollTo(0, 0); }
       if (b.id === "mlReady") { tab = "week"; mlReady(); }
       if (b.dataset.nf) { newsF = b.dataset.nf; newsN = 12; render(); }
       if (b.id === "moreNews") { newsN += 20; render(); }
@@ -1305,17 +1746,25 @@
     const wont = new Set(O.wont || []);
     const keep = held("keep", () => defaultKeep(lg.user));
     const draw = () => {
+      // Salary cap: each one re-signs at his ask, in the order you ticked them, while it fits (the engine does the same).
+      let pay = capOn() ? E.payroll(lg, lg.user) - exp.reduce((s, p) => s + (p.sal || 0), 0) : 0;
+      const nofit = new Set();
+      if (capOn()) for (const id of keep) { const p = lg.players[id]; if (!p || wont.has(id) || !exp.includes(p)) continue; const a = E.askSalary(lg, p); if (pay + a <= E.CAP) pay += a; else nofit.add(id); }
+      const ask = (p) => (capOn() ? `<span class="contract-ask">Asks ${E.money(E.askSalary(lg, p))} a year</span>` : "");
       $("body").innerHTML = `<div class="grid2"><div class="stack"><section class="card"><div class="card-h"><h2 class="disp">Contracts ending</h2><span class="muted" style="font-weight:700">${keep.size} of ${exp.length} kept</span></div>
-        ${exp.map((p) => wont.has(p.id) ? `<label class="chk off"><input type="checkbox" disabled>${grade(p.grade)}<span class="pn"><b>${esc(p.name)}</b><span>${plabel(p)} · ${face(E.moodOf(lg, p.id))} won't re-sign</span></span><span class="muted" style="font-weight:700">Leaving</span></label>`
-          : `<label class="chk ${keep.has(p.id) ? "" : "off"}"><input type="checkbox" data-k="${esc(p.id)}" ${keep.has(p.id) ? "checked" : ""}>${grade(p.grade)}<span class="pn"><b>${esc(p.name)}</b><span>${plabel(p)} · ${face(E.moodOf(lg, p.id))}</span></span><span class="muted" style="font-weight:700">${keep.has(p.id) ? "Re-sign" : "Let go"}</span></label>`).join("") || `<p class="empty" style="padding:12px">No contracts end this year.</p>`}
+        ${capOn() ? `<div class="card-b" style="padding-top:0">${payLine(lg.user, pay)}${nofit.size ? `<p style="margin:6px 0 0;font-weight:800;color:var(--loss)">🚫 Over the cap: ${nofit.size === 1 ? "one player you ticked doesn't" : `${nofit.size} players you ticked don't`} fit and will leave. Untick someone first.</p>` : ""}</div>` : ""}
+        ${exp.map((p) => wont.has(p.id) ? `<label class="chk off"><input type="checkbox" disabled>${playerBadge(p)}<span class="pn"><b>${esc(p.name)}</b><span>${plabel(p)} · ${face(E.moodOf(lg, p.id))} won't re-sign</span></span><span class="muted" style="font-weight:700">Leaving</span></label>`
+          : `<label class="chk ${keep.has(p.id) ? "" : "off"}"><input type="checkbox" data-k="${esc(p.id)}" ${keep.has(p.id) ? "checked" : ""}>${playerBadge(p)}<span class="pn"><b>${esc(p.name)}</b><span>${plabel(p)} · ${face(E.moodOf(lg, p.id))}</span>${ask(p)}</span><span class="muted" style="font-weight:700">${nofit.has(p.id) ? "Won't fit" : keep.has(p.id) ? "Re-sign" : "Let go"}</span></label>`).join("") || `<p class="empty" style="padding:12px">No contracts end this year.</p>`}
         <div class="card-b"><button class="btn gold big block" id="goBtn">Go to the rookie draft</button></div></section></div>
         <div class="side">
+          <section class="card"><div class="card-b"><p style="margin:0 0 10px">Before the rookie draft you can trade players and this year's picks, or sign free agents.</p>${movesBtn()}</div></section>
           ${wont.size ? `<section class="card"><div class="card-b"><p style="margin:0">${wont.size === 1 ? "One player is" : `${wont.size} players are`} unhappy enough to walk. Morale matters at contract time.</p></div></section>` : ""}
-          <section class="card"><div class="card-h"><h2 class="disp">Retired</h2></div>${O.retired.map((id) => { const p = lg.players[id]; return `<div class="prow">${grade(p.grade)}<div class="pn"><b>${esc(p.name)}</b><span>${esc(posName(p))} · ${p.age.toFixed(0)}</span></div><span></span></div>`; }).join("") || `<p class="empty" style="padding:12px">Nobody on your team retired.</p>`}</section>
-          <section class="card"><div class="card-h"><h2 class="disp">Biggest changes</h2></div>${O.changes.slice().sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 12).map(([id, dl]) => { const p = lg.players[id]; return `<div class="prow">${grade(p.grade)}<div class="pn"><b>${esc(p.name)}</b><span>${esc(posName(p))} · ${p.age.toFixed(0)}</span></div><b style="color:${dl > 0 ? "var(--win)" : "var(--loss)"}">${dl > 0 ? "+" : ""}${Math.round(6 * dl)}</b></div>`; }).join("") || `<p class="empty" style="padding:12px">No big changes.</p>`}</section>
+          <section class="card"><div class="card-h"><h2 class="disp">Retired</h2></div>${O.retired.map((id) => { const p = lg.players[id]; return `<div class="prow">${playerBadge(p)}<div class="pn"><b>${esc(p.name)}</b><span>${esc(posName(p))} · ${p.age.toFixed(0)}</span></div><span></span></div>`; }).join("") || `<p class="empty" style="padding:12px">Nobody on your team retired.</p>`}</section>
+          <section class="card"><div class="card-h"><h2 class="disp">Biggest changes</h2></div>${O.changes.slice().sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 12).map(([id, dl]) => { const p = lg.players[id]; return `<div class="prow">${playerBadge(p)}<div class="pn"><b>${esc(p.name)}</b><span>${esc(posName(p))} · ${p.age.toFixed(0)}</span></div><b style="color:${dl > 0 ? "var(--win)" : "var(--loss)"}">${dl > 0 ? "+" : ""}${Math.round(6 * dl)}</b></div>`; }).join("") || `<p class="empty" style="padding:12px">No big changes.</p>`}</section>
         </div></div>`;
       $("body").onchange = (e) => { const k = e.target.dataset.k; if (!k) return; e.target.checked ? keep.add(k) : keep.delete(k); draw(); };
       $("goBtn").onclick = () => { $("body").onchange = null; move({ t: "resign", keep: [...keep] }); };
+      $("movesBtn").onclick = () => { movesOpen = true; render(); window.scrollTo(0, 0); };
     };
     draw();
   }
@@ -1330,7 +1779,7 @@
       const need = ros.length - cut.size - E.ROSTER;
       $("body").innerHTML = `<div class="clock"><div><small>${ros.length} on the roster · ${cut.size} to cut</small><div class="disp">${need > 0 ? `Cut ${need} more` : need < 0 ? `${-need} spot${need === -1 ? "" : "s"} open` : "Ready"}</div></div>
         <button class="btn gold" id="goBtn" ${need > 0 ? "disabled" : ""}>Start the ${lg.year} season</button></div>
-        <section class="card">${ros.map((p) => `<label class="chk ${cut.has(p.id) ? "off" : ""}"><input type="checkbox" data-k="${esc(p.id)}" ${cut.has(p.id) ? "checked" : ""}>${grade(p.grade)}<span class="pn"><b>${esc(p.name)}</b><span>${plabel(p)}${p.gen ? ` · ceiling ${ovr(p.ceil)}` : ""}</span></span><span class="muted" style="font-weight:700">${cut.has(p.id) ? "Cut" : esc(p.g === "ED" ? "Edge" : p.g)}</span></label>`).join("")}</section>`;
+        <section class="card">${ros.map((p) => `<label class="chk ${cut.has(p.id) ? "off" : ""}"><input type="checkbox" data-k="${esc(p.id)}" ${cut.has(p.id) ? "checked" : ""}>${playerBadge(p)}<span class="pn"><b>${esc(p.name)}</b><span>${plabel(p)}${p.gen ? ` · ceiling ${ovr(p.ceil)}` : ""}</span></span><span class="muted" style="font-weight:700">${cut.has(p.id) ? "Cut" : esc(p.g === "ED" ? "Edge" : p.g)}</span></label>`).join("")}</section>`;
       $("body").onchange = (e) => { const k = e.target.dataset.k; if (!k) return; e.target.checked ? cut.add(k) : cut.delete(k); draw(); };
       $("goBtn").onclick = () => { $("body").onchange = null; tab = "week"; move({ t: "cut", ids: [...cut] }); };
     };
@@ -1473,8 +1922,8 @@
   // the same league; each one shows its own team (E.replay's "me"). The page polls for new moves (every 2 s in a draft,
   // 5 s otherwise). Weeks play once every owner is ready; when a deadline passes, any open browser hands out the
   // defaults (an auto-pick, the suggested re-signings and cuts, the week itself), so a missing friend never stalls it.
-  const ORDERLESS = new Set(["ready", "plan", "depth", "half", "call", "finish"]);
-  const TEAM_MOVES = new Set(["pick", "auto", "finish", "depth", "plan", "half", "call", "resign", "cut", "ready"]);
+  const ORDERLESS = new Set(["inj2", "realRookies", "pilot", "ready", "plan", "depth", "half", "call", "finish", "offer", "decline", "withdraw"]);
+  const TEAM_MOVES = new Set(["inj2", "realRookies", "pilot", "pick", "auto", "finish", "depth", "plan", "half", "call", "resign", "cut", "ready", "trade", "offer", "accept", "decline", "withdraw", "sign"]);
   const ownerOf = (t) => ML && ML.info.people.find((p) => p.team === t);
   const whoName = (t) => { const p = ownerOf(t); return p ? (p.me ? "You" : p.name) : E.teamName(team(t)); };
   // Choices on the contracts and cuts screens survive the league refreshing underneath them.
@@ -1499,8 +1948,21 @@
       const t = x.team != null ? team0(x.team) : null;
       const st = x.status === "lobby" ? "Lobby · picking teams" : x.status === "over" ? "Over" : "Running";
       return `<div class="slot" style="border-left:6px solid ${t ? esc(t.c1) : "var(--line-2)"}"><div><b>${esc(x.name)}</b><span>${x.mode === "real" ? `Real Rosters from ${esc(String(x.year))}` : "The Redraft"} · ${x.people} owner${x.people === 1 ? "" : "s"} · ${st}${t ? ` · you: ${esc(E.teamName(t))}` : ""}</span></div>
-        <div class="acts"><button class="btn gold" data-ml="${esc(x.id)}">Open</button></div></div>`;
+        <div class="acts"><button class="btn gold" data-ml="${esc(x.id)}">Open</button>${x.owner ? `<button class="btn" data-ml-delete="${esc(x.id)}" data-league-name="${esc(x.name)}">Delete league</button>` : ""}</div></div>`;
     }).join("") || `<p class="empty" style="margin:0">No friends leagues yet. Start one and invite your friends: each of you runs a team, the AI runs the rest.</p>`;
+  }
+  function mlDeleteConfirm(id, name) {
+    overlay("Founding admin", "Delete friends league?", `<p>Delete <strong>${esc(name)}</strong> for everyone? The shared league, rosters and season history will be permanently removed.</p>
+      <div class="actbar"><button class="btn" id="cancelLeagueDelete">Cancel</button><button class="btn gold" id="confirmLeagueDelete">Delete league</button></div>`);
+    $("cancelLeagueDelete").onclick = closeOv;
+    $("confirmLeagueDelete").onclick = async () => {
+      const button = $("confirmLeagueDelete"); button.disabled = true; button.textContent = "Deleting…";
+      try {
+        // The existing RPC checks the actual league creator on the server, including for started leagues.
+        await rpc("franchise_league_leave", { p_league: id });
+        closeOv(); home(true); toast("League deleted.");
+      } catch (err) { button.disabled = false; button.textContent = "Delete league"; toast(err.message || "Couldn't delete the league. Try again."); }
+    };
   }
   const team0 = (i) => E.TEAMS[i];
   const chip0 = (i) => { const t = team0(i); return `<span class="tc" style="--c:${t.c1};--c2:${t.c2}">${logo(t)}${esc(E.teamShort(t))}</span>`; };
@@ -1546,7 +2008,7 @@
       b.disabled = true; b.textContent = "Making it…";
       try {
         const data = mode === "real" ? await realData(year) : DATA;
-        const settings = mode === "real" ? { mode: "real", year, hindsight: !!($("mHind") && $("mHind").checked), lr: 1 } : { mode: "redraft", userRounds: +$("mRounds").value, lr: 1 };
+        const settings = mode === "real" ? { mode: "real", year, hindsight: !!($("mHind") && $("mHind").checked), lr: 1, cap: 1, inj2: 1, realRookies: 1 } : { mode: "redraft", userRounds: +$("mRounds").value, lr: 1, cap: 1, inj2: 1, realRookies: 1 };
         settings.pickSecs = +$("mClock").value; settings.weekHours = +$("mWeek").value;
         const id = await rpc("franchise_league_create", { p_name: $("mName").value.trim() || "Friends league", p_seed: Math.random().toString(36).slice(2, 10),
           p_data: data.built || null, p_settings: settings, p_team: pickT, p_invite: [...inv] });
@@ -1556,7 +2018,7 @@
   }
 
   // ---- Open a league: the lobby, or replay its log ----
-  async function mlOpen(id, quiet) {
+  async function mlOpen(id, quiet, skipInjuryUpgrade = false) {
     stopMl(); stopLive();
     if (!quiet) { head("Friends league", "Loading…", ""); $("body").innerHTML = `<p class="empty">Loading the league…</p>`; }
     try {
@@ -1569,7 +2031,15 @@
       if (info.status !== "lobby") {
         const data = isReal(info) ? await realData(info.settings.year) : DATA;
         if (ML !== M) return;
-        lg = E.replay(data, { seed: info.seed, settings: info.settings, moves: info.moves.map((x) => x.m) }, me.team);
+        const seen = lastSeen(M), pending = seen == null ? [] : info.moves.filter((x) => x.s > seen);
+        const catchup = pending.some((x) => x.m.t === "week");
+        lg = E.replay(data, { seed: info.seed, settings: info.settings,
+          moves: (catchup ? info.moves.filter((x) => x.s <= seen) : info.moves).map((x) => x.m) }, me.team);
+        if (catchup) { M.next = seen + 1; beginReveal(0, pending); }
+        else { markSeen(M); if (!skipInjuryUpgrade) (async () => {
+          await mlSend({ t: "inj2" }, { quiet: true });
+          if (ML === M) { await mlSend({ t: "realRookies" }, { quiet: true }); if (ML === M && !live) render(); }
+        })(); } // a league from before 2026-10-28 (refused once it is on)
         if (info.data && info.data !== data.built) console.warn("league made with player data", info.data, "this page has", data.built);
         if (!quiet) { tab = "week"; posF = "ALL"; q = ""; }
       }
@@ -1582,15 +2052,15 @@
         <div class="actbar" style="margin:0"><a class="btn gold" href="/franchise/?new">All my franchises</a></div></div></section>`;
     }
   }
-  function stopMl() { if (ML) clearInterval(ML.poll); ML = null; }
-  async function mlResync() { if (ML) await mlOpen(ML.id, true); }
+  function stopMl() { endReveal(false); if (ML) clearInterval(ML.poll); ML = null; }
+  async function mlResync(skipInjuryUpgrade = false) { if (ML) await mlOpen(ML.id, true, skipInjuryUpgrade); }
   // After watching a game: anything recorded meanwhile may have crossed with a friend's moves, so reload when needed.
   function afterLive(L) { if (ML && (ML.dirty || L.guest)) mlOpen(ML.id, true); else render(); }
 
   async function mlTick() {
     const M = ML; if (!M) return;
     mlClock();
-    if (live || M.busy || M.paused) return;
+    if (live || reveal || M.busy || M.paused) return;
     const lobby = M.info.status === "lobby", every = lobby ? 3000 : lg && lg.draft ? 2000 : 5000;
     if (Date.now() - M.last < every) return;
     M.busy = true; M.last = Date.now();
@@ -1602,16 +2072,24 @@
       M.info = info; M.off = info.now - Date.now();
       if (was.status !== info.status) return mlOpen(M.id, true);
       if (lobby) { if (JSON.stringify(was.people) !== JSON.stringify(info.people)) lobbyView(); return; }
+      if (info.moves.some((x) => x.m.t === "week")) {
+        beginReveal(0, info.moves); return;
+      }
       for (const x of info.moves) {
         if (x.s !== M.next) return mlResync();
+        const old = (lg.news || []).length;
         E.apply(lg, x.m); M.next = x.s + 1;
+        const big = S.major(E, lg, (lg.news || []).slice(old)), p = lg.pilot && lg.pilot[M.me];
+        if (big.length && p && p.stop && p.until > lg.week) { M.stopForNews = big[0].h; }
       }
+      if (M.stopForNews) { const h = M.stopForNews; delete M.stopForNews; await pilotOff(); toast(h); return; }
       if (viewKey() !== before || JSON.stringify(was.people) !== JSON.stringify(info.people) || JSON.stringify(was.parties) !== JSON.stringify(info.parties)) mlRender();
       await mlDefaults();
     } catch (err) { console.warn(err.message); } finally { M.busy = false; }
   }
   // What the screen depends on; re-render only when it changes, so a half-made choice isn't wiped by a refresh.
-  const viewKey = () => lg ? [lg.year, lg.phase, lg.week, lg.draft ? lg.draft.n : -1, E.waitingOn(lg).join(), lg.playoffs ? lg.playoffs.round : -1].join("|") : "";
+  const viewKey = () => lg ? [lg.year, lg.phase, lg.week, lg.draft ? lg.draft.n : -1, E.waitingOn(lg).join(), lg.playoffs ? lg.playoffs.round : -1,
+    Object.keys(lg.offers || {}).join(), (lg.tx || []).length, JSON.stringify(lg.pilot || {})].join("|") : ""; // offers and trades/signings redraw the trades screen
   function mlRender() {
     const y = window.scrollY, qf = document.activeElement && document.activeElement.id === "q";
     if (!$("ov").hidden) return; // a box score is open; the next change will redraw
@@ -1621,6 +2099,18 @@
   // Defaults once time runs out, from whichever browser notices first; and the week once every owner is ready.
   async function mlDefaults() {
     const M = ML, I = M.info; if (!lg || I.status !== "live") return;
+    if (reveal || M.sendingPilot) return;
+    const p = lg.pilot && lg.pilot[M.me];
+    if (p && p.stop && p.until > lg.week && !p.left && lg.phase === "season") {
+      const n = S.friendStop(E, lg), forecast = getOutlook();
+      if (n > 0 && !forecast.watch) {
+        M.sendingPilot = true;
+        try { await mlSend({ t: "pilot", n: 1, until: Math.min(p.until, lg.week + n), stop: true }, { quiet: true }); }
+        finally { M.sendingPilot = false; }
+        M.last = 0; return; // fetch the server's ready flags before trying a week
+      }
+      await pilotOff(); return;
+    }
     const before = viewKey();
     const late = I.deadline != null && Date.now() + M.off > I.deadline + 1500;
     const allReady = I.people.every((p) => p.ready);
@@ -1628,7 +2118,7 @@
     if (lg.draft) { if (late && w.length) await mlSend({ t: "auto", team: w[0] }, { quiet: true }); }
     else if (lg.phase === "resign") { if (late) for (const t of w) if (!(await mlSend({ t: "resign", team: t, keep: defaultKeep(t) }, { quiet: true }))) break; }
     else if (lg.phase === "cuts") { if (late) for (const t of w) if (!(await mlSend({ t: "cut", team: t, ids: E.suggestCuts(lg, t) }, { quiet: true }))) break; }
-    else if (lg.phase === "season" || lg.phase === "playoffs") { if (allReady || late) await mlSend({ t: "week" }, { quiet: true }); }
+    else if (lg.phase === "season" || lg.phase === "playoffs") { if (allReady || late) beginReveal(1); }
     else if (lg.phase === "done") { if (allReady || late) await mlSend({ t: "offseason" }, { quiet: true }); }
     else return;
     if (ML === M && !live && viewKey() !== before) mlRender();
@@ -1646,12 +2136,17 @@
       const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: clock });
       if (ML !== M) return false;
       M.next = r.s + 1; M.info.deadline = r.deadline; M.off = r.now - Date.now();
+      if (m.t === "pilot") M.info.people.forEach((p) => { if (p.team === m.team) p.ready = m.n > 0; });
       if (m.t === "ready") M.info.people.forEach((p) => { if (p.team === m.team) p.ready = true; });
-      if (m.t === "week" || m.t === "offseason") M.info.people.forEach((p) => (p.ready = false));
+      if (m.t === "week" || m.t === "offseason") {
+        M.info.people.forEach((p) => (p.ready = !!(lg.pilot && lg.pilot[p.team] && lg.pilot[p.team].left > 0)));
+        markSeen(M);
+      }
       return true;
     } catch (err) {
       const stale = /stale/.test(err.message);
-      await mlResync();
+      // A rejected automatic upgrade must not reopen and submit itself forever.
+      await mlResync(m.t === "inj2" || m.t === "realRookies");
       // A friend's move landed first. Moves that don't depend on order (ready, lineups, plans) just go again.
       if (stale && !opts.again && ML && lg && ORDERLESS.has(m.t)) return mlSend(m, { ...opts, again: true });
       if (!opts.quiet) toast(stale ? "A friend moved first. Here's the league as it is now." : err.message);
@@ -1705,7 +2200,8 @@
     const w = E.waitingOn(lg).map((t) => `${chip(t)} ${esc(whoName(t))}`).join(", ");
     head(`${E.teamName(team(lg.user))} · ${kick}`, title, "");
     $("body").innerHTML = `<section class="card" style="max-width:620px"><div class="card-b"><p style="margin:0 0 8px;font-weight:800">${esc(lede)} ${w}.</p>
-      <small id="mlClock"></small>${ownersBar()}</div></section>`;
+      <small id="mlClock"></small>${ownersBar()}${lg.phase === "resign" ? `<div class="actbar" style="margin:12px 0 0">${movesBtn()}</div>` : ""}</div></section>`;
+    if ($("movesBtn")) $("movesBtn").onclick = () => { movesOpen = true; render(); };
     mlClock();
   }
   // Watch parties for this league's games, so the other owner can jump in.
@@ -1743,6 +2239,7 @@
         else if (b.dataset.kick) { await rpc("franchise_league_invite", { p_league: I.id, p_user: b.dataset.kick, p_add: false }); M.last = 0; await mlTick(); }
         else if (b.id === "lStart") { b.disabled = true; await rpc("franchise_league_start", { p_league: I.id }); mlOpen(I.id); }
         else if (b.id === "lLeave") {
+          if (I.owner) return mlDeleteConfirm(I.id, I.name);
           if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = I.owner ? "Tap again to delete" : "Tap again to leave"; b.classList.add("gold"); return; }
           await rpc("franchise_league_leave", { p_league: I.id }); home();
         }
@@ -1779,6 +2276,11 @@
     PACK = pack; E.setPack(pack);
     try { await loadScript("/franchise/data/players.js"); } catch (e) { gate("error"); return; }
     DATA = window.FRANCHISE_DATA; fill(DATA.players, "players");
+    try {
+      await loadScript("/franchise/data/drafts.js");
+      fill(Object.values(window.FRANCHISE_DRAFTS.years).flat(), "drafts");
+      DATA = { ...DATA, drafts: window.FRANCHISE_DRAFTS };
+    } catch (e) { gate("error"); return; }
     // Open the last franchise straight away if there is one; otherwise the start screen.
     await syncAccount();
     const s0 = store.read();
