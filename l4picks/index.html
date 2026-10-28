@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>L4 Picks AI · PlayBubble</title>
-<meta name="description" content="L4 Picks AI makes its own line on every NFL game: a spread, total and moneyline lean with a confidence level and the reason. Free, for fun, not betting advice.">
-<meta property="og:title" content="L4 Picks AI · PlayBubble">
+<title>Bubble AI · PlayBubble</title>
+<meta name="description" content="Bubble AI makes its own line on every NFL game: a spread, total and moneyline lean with a confidence level and the reason. Free, for fun, not betting advice.">
+<meta property="og:title" content="Bubble AI · PlayBubble">
 <meta property="og:image" content="https://lastfourin.com/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta property="og:description" content="Our model's lean on every NFL game this week: spread, total and moneyline. For fun, not betting advice.">
@@ -142,7 +142,7 @@
   <div class="head">
     <div>
       <div class="kicker">Free · For fun</div>
-      <h1 class="disp">L4 Picks AI</h1>
+      <h1 class="disp">Bubble AI</h1>
       <p>Our model makes its own line on every NFL game, then leans wherever it disagrees with the market: spread, total and moneyline, each with its chance to hit, a confidence level and the reason. Plus player props where our projection beats the line.</p>
     </div>
     <div class="modes" role="group" aria-label="Sort games">
@@ -153,7 +153,7 @@
 
   <div class="fun" role="note">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 7.5v5.5M12 16.5v.1"/></svg>
-    <div><b>For fun, not betting advice.</b> L4 Picks is a free computer model we built for entertainment. We don't take bets, we don't link to sportsbooks, and nothing here is a tip to wager money. If gambling stops being fun, call or text 1-800-GAMBLER.</div>
+    <div><b>For fun, not betting advice.</b> Bubble AI is a free computer model we built for entertainment. We don't take bets, we don't link to sportsbooks, and nothing here is a tip to wager money. If gambling stops being fun, call or text 1-800-GAMBLER.</div>
   </div>
 
   <div id="tops"></div>
@@ -173,7 +173,7 @@
         </div>
       </section>
       <section class="card">
-        <div class="card-h"><h2 class="disp">L4 Power ratings</h2><span class="chip" id="prChip"></span></div>
+        <div class="card-h"><h2 class="disp">Bubble AI Power ratings</h2><span class="chip" id="prChip"></span></div>
         <div class="card-b"><ol class="pr" id="power"></ol></div>
       </section>
       <section class="card">
@@ -297,7 +297,7 @@
     const t = (ha) => `the ${g[ha].nick}`, R = (ha) => M.teams[g[ha].abbr], other = (ha) => (ha === "home" ? "away" : "home");
     const favM = p.margin >= 0 ? "home" : "away", s = [];
     const mkTxt = mk && mk.spread != null ? (mk.spread === 0 ? "the market has it a pick'em" : `the market has ${t(mk.spread < 0 ? "home" : "away")} by ${f1(Math.abs(mk.spread))}`) : "";
-    s.push(`L4 has ${t(favM)} by ${f1(Math.abs(p.margin))}${mkTxt ? `; ${mkTxt}` : ""}.`);
+    s.push(`Bubble AI has ${t(favM)} by ${f1(Math.abs(p.margin))}${mkTxt ? `; ${mkTxt}` : ""}.`);
     const side = L.spread ? L.spread.side : favM, me = R(side), op = R(other(side)), why = [];
     const q = p.notes.find((n) => n.hit);
     if (q) why.push(q.text);
@@ -320,7 +320,7 @@
     const tm = g[ha], lose = g.winner && g.winner !== ha && g.winner !== "tie", r = M.teams[tm.abbr];
     return `<div class="gm-team ${ha === "home" ? "h" : "a"}${lose ? " lose" : ""}">
       ${teamMark(tm.abbr, "", ha === "home" ? "r s" : "s")}
-      <div class="nm"><b>${esc(tm.nick)}</b><small>${esc(tm.rec)}${r ? ` · L4 #${r.rank}` : ""}</small></div>
+      <div class="nm"><b>${esc(tm.nick)}</b><small>${esc(tm.rec)}${r ? ` · Bubble AI #${r.rank}` : ""}</small></div>
       ${g.status !== "pre" && tm.score != null ? `<span class="sc">${tm.score}</span>` : ""}
     </div>`;
   }
@@ -329,18 +329,18 @@
     const { g, p, mk, L, why } = x;
     const top = g.status === "in" ? `<span class="live">● ${esc(g.detail)}</span>` : g.status === "pre" ? esc(fmtShort(g.kickoff)) : esc(g.detail);
     const div = M.week && M.week[g.id] && M.week[g.id].div;
-    const proj = p ? `L4 projects <b>${esc(g.away.abbr)} ${Math.round(p.ap)}</b>, <b>${esc(g.home.abbr)} ${Math.round(p.hp)}</b> · ${esc(g[p.margin >= 0 ? "home" : "away"].abbr)} wins ${pct(Math.max(p.pHome, 1 - p.pHome))} of the time` : "";
+    const proj = p ? `Bubble AI projects <b>${esc(g.away.abbr)} ${Math.round(p.ap)}</b>, <b>${esc(g.home.abbr)} ${Math.round(p.hp)}</b> · ${esc(g[p.margin >= 0 ? "home" : "away"].abbr)} wins ${pct(Math.max(p.pHome, 1 - p.pHome))} of the time` : "";
     const row = (kind, lbl, ln, l) => `<tr><td class="lbl">${lbl}</td><td class="ln">${ln}</td>
       <td class="le">${l ? `<span class="lean${l.conf <= 2 ? " weak" : ""}">${esc(l.label)}</span>${grade(g, kind, l, mk)}<span class="chance">${pct(l.p)} ${l.what}</span>` : `<span class="muted">No line yet</span>`}</td>
       <td class="cf">${l ? bars(l.conf) : ""}</td></tr>`;
-    const spreadLn = mk && mk.spread != null ? `${esc(g.home.abbr)} ${mk.spread === 0 ? "PK" : sgn(mk.spread)}<small>L4 line: ${esc(g.home.abbr)} ${sgn(-p.margin)}</small>` : `<small>L4 line: ${esc(g.home.abbr)} ${sgn(-p.margin)}</small>`;
-    const totalLn = mk && mk.total != null ? `O/U ${f1(mk.total)}<small>L4 total: ${f1(p.total)}</small>` : `<small>L4 total: ${f1(p.total)}</small>`;
-    const mlLn = mk && mk.hML != null ? `${esc(g.away.abbr)} ${ml(mk.aML)} · ${esc(g.home.abbr)} ${ml(mk.hML)}<small>L4 win chance: ${esc(g[L.ml.side].abbr)} ${pct(L.ml.model)} (market ${pct(L.ml.fair)})</small>` : `<small>L4 win chance: ${esc(g.home.abbr)} ${pct(p.pHome)}</small>`;
+    const spreadLn = mk && mk.spread != null ? `${esc(g.home.abbr)} ${mk.spread === 0 ? "PK" : sgn(mk.spread)}<small>Bubble AI line: ${esc(g.home.abbr)} ${sgn(-p.margin)}</small>` : `<small>Bubble AI line: ${esc(g.home.abbr)} ${sgn(-p.margin)}</small>`;
+    const totalLn = mk && mk.total != null ? `O/U ${f1(mk.total)}<small>Bubble AI total: ${f1(p.total)}</small>` : `<small>Bubble AI total: ${f1(p.total)}</small>`;
+    const mlLn = mk && mk.hML != null ? `${esc(g.away.abbr)} ${ml(mk.aML)} · ${esc(g.home.abbr)} ${ml(mk.hML)}<small>Bubble AI win chance: ${esc(g[L.ml.side].abbr)} ${pct(L.ml.model)} (market ${pct(L.ml.fair)})</small>` : `<small>Bubble AI win chance: ${esc(g.home.abbr)} ${pct(p.pHome)}</small>`;
     return `<article class="gm" id="g${g.id}">
       <div class="gm-top"><span>${top}</span><span>${div ? '<span class="tag">Division</span> · ' : ""}${esc(g.tv)}</span></div>
       <div class="gm-teams">${teamSide(g, "away")}<div class="gm-at">@</div>${teamSide(g, "home")}</div>
       ${proj ? `<div class="gm-proj">${proj}</div>` : ""}
-      ${p ? `<table class="mk"><thead><tr><th>Bet</th><th>Market</th><th>L4 lean</th><th>Confidence</th></tr></thead><tbody>
+      ${p ? `<table class="mk"><thead><tr><th>Bet</th><th>Market</th><th>Bubble AI lean</th><th>Confidence</th></tr></thead><tbody>
         ${row("spread", "Spread", spreadLn, L.spread)}${row("total", "Total", totalLn, L.total)}${row("ml", "Moneyline", mlLn, L.ml)}
       </tbody></table>
       ${propsBlock(x)}
@@ -391,7 +391,7 @@
   const fmtStat = (k, v) => (COUNT[k] || k === "rec" ? f1(v) : String(Math.round(v)));
   function propWhy(l) {
     const pl = l.pl, last = pl.miss ? ` Back after missing ${pl.miss} game${pl.miss > 1 ? "s" : ""}, so he's left out of Best Bets.` : "";
-    return `L4 projects ${fmtStat(l.k, l.proj)} vs a line of ${f1(l.line)}; he averages ${fmtStat(l.k, l.avg)} in ${pl.g} game${pl.g > 1 ? "s" : ""} this season.${last}`;
+    return `Bubble AI projects ${fmtStat(l.k, l.proj)} vs a line of ${f1(l.line)}; he averages ${fmtStat(l.k, l.avg)} in ${pl.g} game${pl.g > 1 ? "s" : ""} this season.${last}`;
   }
 
   function propsBlock(x) {

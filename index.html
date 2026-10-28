@@ -183,7 +183,7 @@ main.home { padding-bottom: 64px; }
     cfb: { cal: "cfb", k: "Free every Saturday", o: "Make your college", f: "Picks", p: "Every game with a Top 25 team is on the board. Each pick locks at kickoff.", btn: "Make your college picks", url: "/college/", card: "picks" },
     fantasy: { k: "New", o: "Fantasy football", f: "Analytics", p: "Start-sit help, rankings and the numbers behind every player. Free to use.", btn: "Open fantasy analytics", url: "/fantasy/", card: "lineup" },
     money: { cal: "sbWeekend", hideOff: true, k: "New", o: "The $1,000", f: "Challenge", p: "Start every week with $1,000 in pretend money and see how high you can run it. It resets every Tuesday. No real money in and no prize out: it's for bragging rights.", btn: "Play the $1,000 Challenge", url: "/money/", card: "bank" },
-    l4: { k: "New", one: "l4picks ai", p: "Our AI handicapping model makes a pick on every game. See where it lands, then make your own call.", btn: "See the L4 picks", url: "/l4picks/", card: "model" },
+    l4: { k: "New", one: "bubble ai", p: "Our AI handicapping model makes a pick on every game. See where it lands, then make your own call.", btn: "See the Bubble AI picks", url: "/l4picks/", card: "model" },
   };
   const ORDER = ["ap", "nfl", "cfb", "fantasy", "money", "l4"];
   // An emoji on each slide's headline (Sam: more emojis, more playful).
@@ -219,7 +219,7 @@ main.home { padding-bottom: 64px; }
     picks: () => `<h3>Your picks</h3>${rows(5, (i) => `<div class="row mu"><i${i % 3 === 1 ? "" : ' class="on"'}></i><b>@</b><i${i % 3 === 1 ? ' class="on"' : ""}></i></div>`)}<small>Each pick locks at kickoff</small>`,
     lineup: () => `<h3>Your lineup</h3>${["QB", "RB", "WR", "TE", "FLEX"].map((x) => `<div class="row" style="grid-template-columns:54px minmax(0,1fr)"><b>${x}</b><i></i></div>`).join("")}<small>A new challenge every week</small>`,
     bank: () => `<h3>Your bankroll</h3><div class="big">$1,000</div>${rows(3, (i) => `<div class="row mu"><i${i === 1 ? "" : ' class="on"'}></i><b>@</b><i${i === 1 ? ' class="on"' : ""}></i></div>`)}<small>Pretend money · no prize</small>`,
-    model: () => `<h3>L4 Picks</h3>${rows(5, (i) => `<div class="row mu"><i${i % 2 ? "" : ' class="on"'}></i><b>@</b><i${i % 2 ? ' class="on"' : ""}></i></div>`)}<small>The model's pick on every game</small>`,
+    model: () => `<h3>Bubble AI</h3>${rows(5, (i) => `<div class="row mu"><i${i % 2 ? "" : ' class="on"'}></i><b>@</b><i${i % 2 ? ' class="on"' : ""}></i></div>`)}<small>The model's pick on every game</small>`,
   };
   function slideHTML(k, i) {
     const s = SLIDES[k], on = live(s), H = i ? "h2" : "h1";
@@ -291,17 +291,17 @@ main.home { padding-bottom: 64px; }
   };
   const LOCK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
   const TILES = [
-    { lg: ["nfl"], cal: "nfl", url: "/pickem/", t: "L4 NFL Pick'em", d: "Pick every game straight up, every week.", st: "Open", more: " · each pick locks at kickoff", ic: "football" },
-    { lg: ["ncaaf"], cal: "cfb", url: "/college/", t: "L4 College Pick'em", d: "Every game with a Top 25 team, every Saturday.", st: "Open", more: " · each pick locks at kickoff", ic: "flag" },
+    { lg: ["nfl"], cal: "nfl", url: "/pickem/", t: "Bubble NFL Pick'em", d: "Pick every game straight up, every week.", st: "Open", more: " · each pick locks at kickoff", ic: "football" },
+    { lg: ["ncaaf"], cal: "cfb", url: "/college/", t: "Bubble College Pick'em", d: "Every game with a Top 25 team, every Saturday.", st: "Open", more: " · each pick locks at kickoff", ic: "flag" },
     { lg: ["ncaaf"], cal: "apPoll", url: "/ap-poll/", t: "Guess the AP Poll", sh: "AP Poll", d: "Guess Sunday's Top 25, just for fun.", st: "Draft", more: " · opens Saturday night", ic: "ballot", id: "ap" },
-    { lg: [], url: "/trivia/", t: "L4 Daily Trivia", d: "Five questions, same for everyone, every day.", st: "New today", ic: "q" },
-    { lg: [], url: "/trivia/names.html", t: "L4 Name Them All", d: "How many can you name?", st: "New today", ic: "list" },
-    { lg: [], url: "/trivia/pindrop.html", t: "L4 Pin Drop", d: "Drop a pin on the map. Closest wins.", st: "New today", ic: "pin" },
-    { lg: ["mlb"], cal: "mlb", url: "/mlb/", t: "L4 MLB Pick'em", d: "Pick every game straight up, every day.", st: "Open", more: " · each pick locks at first pitch", ic: "baseball" },
-    { lg: ["nfl", "ncaaf", "ncaab", "nba", "nhl", "mlb"], cal: "sbWeekend", url: "/money/", t: "L4 Free to Play Stakes", sh: "L4 F2P Stakes", d: "$1,000 in pretend money every week. How high can you get?", st: "Open", more: " · no prize, bragging rights", ic: "target" },
-    { lg: ["ncaab"], cal: "ncaab", url: "/ncaab/", t: "L4 NCAAB Pick'em", d: "Every game with a Top 25 team, all week long.", st: "Open", more: " · each pick locks at tip-off", ic: "basketball" },
-    { lg: ["nba"], cal: "nba", url: "/nba/", t: "L4 NBA Pick'em", d: "Pick every game straight up, every night.", st: "Open", more: " · each pick locks at tip-off", ic: "basketball" },
-    { lg: ["nhl"], cal: "nhl", url: "/nhl/", t: "L4 NHL Pick'em", d: "Pick every game straight up, every night.", st: "Open", more: " · each pick locks at puck drop", ic: "hockey" },
+    { lg: [], url: "/trivia/", t: "Bubble Daily Trivia", d: "Five questions, same for everyone, every day.", st: "New today", ic: "q" },
+    { lg: [], url: "/trivia/names.html", t: "Bubble Name Them All", d: "How many can you name?", st: "New today", ic: "list" },
+    { lg: [], url: "/trivia/pindrop.html", t: "Bubble Pin Drop", d: "Drop a pin on the map. Closest wins.", st: "New today", ic: "pin" },
+    { lg: ["mlb"], cal: "mlb", url: "/mlb/", t: "Bubble MLB Pick'em", d: "Pick every game straight up, every day.", st: "Open", more: " · each pick locks at first pitch", ic: "baseball" },
+    { lg: ["nfl", "ncaaf", "ncaab", "nba", "nhl", "mlb"], cal: "sbWeekend", url: "/money/", t: "Bubble Free to Play Stakes", sh: "Bubble F2P Stakes", d: "$1,000 in pretend money every week. How high can you get?", st: "Open", more: " · no prize, bragging rights", ic: "target" },
+    { lg: ["ncaab"], cal: "ncaab", url: "/ncaab/", t: "Bubble NCAAB Pick'em", d: "Every game with a Top 25 team, all week long.", st: "Open", more: " · each pick locks at tip-off", ic: "basketball" },
+    { lg: ["nba"], cal: "nba", url: "/nba/", t: "Bubble NBA Pick'em", d: "Pick every game straight up, every night.", st: "Open", more: " · each pick locks at tip-off", ic: "basketball" },
+    { lg: ["nhl"], cal: "nhl", url: "/nhl/", t: "Bubble NHL Pick'em", d: "Pick every game straight up, every night.", st: "Open", more: " · each pick locks at puck drop", ic: "hockey" },
   ];
   // The calendar decides each tile's state: open contests first, then coming-soon ones whose sport is in season,
   // then anything out of season, labelled with the month it comes back.

@@ -38,7 +38,7 @@
       ["league", "/redraft/", "League Redraft", "Redraft every NFL player into 32 new teams"],
     ] },
     { key: "fantasy", label: "Fantasy", href: "/fantasy/", sub: "Fantasy football tools" },
-    { key: "l4picks", label: "L4 Picks AI", href: "/l4picks/", sub: "AI picks with the stats behind them" },
+    { key: "l4picks", label: "Bubble AI", href: "/l4picks/", sub: "AI picks with the stats behind them" },
   ];
   const LEAGUES = [
     { label: "NFL", items: [
