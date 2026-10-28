@@ -71,8 +71,8 @@
 <main class="page">
   <div class="head">
     <div>
-      <div class="kicker" id="kick">Your crew</div>
-      <h1 class="disp">Friends</h1>
+      <div class="kicker" id="kick">Your crew 👥</div>
+      <h1 class="disp">Friends <span class="em" aria-hidden="true">👥</span></h1>
       <p id="lede">Add your friends and see who's really calling it.</p>
     </div>
   </div>
@@ -115,10 +115,10 @@
       return `<li class="${p.is_me ? "me" : ""}"><span class="rk">${rank}</span>${av(p)}${who(p, esc(B.sub(s)))}<div class="val"><b>${esc(B.val(s))}</b></div></li>`;
     }).join("");
     return `<section class="card">
-      <div class="card-h"><h2 class="disp">Leaderboard</h2><span class="chip">${board.length} ${board.length === 1 ? "player" : "players"}</span></div>
+      <div class="card-h"><h2 class="disp">Leaderboard <span class="em" aria-hidden="true">🏆</span></h2><span class="chip">${board.length} ${board.length === 1 ? "player" : "players"}</span></div>
       <div class="board-h"><div class="seg" role="group" aria-label="Rank by">${Object.entries(BOARDS).map(([k, b]) => `<button type="button" data-metric="${k}" aria-pressed="${k === metric}">${b.label}</button>`).join("")}</div></div>
       <ol class="board">${items}</ol>
-      ${board.length < 2 ? `<p class="empty" style="margin:0;padding:0 18px 16px">Just you so far. Add a friend and this turns into a race.</p>` : ""}
+      ${board.length < 2 ? `<p class="empty" style="margin:0;padding:0 18px 16px">Just you so far. Add a friend and this turns into a race. <span class="em" aria-hidden="true">🏁</span></p>` : ""}
     </section>`;
   }
 
@@ -146,7 +146,7 @@
     const inc = reqs.filter((r) => r.direction === "incoming"), out = reqs.filter((r) => r.direction === "outgoing");
     const row = (r, acts) => `<div class="frow" data-u="${r.user_id}" data-h="${esc(r.username)}">${av(r)}${who(r)}<div class="frow-acts">${acts}</div></div>`;
     return inc.length || out.length ? `<section class="card req-card${inc.length ? " has-inc" : ""}">
-        <div class="card-h"><h2 class="disp">Requests</h2>${inc.length ? `<span class="chip ok">${inc.length} new</span>` : ""}</div>
+        <div class="card-h"><h2 class="disp">Requests <span class="em" aria-hidden="true">📬</span></h2>${inc.length ? `<span class="chip ok">${inc.length} new</span>` : ""}</div>
         <div class="card-b">
           ${inc.length ? `<div class="sub-lbl">Waiting on you</div>${inc.map((r) => row(r, `<button class="btn gold" type="button" data-acc>Accept</button><button class="btn" type="button" data-dec>Decline</button>`)).join("")}` : ""}
           ${out.length ? `<div class="sub-lbl">You asked</div>${out.map((r) => row(r, `<button class="linkish" type="button" data-cancel>Cancel</button>`)).join("")}` : ""}
@@ -155,7 +155,7 @@
 
   function sideHTML() {
     return `<section class="card">
-        <div class="card-h"><h2 class="disp">Add a friend</h2></div>
+        <div class="card-h"><h2 class="disp">Add a friend <span class="em" aria-hidden="true">➕</span></h2></div>
         <div class="card-b">
           <form class="add-form" id="addF" autocomplete="off"><div class="handle-prefix"><span>@</span><input id="addH" maxlength="21" placeholder="their handle" autocapitalize="off" spellcheck="false" aria-label="Their handle"></div><button class="btn navy" type="submit">Add</button></form>
           <div class="sugg" id="sugg"></div>
@@ -163,9 +163,9 @@
         </div></section>
       ${reqHTML()}
       <section class="card">
-        <div class="card-h"><h2 class="disp">Invite</h2></div>
+        <div class="card-h"><h2 class="disp">Invite <span class="em" aria-hidden="true">💌</span></h2></div>
         <div class="card-b"><p class="empty" style="margin-top:0;color:var(--ink-2)">Friends not on here yet? Send them your profile. Once they sign up, they can add you from it.</p>
-          <button class="btn gold block" type="button" id="invite">Send my profile link</button></div></section>`;
+          <button class="btn gold block" type="button" id="invite"><span class="em" aria-hidden="true">🔗</span> Send my profile link</button></div></section>`;
   }
 
   function draw() {
@@ -175,7 +175,7 @@
       <div class="stack">${reqs.some((r) => r.direction === "incoming") ? `<div class="req-top">${reqHTML()}</div>` : ""}${boardHTML()}
         <h2 class="disp" style="font-size:26px;margin:10px 0 0">Your friends${friends.length ? ` <span class="chip">${friends.length}</span>` : ""}</h2>
         <div class="fl">${friends.length ? friends.map((p) => friendCard(p, mine)).join("")
-          : `<section class="card"><div class="card-b"><p class="empty" style="margin:0">No friends yet. Add someone by their handle, or send them your profile link.</p></div></section>`}</div>
+          : `<section class="card"><div class="card-b"><p class="empty" style="margin:0">No friends yet. Add someone by their handle, or send them your profile link. <span class="em" aria-hidden="true">👋</span></p></div></section>`}</div>
       </div>
       <aside class="side stack">${sideHTML()}</aside></div>`;
     $("kick").textContent = `@${me.username}`;
@@ -250,13 +250,13 @@
     if (t.closest("#invite")) {
       const url = `${location.origin}/u/?h=${encodeURIComponent(me.username)}`;
       if (navigator.share) { try { await navigator.share({ title: "Add me on Last Four In", text: `Add me on Last Four In: @${me.username}`, url }); return; } catch (err) { if (err.name === "AbortError") return; } }
-      return toast((await copyText(url)) ? "Profile link copied. Paste it to your friends." : "Couldn't copy the link");
+      return toast((await copyText(url)) ? "🔗 Profile link copied. Paste it to your friends." : "Couldn't copy the link");
     }
     const row = t.closest("[data-u],[data-h]");
     const btn = t.closest("button");
     try {
       if (t.closest("[data-add]")) { btn.disabled = true; return await send(row.dataset.h); }
-      if (t.closest("[data-acc]")) { btn.disabled = true; await cloud.friendRespond(row.dataset.u, true); toast(`You and @${row.dataset.h} are now friends`); return load(); }
+      if (t.closest("[data-acc]")) { btn.disabled = true; await cloud.friendRespond(row.dataset.u, true); toast(`🤝 You and @${row.dataset.h} are now friends`); return load(); }
       if (t.closest("[data-dec]")) { btn.disabled = true; await cloud.friendRespond(row.dataset.u, false); toast("Declined"); return load(); }
       if (t.closest("[data-cancel]")) { btn.disabled = true; await cloud.friendRemove(row.dataset.u); toast("Request cancelled"); return load(); }
       const fm = t.closest("[data-fmenu]");

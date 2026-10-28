@@ -45,8 +45,8 @@
 <main class="page">
   <div class="head">
     <div>
-      <div class="kicker" id="kick">Head to head</div>
-      <h1 class="disp">Challenges</h1>
+      <div class="kicker" id="kick"><span class="em" aria-hidden="true">🥊</span> Head to head</div>
+      <h1 class="disp">Challenges <span class="em" aria-hidden="true">⚔️</span></h1>
       <p>Take on your friends. Anything they challenge you to lands here, and so do your live races and drafts.</p>
     </div>
   </div>
@@ -83,10 +83,10 @@
     const pending = c.incoming && c.status === "pending" && !gameOver(c);
     const who = c.incoming ? `${name(c.who)} challenged you` : `You challenged ${name(c.who)}`;
     let acts;
-    if (pending) acts = `<button class="btn gold" type="button" data-acc>Play</button><button class="btn" type="button" data-dec>Decline</button>`;
+    if (pending) acts = `<button class="btn gold" type="button" data-acc>Play <span class="em" aria-hidden="true">🎮</span></button><button class="btn" type="button" data-dec>Decline</button>`;
     else if (c.game && gameOver(c)) acts = `<span class="st">${gameWord(c.game.status)}</span>`;
-    else if (c.status === "pending") acts = `<span class="st">Waiting</span>`;
-    else acts = `<span class="st${c.status === "accepted" ? " go" : ""}">${c.status === "accepted" ? "Accepted" : "Declined"}</span>${c.incoming && c.status === "accepted" ? `<a class="btn" href="${esc(c.url)}">Open</a>` : ""}`;
+    else if (c.status === "pending") acts = `<span class="st">Waiting <span class="em" aria-hidden="true">⏳</span></span>`;
+    else acts = `<span class="st${c.status === "accepted" ? " go" : ""}">${c.status === "accepted" ? `Accepted <span class="em" aria-hidden="true">✅</span>` : "Declined"}</span>${c.incoming && c.status === "accepted" ? `<a class="btn" href="${esc(c.url)}">Open</a>` : ""}`;
     return `<div class="crow" data-id="${c.id}" data-url="${esc(c.url)}" data-game="${c.game ? 1 : ""}">${av(c.who)}
       <div class="crow-b"><b>${esc(c.title)}</b><span>${who} · ${ago(c.created_at)}</span>${c.note ? `<q>${esc(c.note)}</q>` : ""}</div>
       <div class="crow-acts">${acts}</div></div>`;
@@ -94,7 +94,7 @@
   function gameRow(g) {
     const live = g.status === "live", open = g.status === "open";
     const what = g.kind === "grid" ? `${g.moves} of 25 squares claimed` : `${g.moves} of ${g.total} picks made`;
-    const vs = g.opponent ? `vs ${name(g.opponent)}` : "Waiting for a friend to join";
+    const vs = g.opponent ? `vs ${name(g.opponent)}` : `Waiting for a friend to join <span class="em" aria-hidden="true">⏳</span>`;
     return `<div class="crow">${av(g.opponent)}
       <div class="crow-b"><b>${esc(g.title || GAME_NAME[g.kind] || "Game")}</b><span>${vs} · ${open ? "room open" : live ? what : gameWord(g.status).toLowerCase()}</span></div>
       <div class="crow-acts"><a class="btn${live ? " gold" : ""}" href="/${g.kind === "draft" ? "drafts" : "grid"}/?g=${esc(g.code)}">${live || open ? "Go" : "See it"}</a></div></div>`;
@@ -108,15 +108,15 @@
     const going = games.filter((g) => g.status === "open" || g.status === "live");
     $("body").innerHTML = `<div class="grid2">
       <div class="stack">
-        ${card("Waiting on you", waiting.length ? `${waiting.length} new` : "", waiting.length ? waiting.map(row).join("")
-          : `<p class="empty" style="margin:0">Nothing waiting. When a friend challenges you, it shows up here.</p>`)}
-        ${going.length ? card("Your games", going.length, going.map(gameRow).join("")) : ""}
+        ${card(`Waiting on you <span class="em" aria-hidden="true">👉</span>`,waiting.length ? `${waiting.length} new` : "", waiting.length ? waiting.map(row).join("")
+          : `<p class="empty" style="margin:0"><span class="em" aria-hidden="true">📭</span> Nothing waiting. When a friend challenges you, it shows up here.</p>`)}
+        ${going.length ? card(`Your games <span class="em" aria-hidden="true">🎮</span>`, going.length, going.map(gameRow).join("")) : ""}
         ${sent.length ? card("You sent", "", sent.map(row).join("")) : ""}
         ${past.length ? card("Earlier", "", past.map(row).join("")) : ""}
       </div>
-      <aside class="side stack">${card("Start one", "", `<div class="start">
-          <a href="/grid/"><b>Grid Race</b><span>Same 25 squares, first right answer claims it</span></a>
-          <a href="/drafts/"><b>Draft</b><span>Snake-draft any slice of NFL history, live</span></a>
+      <aside class="side stack">${card(`Start one <span class="em" aria-hidden="true">✨</span>`, "", `<div class="start">
+          <a href="/grid/"><b>Grid Race <span class="em" aria-hidden="true">🏁</span></b><span>Same 25 squares, first right answer claims it</span></a>
+          <a href="/drafts/"><b>Draft <span class="em" aria-hidden="true">📋</span></b><span>Snake-draft any slice of NFL history, live</span></a>
         </div><p class="empty" style="margin:12px 0 0">Or finish any pick'em, poll, trivia or draft and tap a friend under <b>Challenge a friend</b>.</p>`)}</aside>
     </div>`;
   }
@@ -124,13 +124,13 @@
   async function load() {
     if (!cloud.on || !cloud.user) {
       $("body").innerHTML = `<section class="card" style="max-width:560px"><div class="card-b">
-        <p style="margin:0 0 8px;font-weight:700">Sign in to challenge your friends.</p>
+        <p style="margin:0 0 8px;font-weight:700">Sign in to challenge your friends. <span class="em" aria-hidden="true">⚔️</span></p>
         <p class="empty" style="margin-top:0">It's free. Race them in the Grid, draft against them live, or dare them to beat your picks.</p>
         <a class="btn gold" href="/signin/?next=/challenges/">Sign in or create account</a></div></section>`;
       return;
     }
     if (!cloud.profile || !cloud.profile.onboarded) { location.replace("/signin/?next=/challenges/"); return; }
-    $("kick").textContent = `@${cloud.profile.username}`;
+    $("kick").innerHTML = `<span class="em" aria-hidden="true">🥊</span> ${esc("@" + cloud.profile.username)}`;
     try {
       [list, games] = await Promise.all([G.challenges(), G.mine().catch(() => [])]);
       draw();
@@ -149,7 +149,7 @@
         if (!r.dataset.game) await G.respond(r.dataset.id, true); // a game room answers the challenge when you join it
         location.href = r.dataset.url;
       } else if (btn.matches("[data-dec]")) {
-        await G.respond(r.dataset.id, false); toast("Declined"); load();
+        await G.respond(r.dataset.id, false); toast("Declined 👋"); load();
       }
     } catch (err) { toast(err.message); btn.disabled = false; load(); }
   });

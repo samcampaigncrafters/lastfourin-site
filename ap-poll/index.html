@@ -45,8 +45,8 @@
 <main class="page">
   <div class="head">
     <div>
-      <div class="kicker" id="kick">Just for fun</div>
-      <h1 class="disp">Guess the AP Poll</h1>
+      <div class="kicker" id="kick"><span class="em" aria-hidden="true">🎉</span> Just for fun</div>
+      <h1 class="disp"><span class="em" aria-hidden="true">🗳️</span> Guess the AP Poll</h1>
       <p id="lede">Rank the Top 25 you think the AP voters will release on Sunday. Start from this week's poll and move teams for how you think the games go.</p>
       <p class="sheet-note" style="margin-top:12px">Never a contest: AP voters and the people near them could know the real poll, so there are no prizes and no leaderboard.</p>
       <nav class="modes" aria-label="Mode"><a href="./" id="mContest">Sunday's poll</a><a href="?sandbox" id="mFun">Blank board</a></nav>
@@ -68,14 +68,14 @@
         <div class="submitbar">
           <span id="submitNote">Rank 25 teams, then save your guess.</span>
           <button class="btn fun-only" type="button" id="clearBtn">Start over</button>
-          <button class="btn gold" type="button" id="submitBtn" disabled>Save my guess</button>
+          <button class="btn gold" type="button" id="submitBtn" disabled><span class="em" aria-hidden="true">🔒</span> Save my guess</button>
         </div>
       </section>
     </div>
 
     <aside class="side">
       <section class="card fun-only">
-        <div class="card-h"><h2 class="disp">Blank board</h2></div>
+        <div class="card-h"><h2 class="disp"><span class="em" aria-hidden="true">✨</span> Blank board</h2></div>
         <div class="card-b"><p class="empty" style="color:var(--ink-2)">Start from a blank board and rank any 25 teams however you like, any day of the week. It never closes. Your board saves on this device so you can come back to it. Want to see how close you get to the real thing? Switch to Sunday's poll.</p></div>
       </section>
       <section class="card poll-only">
@@ -86,7 +86,7 @@
         </div>
       </section>
       <section class="card poll-only">
-        <div class="card-h"><h2 class="disp">How close?</h2><span class="chip">For fun</span></div>
+        <div class="card-h"><h2 class="disp"><span class="em" aria-hidden="true">🎯</span> How close?</h2><span class="chip">For fun</span></div>
         <div class="card-b">
           <ul class="rules-list">
             <li><span class="pts">5</span><span><b>Exact spot</b>You have the team at its exact AP rank.</span></li>
@@ -211,19 +211,19 @@
     const btn = $("submitBtn");
     if (FUN) {
       btn.disabled = n === 0;
-      btn.textContent = "Share my poll";
-      $("submitNote").textContent = n ? `${n} of 25 ranked. Just for fun.` : "Add teams from the list to start your poll.";
+      btn.innerHTML = `<span class="em" aria-hidden="true">📣</span> Share my poll`;
+      $("submitNote").textContent = n ? `🎯 ${n} of 25 ranked. Just for fun.` : "Add teams from the list to start your poll.";
       return;
     }
     const ph = phase();
     btn.disabled = sub ? false : ph !== "open" || n !== 25;
-    btn.textContent = sub ? "Share my guess" : "Save my guess";
-    $("submitNote").textContent = sub ? "Saved. When the AP poll comes out Sunday, come back to see how close you got."
-      : ph === "closed" ? "Guesses are closed. The new AP poll is due any minute."
-      : n !== 25 ? `${n} of 25 ranked.${ph === "draft" ? " This is a draft for now." : ` Add ${25 - n} more to save.`}`
-      : ph === "draft" ? "All 25 ranked. Your draft is saved on this device; you can save it as your guess Saturday night."
-      : "All 25 ranked. You save one guess a week, so look it over first.";
-    if (sub) { $("winChip").textContent = "Saved"; $("winChip").className = "chip ok"; }
+    btn.innerHTML = sub ? `<span class="em" aria-hidden="true">📣</span> Share my guess` : `<span class="em" aria-hidden="true">🔒</span> Save my guess`;
+    $("submitNote").textContent = sub ? "✅ Saved. When the AP poll comes out Sunday, come back to see how close you got."
+      : ph === "closed" ? "🔒 Guesses are closed. The new AP poll is due any minute."
+      : n !== 25 ? `🎯 ${n} of 25 ranked.${ph === "draft" ? " This is a draft for now." : ` Add ${25 - n} more to save.`}`
+      : ph === "draft" ? "✅ All 25 ranked. Your draft is saved on this device; you can save it as your guess Saturday night."
+      : "✅ All 25 ranked. You save one guess a week, so look it over first.";
+    if (sub) { $("winChip").textContent = "✅ Saved"; $("winChip").className = "chip ok"; }
   }
 
   // Last week's guess against the poll that just came out. Only for you, never ranked against anyone.
@@ -245,8 +245,8 @@
     if (FUN) {
       document.body.classList.add("fun");
       document.title = "Build Your Own AP Poll · Last Four In";
-      $("kick").textContent = "Just for fun · blank board";
-      document.querySelector("h1").textContent = "Build Your Own AP Poll";
+      $("kick").textContent = "🎉 Just for fun · blank board";
+      document.querySelector("h1").innerHTML = `<span class="em" aria-hidden="true">🗳️</span> Build Your Own AP Poll`;
       $("lede").textContent = "A blank board. Rank any 25 teams however you see it, just for fun. It never closes and is only for you.";
       $("ballotH").textContent = "Your Top 25";
       $("winChip").textContent = "Just for fun";
@@ -254,7 +254,7 @@
     }
     const tgt = target();
     if (!FUN) {
-      const ph = phase(), chip = { draft: "Draft", open: "Open", closed: "Closed" }[ph];
+      const ph = phase(), chip = { draft: "Draft", open: "Open", closed: "🔒 Closed" }[ph];
       $("ballotH").textContent = `Your guess · ${fmtDay(tgt)}`;
       $("lede").textContent = `Rank the Top 25 you think the AP voters will release on ${fmtDay(tgt)}. You start from the current poll (${fmtDay(pollDate)}); move teams for how you think this week's games go.`;
       $("winChip").textContent = chip;
@@ -305,10 +305,10 @@
   $("submitBtn").addEventListener("click", async () => {
     if (FUN) {
       if (!order.length) return;
-      const text = `My AP Top 25 (just for fun):\n${order.map((id, i) => `${i + 1}. ${T[id].name}`).join("\n")}\n\nBuild yours: https://lastfourin.com/ap-poll/?sandbox`;
+      const text = `🗳️ My AP Top 25 (just for fun):\n${order.map((id, i) => `${i + 1}. ${T[id].name}`).join("\n")}\n\nBuild yours: https://lastfourin.com/ap-poll/?sandbox`;
       try {
         if (navigator.share) await navigator.share({ text });
-        else { await navigator.clipboard.writeText(text); toast("Copied your poll. Paste it anywhere."); }
+        else { await navigator.clipboard.writeText(text); toast("📣 Copied your poll. Paste it anywhere."); }
       } catch (e) {}
       return;
     }
@@ -319,7 +319,7 @@
     const e = entries.put({
       id: entryId(), kind: "ap", title: `AP Poll guess · ${fmtDay(target())}`, sub: "Just for fun", url: "/ap-poll/",
       data: { top: order.map((id) => T[id].name), ids: order, ab: order.map((id) => T[id].abbr) },
-      shareText: `Here's my guess at the AP Top 25 for ${fmtDay(target())}, just for fun. What's yours?`,
+      shareText: `🗳️ Here's my guess at the AP Top 25 for ${fmtDay(target())}, just for fun. What's yours?`,
     });
     render();
     LFI.share(e);

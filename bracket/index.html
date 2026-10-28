@@ -172,8 +172,8 @@
 <main class="page">
   <div class="bk-top">
     <div>
-      <div class="kicker">2026–27 College Football Playoff</div>
-      <h1 class="disp">Build the field</h1>
+      <div class="kicker"><span class="em" aria-hidden="true">🏈</span> 2026–27 College Football Playoff</div>
+      <h1 class="disp"><span class="em" aria-hidden="true">🏆</span> Build the field</h1>
       <p>Rank your Top 25. The 12-team bracket seeds itself under this season's selection rules, then you pick every game to a champion. Share it and argue it out.</p>
     </div>
   </div>
@@ -190,7 +190,7 @@
 
   <div class="bk-main">
     <section class="card" id="rankings">
-      <div class="card-h"><div><h2 class="disp">Your Top 25</h2><p>Starts from this week's AP poll. Hold and drag a team to move it, or tap the dots on the right for more moves. Tap a crown to name a conference champion.</p></div></div>
+      <div class="card-h"><div><h2 class="disp"><span class="em" aria-hidden="true">🗳️</span> Your Top 25</h2><p>Starts from this week's AP poll. Hold and drag a team to move it, or tap the dots on the right for more moves. Tap a crown to name a conference champion.</p></div></div>
       <div class="card-b"><div id="ranker"></div><p class="empty" style="margin-top:10px">Faded crown: projected champion, the top-ranked team in its conference. Gold crown: your pick.</p></div>
     </section>
 
@@ -216,7 +216,7 @@
   </div>
 
   <section class="h2h" id="h2h" aria-labelledby="h2hH">
-    <div class="head" style="margin:34px 0 16px"><div><div class="kicker">Two teams look close?</div><h2 class="disp" id="h2hH" style="font-size:clamp(34px,5vw,52px);margin:6px 0 0">Head-to-Head</h2><p>Line two teams up the way the committee does when they look close. Rankings come from your Top 25 above.</p></div></div>
+    <div class="head" style="margin:34px 0 16px"><div><div class="kicker"><span class="em" aria-hidden="true">🤔</span> Two teams look close?</div><h2 class="disp" id="h2hH" style="font-size:clamp(34px,5vw,52px);margin:6px 0 0"><span class="em" aria-hidden="true">⚔️</span> Head-to-Head</h2><p>Line two teams up the way the committee does when they look close. Rankings come from your Top 25 above.</p></div></div>
   <div class="grid2">
     <section class="card">
       <div class="tape" id="tape"></div>
@@ -246,7 +246,7 @@
   <div class="dock">
     <div class="card submitbar">
       <span id="submitNote">Pick a champion, then save it.</span>
-      <span style="display:flex;gap:8px"><button class="btn" type="button" id="resetBtn">Reset</button><button class="btn gold" type="button" id="submitBtn">Save &amp; share my bracket</button></span>
+      <span style="display:flex;gap:8px"><button class="btn" type="button" id="resetBtn">Reset</button><button class="btn gold" type="button" id="submitBtn"><span class="em" aria-hidden="true">🔒</span> Save &amp; share my bracket</button></span>
     </div>
   </div>
 </main>
@@ -330,7 +330,7 @@
     }).join("")}</div></div>`).join("");
     const champ = champion(F);
     html += `<div class="col"><h3>Champion</h3><div class="bk-games"><div class="champ" data-game="champ" ${champ ? `style="${tc(champ)}"` : ""}>
-      <span class="lbl">National champion</span>
+      <span class="lbl"><span class="em" aria-hidden="true">🏆</span> National champion</span>
       ${champ ? mark(champ) : `<span class="ph-logo">?</span>`}
       <span class="big">${champ ? esc(champ) : "Pick a winner"}</span>
       <span class="sub2">${champ ? "No. " + seedOf(champ) + " seed" : "Advance a team through the title game"}</span></div></div></div>`;
@@ -381,9 +381,9 @@
   const ENTRY_ID = "bracket-cfp-2026";
   function renderSubmit() {
     const champ = champion(F), saved = entries.get(ENTRY_ID);
-    $("submitBtn").textContent = saved ? "Update & share my bracket" : "Save & share my bracket";
+    $("submitBtn").innerHTML = saved ? `<span class="em" aria-hidden="true">📣</span> Update &amp; share my bracket` : `<span class="em" aria-hidden="true">🔒</span> Save &amp; share my bracket`;
     const left = ORDER_GAMES.filter((id) => !S.picks[id]).length;
-    $("submitNote").textContent = champ ? (saved ? "Saved. Change anything, then update." : `${champ} wins it all. Save it to your account.`) : `${left} game${left === 1 ? "" : "s"} left to pick. You can save the field now.`;
+    $("submitNote").textContent = champ ? (saved ? "✅ Saved. Change anything, then update." : `🏆 ${champ} wins it all. Save it to your account.`) : `🎯 ${left} game${left === 1 ? "" : "s"} left to pick. You can save the field now.`;
   }
 
   // Events
@@ -397,7 +397,7 @@
     const s = e.target.closest("select[data-conf]"); if (!s) return;
     S.champs[s.dataset.conf] = s.value; render();
   });
-  $("resetBtn").addEventListener("click", () => { if (!confirm("Start over from this week's AP poll?")) return; CFP.reset(); render(); toast("Reset to this week's AP poll"); });
+  $("resetBtn").addEventListener("click", () => { if (!confirm("Start over from this week's AP poll?")) return; CFP.reset(); render(); toast("🗳️ Reset to this week's AP poll"); });
   $("submitBtn").addEventListener("click", () => {
     const champ = champion(F), had = !!entries.get(ENTRY_ID);
     const lines = ["My 2026 College Football Playoff bracket", ""];
@@ -407,7 +407,7 @@
       id: ENTRY_ID, kind: "bracket", title: "CFP Bracket", sub: champ ? `${champ} wins it all` : "Field only", url: "/bracket/",
       data: { seeds: F.seeds, ids: F.seeds.map((t) => TEAMS[t].id), ab: F.seeds.map((t) => TEAMS[t].abbr), champ: champ || "", champId: champ ? TEAMS[champ].id : "",
               champAb: champ ? TEAMS[champ].abbr : "", champNick: champ ? TEAMS[champ].nick : "" },
-      shareText: champ ? `I've got ${champ} winning the College Football Playoff. Build your bracket and prove me wrong.` : "Here's my 12-team College Football Playoff field. Build yours and prove me wrong.",
+      shareText: champ ? `🏆 I've got ${champ} winning the College Football Playoff. Build your bracket and prove me wrong.` : "🏆 Here's my 12-team College Football Playoff field. Build yours and prove me wrong.",
       text: lines.join("\n"),
     });
     LFI.share(e, { updated: had });
@@ -594,7 +594,7 @@
     const wi = rankOf(w); if (wi >= 0) S.order.splice(wi, 1);
     S.order.splice(rankOf(l), 0, w);
     if (S.order.length > 25) S.order.length = 25;
-    window.LFI_BRACKET_RENDER(); toast(`${w} moved ahead of ${l} in your bracket`);
+    window.LFI_BRACKET_RENDER(); toast(`✅ ${w} moved ahead of ${l} in your bracket`);
   });
   window.LFI_H2H = render;
   render();

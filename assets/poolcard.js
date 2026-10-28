@@ -20,21 +20,21 @@
         <button class="btn gold" type="submit">Join</button></form>`;
     return "";
   }
-  const buttons = () => `<div class="pool-acts"><button class="btn${open === "new" ? " navy" : ""}" type="button" data-open="new">Start a pool</button>
-    <button class="btn${open === "join" ? " navy" : ""}" type="button" data-open="join">Join with a code</button></div>${forms()}`;
+  const buttons = () => `<div class="pool-acts"><button class="btn${open === "new" ? " navy" : ""}" type="button" data-open="new"><span class="em" aria-hidden="true">➕</span> Start a pool</button>
+    <button class="btn${open === "join" ? " navy" : ""}" type="button" data-open="join"><span class="em" aria-hidden="true">🤝</span> Join with a code</button></div>${forms()}`;
 
   let pools = [];
   function draw() {
     const cloud = LFI.cloud;
-    if (!cloud || !cloud.on) { box.innerHTML = `<p class="empty">Pools with friends switch on with sign-in.</p>`; return; }
+    if (!cloud || !cloud.on) { box.innerHTML = `<p class="empty">👥 Pools with friends switch on with sign-in.</p>`; return; }
     if (!cloud.user || !cloud.profile || !cloud.profile.onboarded) {
       box.innerHTML = `<p class="empty" style="margin-top:0;color:var(--ink-2)">Start a private pool, send the link, and see who's really calling it. Your normal picks count, nothing extra to fill in.</p>
-        <a class="btn gold block" href="/signin/?next=${here}">${cloud.user ? "Finish your profile" : "Sign in to start a pool"}</a>`;
+        <a class="btn gold block" href="/signin/?next=${here}"><span class="em" aria-hidden="true">👥</span> ${cloud.user ? "Finish your profile" : "Sign in to start a pool"}</a>`;
       return;
     }
     box.innerHTML = (pools.length ? `<ul class="pool-list">${pools.map((p) => `<li><a href="/pools/?id=${p.id}">
-        <b>${esc(p.name)}</b><span>${p.rank ? `${ord(p.rank)} of ${p.members}` : `${p.members} ${p.members === 1 ? "player" : "players"}`} · ${p.correct}-${p.wrong}</span></a></li>`).join("")}</ul>`
-      : `<p class="empty" style="margin-top:0;color:var(--ink-2)">Play your friends all season. Start a pool and send the link, or join one with a code.</p>`) + buttons();
+        <b>${esc(p.name)}</b><span>${p.rank === 1 ? "🏆 " : ""}${p.rank ? `${ord(p.rank)} of ${p.members}` : `${p.members} ${p.members === 1 ? "player" : "players"}`} · ${p.correct}-${p.wrong}</span></a></li>`).join("")}</ul>`
+      : `<p class="empty" style="margin-top:0;color:var(--ink-2)">🏆 Play your friends all season. Start a pool and send the link, or join one with a code.</p>`) + buttons();
     const f = box.querySelector("input"); if (f) f.focus();
   }
 

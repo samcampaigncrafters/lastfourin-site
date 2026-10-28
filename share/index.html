@@ -24,7 +24,7 @@
 <main class="page" style="max-width:640px">
   <div class="head">
     <div>
-      <div class="kicker" id="k">You've been challenged</div>
+      <div class="kicker" id="k">You've been challenged ⚔️</div>
       <h1 class="disp" id="h">Think you can beat this?</h1>
       <p id="p">A friend made their picks on Last Four In. Make yours, then send them back.</p>
     </div>
@@ -32,7 +32,7 @@
   <div id="entry"></div>
   <div class="share-acts">
     <a class="btn gold big" id="make" href="/">Make your own</a>
-    <a class="btn" href="/">See everything you can play</a>
+    <a class="btn" href="/"><span class="em" aria-hidden="true">🎮</span> See everything you can play</a>
   </div>
   <p class="empty" style="margin-top:14px">Free to play. No purchase necessary.</p>
 </main>
@@ -47,15 +47,15 @@
     const e = readShare(new URLSearchParams(location.search).get("e") || "");
     const k = KIND[e.kind] || {};
     const who = e.by ? esc(e.by) : "A friend";
-    $("k").textContent = e.kind === "ap" ? `${e.by || "A friend"} shared a guess, just for fun` : `${e.by || "A friend"} challenged you`;
+    $("k").textContent = e.kind === "ap" ? `🗳️ ${e.by || "A friend"} shared a guess, just for fun` : `⚔️ ${e.by || "A friend"} challenged you`;
     $("h").textContent = e.kind === "bracket" ? "Think you can build a better bracket?" : e.kind === "ap" ? "What's your AP Top 25?" : e.kind === "trivia" ? "Think you can beat this score?" : e.kind === "draft" ? "Think you can draft it better?" : "Think you can beat these picks?";
     $("p").innerHTML = `${who} made ${e.kind === "bracket" ? "their playoff bracket" : e.kind === "ap" ? "their AP poll guess" : e.kind === "trivia" ? "today's trivia" : e.kind === "draft" ? "this draft" : "their picks"} on Last Four In. Make yours, then send it back.`;
     $("entry").innerHTML = renderEntry(e, { full: true, by: e.by });
-    $("make").textContent = (k.make || "Make your own") + " →";
+    $("make").textContent = "🎯 " + (k.make || "Make your own") + " →";
     $("make").href = e.kind === "draft" && /^\?[\w=&%.+-]*$/.test((e.data || {}).q || "") ? k.url + e.data.q : k.url || "/"; // same pool as the friend's draft
     document.title = `${e.by || "A friend"} challenged you · Last Four In`;
   } catch (err) {
-    $("entry").innerHTML = `<p class="empty">This share link looks broken, but you can still play.</p>`;
+    $("entry").innerHTML = `<p class="empty">This share link looks broken, but you can still play. <span class="em" aria-hidden="true">🤷</span></p>`;
   }
 })();
 </script>

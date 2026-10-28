@@ -103,7 +103,7 @@
       try {
         const r = await cloud.finishSignup({ username, display: $("dn").value.trim(), year: $("by").value, month: $("bm").value });
         if (r === "under13") return showUnder13();
-        toast("You're in");
+        toast("🎉 You're in");
         location.replace(next);
       } catch (e) { err(e.message); btn.disabled = false; }
     };

@@ -89,20 +89,20 @@ body.playing .head { display: none; }
 <main class="page">
   <div class="head">
     <div>
-      <div class="kicker">NFL trivia race</div>
-      <h1 class="disp">Grid Race</h1>
+      <div class="kicker"><span class="em" aria-hidden="true">🏈</span> NFL trivia race</div>
+      <h1 class="disp">Grid Race <span class="em" aria-hidden="true">🏁</span></h1>
       <p>Twenty-five squares, one answer each. Tap a square, name the player. Get it right first and the square is yours, locked for good. Most squares wins.</p>
     </div>
   </div>
 
   <section class="card" id="setup">
-    <div class="card-h"><h2 class="disp">Before you play</h2><span class="chip" id="dataChip">Loading clues…</span></div>
+    <div class="card-h"><h2 class="disp">Before you play <span class="em" aria-hidden="true">🎯</span></h2><span class="chip" id="dataChip">Loading clues…</span></div>
     <div class="card-b set">
       <div class="set-row">
         <div class="set-lbl">Opponent</div>
         <div class="seg" id="opp">
-          <button type="button" data-v="cpu" aria-pressed="true">The computer</button>
-          <button type="button" data-v="friend" aria-pressed="false">A friend<small>Live, by link</small></button>
+          <button type="button" data-v="cpu" aria-pressed="true">The computer <span class="em" aria-hidden="true">🤖</span></button>
+          <button type="button" data-v="friend" aria-pressed="false">A friend <span class="em" aria-hidden="true">👥</span><small>Live, by link</small></button>
           <button type="button" data-v="solo" aria-pressed="false">Just me<small>Fill the board</small></button>
         </div>
         <div class="note" id="friendNote" hidden></div>
@@ -128,8 +128,8 @@ body.playing .head { display: none; }
           <button type="button" data-v="0" aria-pressed="false">Untimed<small>Until every square is gone</small></button>
         </div>
       </div>
-      <p class="note" style="margin:0">Last names count: "Brady" is as good as "Tom Brady".</p>
-      <div class="go-row"><button class="btn gold big" type="button" id="startBtn" disabled>Start the race</button></div>
+      <p class="note" style="margin:0"><span class="em" aria-hidden="true">💡</span> Last names count: "Brady" is as good as "Tom Brady".</p>
+      <div class="go-row"><button class="btn gold big" type="button" id="startBtn" disabled>Start the race <span class="em" aria-hidden="true">🚀</span></button></div>
     </div>
   </section>
 
@@ -149,11 +149,11 @@ body.playing .head { display: none; }
   </section>
 
   <section id="result" hidden>
-    <div class="res-banner"><div class="kicker" style="color:#fff;opacity:.85" id="resKick">Grid Race</div><div class="disp" id="resH"></div><p id="resP"></p></div>
+    <div class="res-banner"><div class="kicker" style="color:#fff;opacity:.85" id="resKick"><span class="em" aria-hidden="true">🏁</span> Grid Race</div><div class="disp" id="resH"></div><p id="resP"></p></div>
     <div class="grid5" id="resGrid"></div>
     <div class="res-acts">
-      <button class="btn gold big" type="button" id="shareBtn">Share it</button>
-      <button class="btn" type="button" id="againBtn">Play again</button>
+      <button class="btn gold big" type="button" id="shareBtn">Share it <span class="em" aria-hidden="true">📣</span></button>
+      <button class="btn" type="button" id="againBtn">Play again <span class="em" aria-hidden="true">🔁</span></button>
     </div>
   </section>
 
@@ -168,7 +168,7 @@ body.playing .head { display: none; }
         <p class="q" id="askQ"></p>
         <input id="askIn" type="text" autocapitalize="words" spellcheck="false" placeholder="Player's name" aria-label="Your answer">
         <div class="msg" id="askMsg" role="status"></div>
-        <button class="btn gold big" type="submit" id="askGo">Claim it</button>
+        <button class="btn gold big" type="submit" id="askGo">Claim it <span class="em" aria-hidden="true">🔒</span></button>
       </form>
     </div>
   </div>
@@ -180,6 +180,7 @@ body.playing .head { display: none; }
 <script>
 (function () {
   const { $, esc, entries, toast } = LFI;
+  const em = (e) => `<span class="em" aria-hidden="true">${e}</span>`;
   const qs = new URLSearchParams(location.search);
   const key = (s) => String(s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const S = { opp: "cpu", cpu: "medium", time: "300", from: +qs.get("from") || 0, to: +qs.get("to") || 0 };
@@ -200,7 +201,7 @@ body.playing .head { display: none; }
     $("friendNote").hidden = !friend;
     $("friendNote").innerHTML = ME ? "You get a link to send. You both see the same grid and race live."
       : `Friend races need an account so the site can referee. <a href="${LFI.games.signInUrl()}">Sign in free</a>, then come back.`;
-    $("startBtn").textContent = friend ? "Create the race room" : "Start the race";
+    $("startBtn").innerHTML = friend ? `Create the race room ${em("🔗")}` : `Start the race ${em("🚀")}`;
     $("startBtn").disabled = !BANK || (friend && !ME) || !fits();
   }
 
@@ -283,7 +284,7 @@ body.playing .head { display: none; }
     if (!R.endAt) { $("clock").innerHTML = `<small>Untimed</small>${R.own.filter((x) => !x).length}`; $("clock").title = "Squares left"; return; }
     const left = Math.max(0, R.endAt - now());
     const s = Math.ceil(left / 1000);
-    $("clock").innerHTML = `<small>Time</small>${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    $("clock").innerHTML = `<small>⏱️ Time</small>${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
     $("clock").classList.toggle("low", s <= 30);
     if (left <= 0 && !R.game) end();
   }
@@ -303,7 +304,7 @@ body.playing .head { display: none; }
     if (R.own[i]) return;
     R.own[i] = who; R.ans[i] = answer || "";
     draw(i);
-    if (asking === i && who === "them") { closeAsk(); toast(`${R.them.split(" ")[0]} got that one first.`); }
+    if (asking === i && who === "them") { closeAsk(); toast(`😬 ${R.them.split(" ")[0]} got that one first.`); }
     if (!R.game && R.own.every(Boolean)) end();
   }
   function draw(flash) {
@@ -337,7 +338,7 @@ body.playing .head { display: none; }
     e.preventDefault();
     const i = asking, typed = $("askIn").value.trim();
     if (i < 0 || !typed || !R || R.own[i]) return;
-    const wrong = () => { $("askMsg").textContent = "Not it. Try again or pick another square."; $("askIn").classList.remove("shake"); void $("askIn").offsetWidth; $("askIn").classList.add("shake"); $("askIn").select(); };
+    const wrong = () => { $("askMsg").textContent = "❌ Not it. Try again or pick another square."; $("askIn").classList.remove("shake"); void $("askIn").offsetWidth; $("askIn").classList.add("shake"); $("askIn").select(); };
     if (!R.game) {
       const ok = R.cells[i].a.some((a) => key(a) === key(typed));
       if (!ok) return wrong();
@@ -348,8 +349,8 @@ body.playing .head { display: none; }
       const res = await LFI.games.move(R.game.id, i, {}, typed);
       if (res.ok) { closeAsk(); claim(i, "me", res.a || typed); }
       else if (res.why === "wrong") wrong();
-      else if (res.why === "taken") { closeAsk(); toast(`${R.them.split(" ")[0]} got that one first.`); }
-      else { closeAsk(); toast("Time's up."); }
+      else if (res.why === "taken") { closeAsk(); toast(`😬 ${R.them.split(" ")[0]} got that one first.`); }
+      else { closeAsk(); toast("⏱️ Time's up."); }
     } catch (err) { $("askMsg").textContent = err.message; }
     $("askGo").disabled = false;
     if (watcher) watcher.poke();
@@ -364,21 +365,21 @@ body.playing .head { display: none; }
     const a = R.own.filter((x) => x === "me").length, b = R.own.filter((x) => x === "them").length;
     $("play").hidden = true; $("result").hidden = false;
     let h, p, result;
-    if (!R.them) { h = `${a} of 25`; p = a === 25 ? "Every square. Clean sweep." : "Send it to a friend and see if they can fill more."; result = `${a} of 25 squares`; }
+    if (!R.them) { h = `${a} of 25`; p = a === 25 ? "Every square. Clean sweep. 🔥" : "Send it to a friend and see if they can fill more."; result = `${a} of 25 squares`; }
     else {
       const first = R.them.split(" ")[0];
-      h = a > b ? "You win" : a < b ? `${first} wins` : "Dead even";
+      h = a > b ? `You win ${em("🎉")}` : a < b ? `${esc(first)} wins ${em("😬")}` : `Dead even ${em("🤝")}`;
       p = `${a} squares to ${b}.${early ? ` ${first} left the race.` : ""}`;
       result = a === b ? `Tied ${a}-${b}` : `${a > b ? "Won" : "Lost"} ${a}-${b}`;
     }
-    $("resH").textContent = h; $("resP").textContent = p;
+    $("resH").innerHTML = h; $("resP").textContent = p;
     const title = R.range ? `Grid Race · ${R.range}` : "Grid Race", yrs = R.range ? ` (${R.range})` : "";
-    $("resKick").textContent = `${title} · ${R.them ? `vs ${R.them}` : "solo"}`;
+    $("resKick").innerHTML = `${em("🏁")} ${esc(`${title} · ${R.them ? `vs ${R.them}` : "solo"}`)}`;
     $("resGrid").innerHTML = R.cells.map((c, i) => square(c, i, R.own[i], R.ans[i] || (answers && answers[i] ? answers[i][0] : c.a ? c.a[0] : ""), false, true)).join("");
     const grid = [0, 1, 2, 3, 4].map((r) => R.own.slice(r * 5, r * 5 + 5).map((o) => o === "me" ? "🟪" : o === "them" ? "🟥" : "⬜").join("")).join("\n");
     lastEntry = entries.put({ id: R.game ? `grid-g-${R.game.id}` : `grid-${Date.now()}`, kind: "trivia", title, url: "/grid/" + R.rq, sub: R.them ? `vs ${R.them}` : "Solo", result,
       data: { score: R.them ? `${a}-${b}` : `${a}/25`, grid },
-      shareText: R.them ? `Grid Race${yrs} on Last Four In: ${result}. Think you can take more squares?` : `I claimed ${a} of 25 squares in the Grid Race${yrs} on Last Four In. Beat that.` });
+      shareText: R.them ? `🏁 Grid Race${yrs} on Last Four In: ${result}. Think you can take more squares?` : `🏁 I claimed ${a} of 25 squares in the Grid Race${yrs} on Last Four In. Beat that.` });
     scrollTo({ top: 0, behavior: "smooth" });
     setTimeout(() => LFI.share(lastEntry, { kicker: "Race saved", note: "Send it to a friend and race them next." }), 900);
   }
@@ -415,7 +416,7 @@ body.playing .head { display: none; }
   function lobby(html, h, chip) {
     $("setup").hidden = true; $("play").hidden = true; $("result").hidden = true; $("lobby").hidden = false;
     document.body.classList.add("playing");
-    $("lobbyH").textContent = h || "Race room"; $("lobbyChip").textContent = chip || ""; $("lobbyB").innerHTML = html;
+    $("lobbyH").innerHTML = `${esc(h || "Race room")} ${em(h ? "⚔️" : "🏁")}`; $("lobbyChip").textContent = chip || ""; $("lobbyB").innerHTML = html;
   }
   async function openGame(code) {
     GAME = code;
@@ -434,11 +435,11 @@ body.playing .head { display: none; }
     const range = g.settings.range || "";
     lobby(`<p style="margin:0">Send this link to the friend you want to race.${range ? ` Every square comes from ${range}.` : ""} The clock starts the moment they join${g.seconds ? ` and runs ${Math.round(g.seconds / 60)} minutes` : ""}.</p>
       <input class="lobby-link" readonly value="${esc(url)}" aria-label="Race link">
-      <div class="go-row"><button class="btn gold big" type="button" id="lbShare">Send the link</button><button class="btn" type="button" id="lbCopy">Copy link</button></div>
+      <div class="go-row"><button class="btn gold big" type="button" id="lbShare">Send the link ${em("📣")}</button><button class="btn" type="button" id="lbCopy">Copy link ${em("🔗")}</button></div>
       <div class="set-row" id="lbFr" hidden><div class="set-lbl">Or challenge a friend on Last Four In</div><div class="friend-pick" id="lbFrList"></div></div>
-      <div class="go-row"><span class="note">Waiting for your friend… this page updates by itself.</span><button class="btn" type="button" id="lbCancel">Call it off</button></div>`, "Race room", range ? `${range} · Waiting` : "Waiting");
-    $("lbShare").onclick = () => LFI.games.shareLink(url, `Race me in the Grid Race${range ? ` (${range})` : ""} on Last Four In.`);
-    $("lbCopy").onclick = async () => toast((await LFI.copyText(url)) ? "Link copied" : "Couldn't copy the link here");
+      <div class="go-row"><span class="note">${em("⏳")} Waiting for your friend… this page updates by itself.</span><button class="btn" type="button" id="lbCancel">Call it off</button></div>`, "Race room", range ? `${range} · Waiting` : "Waiting");
+    $("lbShare").onclick = () => LFI.games.shareLink(url, `🏁 Race me in the Grid Race${range ? ` (${range})` : ""} on Last Four In.`);
+    $("lbCopy").onclick = async () => toast((await LFI.copyText(url)) ? "🔗 Link copied" : "Couldn't copy the link here");
     $("lbCancel").onclick = async () => { try { await LFI.games.leave(g.id); } catch (err) {} toSetup(); };
     LFI.games.friends().then((fr) => {
       if (!fr.length || !$("lbFrList")) return;
@@ -447,7 +448,7 @@ body.playing .head { display: none; }
       $("lbFrList").onclick = async (e) => {
         const b = e.target.closest("button[data-h]"); if (!b) return;
         b.disabled = true;
-        try { await LFI.games.challenge(b.dataset.h, "grid", g.settings.title || "Grid Race", `/grid/?g=${g.code}`); b.textContent = "✓ " + b.textContent; toast("Challenge sent"); }
+        try { await LFI.games.challenge(b.dataset.h, "grid", g.settings.title || "Grid Race", `/grid/?g=${g.code}`); b.textContent = "✓ " + b.textContent; toast("⚔️ Challenge sent"); }
         catch (err) { toast(err.message); b.disabled = false; }
       };
     });
@@ -461,7 +462,7 @@ body.playing .head { display: none; }
       const s = g.settings, rq = s.range ? `?from=${s.from}&to=${s.to}` : "";
       begin(s.cells, { game: { id: g.id }, them: them ? them.name : "Your friend", meName: (g[mine] || {}).name || "You", skew, range: s.range || "", rq,
                                 endAt: g.seconds ? new Date(g.started_at).getTime() + g.seconds * 1000 : null });
-      if (g.moves.length === 0) toast(`${them ? them.name : "Your friend"} is in. Go!${s.range ? ` Squares from ${s.range}.` : ""}`);
+      if (g.moves.length === 0) toast(`🏁 ${them ? them.name : "Your friend"} is in. Go!${s.range ? ` Squares from ${s.range}.` : ""}`);
     }
     for (const m of g.moves) if (!R.own[+m.item]) claim(+m.item, m.by === mine ? "me" : "them", (m.payload && m.payload.a) || "");
     // Ended early = someone left (the server's own clock says so, not this browser's).

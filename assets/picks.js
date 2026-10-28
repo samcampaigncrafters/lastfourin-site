@@ -113,19 +113,20 @@
 
   function chipFor(g) {
     const p = picks[g.id];
-    if (g.status === "in") return `<span class="chip live">● ${esc(g.detail)}</span>`;
+    if (g.status === "in") return `<span class="chip live">🔴 ${esc(g.detail)}</span>`;
     if (g.status === "off") return `<span class="chip lock">${esc(g.detail)}</span>`;
     if (g.status === "post") {
-      if (!p) return `<span class="chip lock">Final · no pick</span>`;
-      if (g.winner === "tie") return `<span class="chip lock">Final · tie</span>`;
-      return g.winner === p ? `<span class="chip ok">✓ Correct</span>` : `<span class="chip no">✗ Missed</span>`;
+      if (!p) return `<span class="chip lock">🏁 Final · no pick</span>`;
+      if (g.winner === "tie") return `<span class="chip lock">🏁 Final · tie</span>`;
+      return g.winner === p ? `<span class="chip ok">✅ Correct</span>` : `<span class="chip no">❌ Missed</span>`;
     }
     if (!isOpen(g)) return `<span class="chip lock">🔒 Locked</span>`;
-    return p ? `<span class="chip ok">Picked</span>` : `<span class="chip">Open</span>`;
+    return p ? `<span class="chip ok">🎯 Picked</span>` : `<span class="chip">Open</span>`;
   }
 
   function render() {
-    $("title").textContent = `${CFG.name} · ${weekTitle()}`;
+    const em = { nfl: "🏈", cfb: "🎓" }[league];
+    $("title").innerHTML = (em ? `<span class="em" aria-hidden="true">${em}</span> ` : "") + esc(`${CFG.name} · ${weekTitle()}`);
     $("stripWeek").textContent = daily && day ? fmtYmd(day, { weekday: "short", month: "short", day: "numeric" }) : weekTitle();
     renderStrip(); renderGames(); renderSummary();
   }
@@ -148,7 +149,7 @@
     if (!games.length) {
       $("days").innerHTML = off ? `<div class="card off-season"><div class="kicker">Off-season</div><h2 class="disp">${esc(CFG.name)} is ${esc(LFI_CAL.backNote(CFG.cal[0], now()).replace(/^Back/, "back"))}</h2>
           <p>There are no games on the board right now. Picks open again when the new season starts.</p></div>`
-        : `<p class="empty">No games on the board for this week.</p>`;
+        : `<p class="empty">📅 No games on the board for this week.</p>`;
       return;
     }
     let html = daily ? dayTabs() : "", cur = "";
@@ -173,16 +174,16 @@
 
   function renderSummary() {
     const made = games.filter((g) => picks[g.id]).length;
-    $("progN").textContent = `${made} of ${games.length} picked${daily ? " this week" : ""}`;
+    $("progN").textContent = `🎯 ${made} of ${games.length} picked${daily ? " this week" : ""}`;
     $("progBar").style.width = games.length ? (made / games.length) * 100 + "%" : "0";
     const next = games.find(isOpen);
-    $("deadline").textContent = next ? `Next lock ${fmtShort(next.kickoff)}` : "All games locked";
+    $("deadline").textContent = next ? `Next lock ${fmtShort(next.kickoff)}` : "🔒 All games locked";
 
     const r = record();
     const pending = games.filter((g) => picks[g.id] && g.status !== "post").length;
     $("wkChip").textContent = daily ? fmtYmd(week) + " to " + fmtYmd(addDays(week, 6)) : `Week ${week}`;
     $("myWeek").innerHTML = `<div style="display:flex;gap:24px;align-items:end">
-        <div><div class="disp" style="font-size:48px">${r.right}-${r.wrong}</div><div class="empty" style="padding:0">Record</div></div>
+        <div><div class="disp" style="font-size:48px">${r.right}-${r.wrong}</div><div class="empty" style="padding:0">Record${r.graded && r.graded === games.length && !r.wrong ? " 💯" : r.right > r.wrong ? " 🎉" : ""}</div></div>
         <div><div class="disp" style="font-size:48px;color:var(--muted)">${pending}</div><div class="empty" style="padding:0">Still to play</div></div>
       </div>`;
 
@@ -190,8 +191,8 @@
     const saved = entries.get(entryId());
     const btn = $("submitBtn");
     btn.disabled = !made || !next;
-    btn.textContent = saved ? "Update & share my picks" : "Submit my picks";
-    $("submitNote").textContent = !next ? "This week is locked." : saved ? `Submitted. Change any pick before its game ${starts}, then update.` : made < games.length ? `${games.length - made} game${games.length - made === 1 ? "" : "s"} left. Submit any time; you can change picks until ${start}.` : "Every game picked. Lock it in.";
+    btn.innerHTML = saved ? `<span class="em" aria-hidden="true">📣</span> Update &amp; share my picks` : `<span class="em" aria-hidden="true">🔒</span> Submit my picks`;
+    $("submitNote").textContent = !next ? "🔒 This week is locked." : saved ? `✅ Submitted. Change any pick before its game ${starts}, then update.` : made < games.length ? `${games.length - made} game${games.length - made === 1 ? "" : "s"} left. Submit any time; you can change picks until ${start}.` : "Every game picked. Lock it in. 🔒";
     if (saved && r.graded) entries.patch(entryId(), { result: `${r.right}-${r.wrong}` + (r.graded < games.length ? " so far" : "") });
   }
 
@@ -205,7 +206,7 @@
       id: entryId(), kind: league, title: `${CFG.name} · ${weekTitle()}`, sub: `${list.length} of ${games.length} picked`,
       result: r.graded ? `${r.right}-${r.wrong}` : "", url: CFG.url, data: { picks: list },
       shareText: CFG.share ? `${CFG.share} for the week of ${fmtYmd(week)} are in on Last Four In. Think you can beat me?`
-        : league === "nfl" ? `My NFL picks for Week ${week} are in on Last Four In. Think you can beat me?` : `My college football picks for Week ${week} are in on Last Four In. Think you can beat me?`,
+        : league === "nfl" ? `🏈 My NFL picks for Week ${week} are in on Last Four In. Think you can beat me?` : `🎓 My college football picks for Week ${week} are in on Last Four In. Think you can beat me?`,
     };
   }
 
@@ -222,7 +223,7 @@
     }
     const b = e.target.closest(".tm"); if (!b || b.disabled) return;
     const g = games.find((x) => x.id === b.dataset.g);
-    if (!isOpen(g)) { toast(`That game has ${daily ? "started" : "kicked off"}. Picks are locked.`); return; }
+    if (!isOpen(g)) { toast(`🔒 That game has ${daily ? "started" : "kicked off"}. Picks are locked.`); return; }
     const side = b.dataset.s;
     if (picks[g.id] === side) delete picks[g.id]; else picks[g.id] = side;
     local.set(storeKey, picks);
@@ -237,7 +238,7 @@
     if (daily) { const t = document.querySelector(`[data-day="${ymdET(g.kickoff)}"] small`), gs = dayGames(ymdET(g.kickoff)), n = gs.filter((x) => picks[x.id]).length;
       if (t) t.textContent = n ? `${n}/${gs.length} picked` : `${gs.length} ${gs.length === 1 ? "game" : "games"}`; }
     renderStrip(); renderSummary();
-    if (picks[g.id]) toast(`${label(g[side])} saved. Locks at ${start}.`);
+    if (picks[g.id]) toast(`✅ ${label(g[side])} saved. Locks at ${start}.`);
   });
   $("submitBtn").addEventListener("click", () => {
     const had = !!entries.get(entryId());
@@ -247,6 +248,6 @@
   });
   $("weekSel").addEventListener("change", (e) => { $("weekSel").dataset.moved = "1"; load(daily ? e.target.value : +e.target.value); });
 
-  load().catch(() => { $("days").innerHTML = `<p class="empty">Couldn't load this week's games. Refresh to try again.</p>`; });
+  load().catch(() => { $("days").innerHTML = `<p class="empty">😬 Couldn't load this week's games. Refresh to try again.</p>`; });
   setInterval(() => { if (games.some((g) => g.status === "in")) load(week); }, 60000);
 })();

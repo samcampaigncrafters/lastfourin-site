@@ -57,6 +57,13 @@
     { label: "NCAAB", items: [["cbb", "/ncaab/", "College Hoops Pick'em", "Every game with a Top 25 team"]] },
     { label: "MLB", items: [["mlb", "/mlb/", "MLB Pick'em", "Every MLB game, every day"]] },
   ];
+  // An emoji beside every menu entry and group (Sam: "more emojis, makes it more playful"). Items by key, groups by label.
+  // The desktop main row stays plain: with emojis it no longer fits beside Sign in at 1280px.
+  const EMO = { home: "🏠", trivia: "🧠", names: "📝", pindrop: "📍", grid: "🏁", race: "🏃", challenges: "⚔️",
+    nfl: "🏈", cfb: "🏈", nba: "🏀", nhl: "🏒", cbb: "🏀", mlb: "⚾", pools: "👥", ap: "🗳️", bracket: "🏆", voters: "🕵️",
+    drafts: "📋", jerseys: "👕", coaches: "🧢", redraft: "🎓", franchise: "🏟️", fantasy: "📊", l4picks: "🤖",
+    Trivia: "🧠", "Pick'em": "🎯", Multiplayer: "⚔️", Drafts: "📋", NFL: "🏈", NCAAF: "🏈", NBA: "🏀", NHL: "🏒", NCAAB: "🏀", MLB: "⚾" };
+  const em = (k) => EMO[k] ? `<span class="em" aria-hidden="true">${EMO[k]}</span> ` : "";
   const CARET = '<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 4l4 4 4-4"/></svg>';
   const BURGER = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
   const SUN = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>';
@@ -144,18 +151,18 @@
     if (!h) return;
     const active = h.dataset.active || "";
     const name = myName();
-    const item = ([k, href, label, sub]) => `<a href="${href}"${k === active ? ' class="on" aria-current="page"' : ""}><b>${label}</b><span>${sub}</span></a>`;
+    const item = ([k, href, label, sub]) => `<a href="${href}"${k === active ? ' class="on" aria-current="page"' : ""}><b>${em(k)}${label}</b><span>${sub}</span></a>`;
     const dd = (g, id) => {
       const on = g.items.some(([k]) => k === active);
-      return `<div class="dd${on ? " on" : ""}"><button type="button" class="dd-btn" aria-expanded="false" aria-controls="${id}">${g.label}${CARET}</button>
+      return `<div class="dd${on ? " on" : ""}"><button type="button" class="dd-btn" aria-expanded="false" aria-controls="${id}">${LEAGUES.includes(g) ? em(g.label) : ""}${g.label}${CARET}</button>
         <div class="dd-panel" id="${id}" hidden>${g.items.map(item).join("")}</div></div>`;
     };
     const top = TOP.map((t, i) => t.items ? dd(t, `dd${i}`)
       : t.soon ? `<span class="nav-home nav-soon" title="Coming soon">${t.label}<small>Soon</small></span>`
       : `<a class="nav-home${t.key === active ? " on" : ""}" href="${t.href}">${t.label}</a>`).join("");
-    const mmTop = TOP.map((t) => t.items ? `<div class="mm-group"><div class="mm-lbl">${t.label}</div>${t.items.map(item).join("")}</div>`
+    const mmTop = TOP.map((t) => t.items ? `<div class="mm-group"><div class="mm-lbl">${em(t.label)}${t.label}</div>${t.items.map(item).join("")}</div>`
       : t.soon ? `<span class="mm-home mm-soon"><b>${t.label} <i class="mm-badge">Soon</i></b><span>${t.sub}</span></span>`
-      : `<a class="mm-home${t.key === active ? " on" : ""}" href="${t.href}"><b>${t.label}</b><span>${t.sub}</span></a>`).join("");
+      : `<a class="mm-home${t.key === active ? " on" : ""}" href="${t.href}"><b>${em(t.key)}${t.label}</b><span>${t.sub}</span></a>`).join("");
     h.innerHTML = `<div class="nav-in">
         <a class="brand" href="/" aria-label="Last Four In home">${LOGO}<b>Last Four In</b></a>
         <nav class="nav-links" aria-label="Main">${top}</nav>
@@ -172,12 +179,12 @@
       </div>
       <div class="mmenu" id="mmenu" hidden>
           ${mmTop}
-          ${LEAGUES.map((g) => `<div class="mm-group"><div class="mm-lbl">${g.label}</div>${g.items.map(item).join("")}</div>`).join("")}
-          <a class="mm-home${active === "account" ? " on" : ""}" href="/account/"><b>My picks</b><span>Everything you've submitted</span></a>
-          ${me && me.onboarded ? `<a class="mm-home${active === "profile" ? " on" : ""}" href="/u/?h=${encodeURIComponent(me.username)}"><b>My profile</b><span>@${esc(me.username)}</span></a>`
-            : window.LFI_CLOUD_ON ? `<a class="mm-home" href="/signin/"><b>Sign in</b><span>Keep your picks on every device</span></a>` : ""}
-          ${me && me.onboarded ? `<a class="mm-home${active === "friends" ? " on" : ""}" href="/friends/"><b>Friends${inbox() ? ` <i class="mm-badge">${inbox()}</i>` : ""}</b><span>${inbox() ? `${inbox()} new friend request${inbox() > 1 ? "s" : ""}` : "Add friends and compare stats"}</span></a>` : ""}
-          ${me && me.onboarded ? `<a class="mm-home${active === "challenges" ? " on" : ""}" href="/challenges/"><b>Challenges${challengesWaiting ? ` <i class="mm-badge">${challengesWaiting}</i>` : ""}</b><span>${challengesWaiting ? `${challengesWaiting} waiting on you` : "Take on your friends"}</span></a>` : ""}
+          ${LEAGUES.map((g) => `<div class="mm-group"><div class="mm-lbl">${em(g.label)}${g.label}</div>${g.items.map(item).join("")}</div>`).join("")}
+          <a class="mm-home${active === "account" ? " on" : ""}" href="/account/"><b><span class="em" aria-hidden="true">📋</span> My picks</b><span>Everything you've submitted</span></a>
+          ${me && me.onboarded ? `<a class="mm-home${active === "profile" ? " on" : ""}" href="/u/?h=${encodeURIComponent(me.username)}"><b><span class="em" aria-hidden="true">👤</span> My profile</b><span>@${esc(me.username)}</span></a>`
+            : window.LFI_CLOUD_ON ? `<a class="mm-home" href="/signin/"><b><span class="em" aria-hidden="true">🔑</span> Sign in</b><span>Keep your picks on every device</span></a>` : ""}
+          ${me && me.onboarded ? `<a class="mm-home${active === "friends" ? " on" : ""}" href="/friends/"><b><span class="em" aria-hidden="true">👥</span> Friends${inbox() ? ` <i class="mm-badge">${inbox()}</i>` : ""}</b><span>${inbox() ? `${inbox()} new friend request${inbox() > 1 ? "s" : ""}` : "Add friends and compare stats"}</span></a>` : ""}
+          ${me && me.onboarded ? `<a class="mm-home${active === "challenges" ? " on" : ""}" href="/challenges/"><b><span class="em" aria-hidden="true">⚔️</span> Challenges${challengesWaiting ? ` <i class="mm-badge">${challengesWaiting}</i>` : ""}</b><span>${challengesWaiting ? `${challengesWaiting} waiting on you` : "Take on your friends"}</span></a>` : ""}
           <button type="button" class="mm-home mm-theme" data-theme-flip>${theme() === "light" ? MOON : SUN}<b>${themeLabel()}</b></button>
       </div>`;
     let lg = $("navlg");
@@ -271,7 +278,7 @@
     let body = "";
     if (e.kind === "bracket") {
       const ct = cfbTeam(d.champId) || {};
-      body = `${d.champ ? `<div class="entry-champ">${teamMark(d.champAb || ct.abbr, d.champNick || ct.nick)}<div><small>National champion</small><b>${esc(d.champ)}</b></div></div>` : ""}
+      body = `${d.champ ? `<div class="entry-champ">${teamMark(d.champAb || ct.abbr, d.champNick || ct.nick)}<div><small><span class="em" aria-hidden="true">🏆</span> National champion</small><b>${esc(d.champ)}</b></div></div>` : ""}
         <div class="mini-grid">${(d.seeds || []).map((t, i) => `<div><i>${i + 1}</i>${teamMark(abOf(d, i), "", "s")}${esc(t)}</div>`).join("")}</div>`;
     } else if (e.kind === "ap") {
       const top = d.top || [], n = opts.full ? top.length : 10;
@@ -314,15 +321,15 @@
     dlg = document.createElement("div");
     dlg.className = "ov"; dlg.hidden = true;
     dlg.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="shH">
-      <div class="dlg-h"><div><div class="kicker" id="shK">Saved</div><h2 class="disp" id="shH">Get your friends to compete against you</h2></div>
+      <div class="dlg-h"><div><div class="kicker" id="shK">Saved</div><h2 class="disp" id="shH">Get your friends to compete against you <span class="em" aria-hidden="true">🔥</span></h2></div>
         <button class="dlg-x" type="button" data-x aria-label="Close">×</button></div>
       <div class="dlg-b">
         <p style="margin:0 0 12px;color:var(--ink-2)" id="shP"></p>
         <div id="shE"></div>
         <div class="share-acts">
           <button class="btn gold big" type="button" id="shGo"></button>
-          <button class="btn" type="button" id="shCopy">Copy link</button>
-          <a class="btn" href="/account/" id="shAcct">See all my predictions</a>
+          <button class="btn" type="button" id="shCopy"><span class="em" aria-hidden="true">🔗</span> Copy link</button>
+          <a class="btn" href="/account/" id="shAcct"><span class="em" aria-hidden="true">📋</span> See all my predictions</a>
         </div>
         <div id="shCh"></div>
         <div id="shPost"></div>
@@ -345,19 +352,19 @@
     const k = KIND[e.kind] || {};
     const d = ensureDialog();
     const url = shareUrl(e);
-    const text = e.shareText || `Here are my ${k.noun || "picks"} on Last Four In. Think you can beat me?`;
-    d.querySelector("#shK").textContent = opts.kicker || `Your ${k.noun || "entry"} ${opts.updated ? "is updated" : "is in"}`;
+    const text = e.shareText || `Here are my ${k.noun || "picks"} on Last Four In. Think you can beat me? 🔥`;
+    d.querySelector("#shK").textContent = opts.kicker || `Your ${k.noun || "entry"} ${opts.updated ? "is updated" : "is in"} ✅`;
     d.querySelector("#shP").textContent = opts.note || "Send it to your friends and see who calls it better.";
     d.querySelector("#shE").innerHTML = renderEntry(e);
     const go = d.querySelector("#shGo");
-    go.textContent = k.share || "Share";
+    go.textContent = "📣 " + (k.share || "Share");
     go.onclick = async () => {
       if (navigator.share) {
         try { await navigator.share({ title: "Last Four In", text, url }); return; } catch (err) { if (err && err.name === "AbortError") return; }
       }
-      toast((await copyText(`${text} ${url}`)) ? "Link copied. Paste it to your friends." : "Couldn't copy. Long-press the link to share.");
+      toast((await copyText(`${text} ${url}`)) ? "🔗 Link copied. Paste it to your friends." : "Couldn't copy. Long-press the link to share.");
     };
-    d.querySelector("#shCopy").onclick = async () => toast((await copyText(url)) ? "Link copied" : "Couldn't copy the link here");
+    d.querySelector("#shCopy").onclick = async () => toast((await copyText(url)) ? "🔗 Link copied" : "Couldn't copy the link here");
     const post = d.querySelector("#shPost");
     post.innerHTML = "";
     if (LFI.onShareOpen) LFI.onShareOpen(e, post);
@@ -382,13 +389,13 @@
       if (!LFI.games) return;
       const friends = await LFI.games.friends();
       if (!slot.isConnected) return;
-      slot.innerHTML = `<div class="post-box"><p><b>Challenge a friend</b> ${friends.length ? "to play this too. They'll see it on their Challenges page." : "once you've added some."}</p>
+      slot.innerHTML = `<div class="post-box"><p><b><span class="em" aria-hidden="true">⚔️</span> Challenge a friend</b> ${friends.length ? "to play this too. They'll see it on their Challenges page." : "once you've added some."}</p>
         <div class="post-acts">${friends.length ? friends.map((f) => `<button class="btn" type="button" data-h="${esc(f.username)}">${esc(f.display_name || f.username)}</button>`).join("")
-          : `<a class="btn" href="/friends/">Add friends</a>`}</div></div>`;
+          : `<a class="btn" href="/friends/"><span class="em" aria-hidden="true">👋</span> Add friends</a>`}</div></div>`;
       slot.onclick = async (ev) => {
         const b = ev.target.closest("button[data-h]"); if (!b) return;
         b.disabled = true;
-        try { await LFI.games.challenge(b.dataset.h, kind, title, url, note); b.textContent = "✓ " + b.textContent; toast("Challenge sent"); }
+        try { await LFI.games.challenge(b.dataset.h, kind, title, url, note); b.textContent = "✓ " + b.textContent; toast("⚔️ Challenge sent"); }
         catch (err) { toast(err.message); b.disabled = false; }
       };
     };

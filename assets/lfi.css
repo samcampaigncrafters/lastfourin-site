@@ -760,3 +760,11 @@ html.theme-flip::view-transition-new(root) { animation-name: lfi-fade-in; }
 .off-season { padding: 22px 20px; margin-top: 14px; }
 .off-season h2 { margin: 6px 0 8px; font-size: 30px; }
 .off-season p { margin: 0; color: var(--muted); }
+
+/* ---------- Emoji accents (Sam 2026-10-28: "more emojis, makes it more playful") ----------
+   Emojis inside display type sit in <span class="em" aria-hidden="true">, so stacked headline shadows, outlined
+   strokes and wide letter-spacing never smear the glyph. One or two per element, always next to words, never instead of them. */
+.em { display: inline-block; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; font-style: normal; font-weight: 400;
+  letter-spacing: 0; text-transform: none; text-shadow: none; -webkit-text-stroke: 0; -webkit-text-fill-color: initial; color: initial;
+  line-height: 1; vertical-align: .02em; }
+h1 .em, h2 .em, .disp .em { font-size: .8em; vertical-align: .06em; }

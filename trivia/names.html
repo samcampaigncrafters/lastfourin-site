@@ -75,7 +75,7 @@
   <div class="head">
     <div>
       <div class="kicker" id="kicker">Free daily game</div>
-      <h1 class="disp">Name Them All</h1>
+      <h1 class="disp">Name Them All <span class="em" aria-hidden="true">📝</span></h1>
       <p id="intro">One list a day, the same for everyone. Name as many as you can before the clock hits zero. Spelling counts, capitals and punctuation don't.</p>
     </div>
     <div class="headr">
@@ -89,11 +89,11 @@
 
     <aside class="side">
       <section class="card">
-        <div class="card-h"><h2 class="disp">Your record</h2><span class="chip" id="recChip"></span></div>
+        <div class="card-h"><h2 class="disp">Your record <span class="em" aria-hidden="true">🏆</span></h2><span class="chip" id="recChip"></span></div>
         <div class="card-b"><div class="stats4" id="stats"></div></div>
       </section>
       <section class="card">
-        <div class="card-h"><h2 class="disp">How it works</h2></div>
+        <div class="card-h"><h2 class="disp">How it works <span class="em" aria-hidden="true">💡</span></h2></div>
         <div class="card-b">
           <ol class="steps" id="steps">
             <li>The list is hidden until you press start. Then the clock runs, and it keeps running if you leave the page.</li>
@@ -104,11 +104,11 @@
         </div>
       </section>
       <section class="card" id="recentCard" hidden>
-        <div class="card-h"><h2 class="disp">Recent lists</h2></div>
+        <div class="card-h"><h2 class="disp">Recent lists <span class="em" aria-hidden="true">📋</span></h2></div>
         <div class="card-b"><ul class="recent" id="recent"></ul></div>
       </section>
       <section class="card" id="daysCard">
-        <div class="card-h"><h2 class="disp">Other days</h2></div>
+        <div class="card-h"><h2 class="disp">Other days <span class="em" aria-hidden="true">📅</span></h2></div>
         <div class="card-b"><ul class="days-list" id="daysList"></ul></div>
       </section>
       <p class="credit" id="credit"></p>
@@ -184,7 +184,7 @@
     let from = pool.filter((l) => !inf.played[l.key] && l.key !== curKey);
     if (!from.length) {
       from = pool.filter((l) => l.key !== curKey);
-      toast("You've played every list. Repeats from here on.");
+      toast("🔁 You've played every list. Repeats from here on.");
     }
     const next = from[Math.floor(Math.random() * from.length)];
     inf.cur = { key: next.key, found: [], startedAt: null, endedAt: null };
@@ -230,8 +230,8 @@
       ${over ? "" : `
       <div class="play">
         <input id="guess" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Type a name" aria-label="Type a name">
-        <div class="clock" id="clock"><b></b><span>left</span></div>
-        <button class="btn" id="giveup">Give up</button>
+        <div class="clock" id="clock"><b></b><span><span class="em" aria-hidden="true">⏱️</span> left</span></div>
+        <button class="btn" id="giveup">Give up <span class="em" aria-hidden="true">🏳️</span></button>
       </div>`}
       <div class="found-bar"><b class="num" id="count"></b><div class="bar"><i id="bar"></i></div></div>
       <div class="slots" id="slots">${slotsHtml()}</div>`;
@@ -260,12 +260,12 @@
       // nothing rides on an infinite list, so the question shows up front and a dud can be skipped
       $("game").innerHTML = `
       <div class="lock-cover">
-        <div class="kicker">Sandbox · ${Object.keys(inf.played).length} played</div>
+        <div class="kicker"><span class="em" aria-hidden="true">🧪</span> Sandbox · ${Object.keys(inf.played).length} played</div>
         <div class="chip" style="margin:10px 0 12px">${esc(L.cat)}</div>
         <h2 class="prompt">${esc(L.prompt)}</h2>
         ${vsHere() ? `<p><b>${esc(VS.name)} named ${VS.n} of ${N}.</b> Same list, your own clock. Can you beat it?</p>` : ""}
         <p>${N} names, ${mmss(L.seconds)} on the clock. Just for fun: never scored, never touches your record or streak.</p>
-        <div class="btns"><button class="btn gold" id="start" style="font-size:17px;padding:13px 30px">Start the clock</button><button class="btn" id="skip">Different list</button></div>
+        <div class="btns"><button class="btn gold" id="start" style="font-size:17px;padding:13px 30px">Start the clock <span class="em" aria-hidden="true">⏱️</span></button><button class="btn" id="skip">Different list <span class="em" aria-hidden="true">🔀</span></button></div>
       </div>`;
       $("start").onclick = () => { run.startedAt = Date.now(); save(); render(); };
       $("skip").onclick = () => { dealNext(); render(); };
@@ -274,10 +274,10 @@
     $("game").innerHTML = `
       <div class="lock-cover">
         <div class="kicker">${esc(pretty(date))} · List #${setNo}</div>
-        <h2 class="disp big">Today's list</h2>
+        <h2 class="disp big">Today's list <span class="em" aria-hidden="true">🎯</span></h2>
         <p>${N} names to find, ${mmss(L.seconds)} on the clock. The list stays hidden until you start, and the clock doesn't stop once it's going.</p>
         <div class="rules" style="display:flex;justify-content:center;gap:8px;margin-bottom:22px"><span class="chip">${esc(L.cat)}</span><span class="chip">${N} answers</span><span class="chip">${mmss(L.seconds)}</span></div>
-        <button class="btn gold" id="start" style="font-size:17px;padding:13px 30px">Start the clock</button>
+        <button class="btn gold" id="start" style="font-size:17px;padding:13px 30px">Start the clock <span class="em" aria-hidden="true">⏱️</span></button>
         ${date === today ? `<p class="note" style="margin:16px auto 0">This one counts. Finish it and infinite play opens up.</p>` : ""}
       </div>`;
     $("start").onclick = () => { run.startedAt = Date.now(); save(); render(); };
@@ -286,11 +286,11 @@
   const vsHere = () => VS && L && L.key === VS.key;
   function endline() {
     const n = run.found.length, used = L.seconds - left();
-    const vs = vsHere() ? ` ${esc(VS.name)} named ${VS.n}: ${n > VS.n ? "you win." : n < VS.n ? `${esc(VS.name)} wins.` : "dead heat."}` : "";
-    return `<div class="endline"><div><div class="disp num">${n} / ${N}</div><span>${n === N ? `All of them, with ${mmss(left())} to spare.` : `Time used ${mmss(used)}. The ones in red got away.`}${vs}</span></div>
+    const vs = vsHere() ? ` ${esc(VS.name)} named ${VS.n}: ${n > VS.n ? `you win. <span class="em" aria-hidden="true">🎉</span>` : n < VS.n ? `${esc(VS.name)} wins.` : `dead heat. <span class="em" aria-hidden="true">🤝</span>`}` : "";
+    return `<div class="endline"><div><div class="disp num">${n} / ${N}</div><span>${n === N ? `All of them, with ${mmss(left())} to spare. <span class="em" aria-hidden="true">💯</span>` : `Time used ${mmss(used)}. The ones in red got away.`}${vs}</span></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">${INF
-        ? `<button class="btn gold" id="next">Next list</button><button class="btn" id="dare">${vsHere() ? "Send your score back" : "Challenge a friend"}</button>`
-        : `<button class="btn gold" id="share">Share score</button><a class="btn" href="names.html?mode=infinite">Keep playing</a>`}</div></div>`;
+        ? `<button class="btn gold" id="next">Next list <span class="em" aria-hidden="true">👉</span></button><button class="btn" id="dare">${vsHere() ? "Send your score back" : "Challenge a friend"} <span class="em" aria-hidden="true">⚔️</span></button>`
+        : `<button class="btn gold" id="share">Share score <span class="em" aria-hidden="true">📣</span></button><a class="btn" href="names.html?mode=infinite">Keep playing <span class="em" aria-hidden="true">🔁</span></a>`}</div></div>`;
   }
 
   function updateClock() {
@@ -318,11 +318,11 @@
       const open = last.get(g).filter((j) => !run.found.includes(j));
       const coming = () => keys.some((k, j) => !run.found.includes(j) && j !== open[0] && k.some((x) => x !== g && x.startsWith(g)));
       if (open.length === 1 && (enter || !coming())) i = open[0];
-      else if (enter && open.length > 1) { flash("miss"); toast("More than one still open with that last name. Add the first name."); return; }
-      else if (enter && !open.length) { inp.value = ""; toast("Already got everyone with that last name."); return; }
+      else if (enter && open.length > 1) { flash("miss"); toast("🤔 More than one still open with that last name. Add the first name."); return; }
+      else if (enter && !open.length) { inp.value = ""; toast("✅ Already got everyone with that last name."); return; }
     }
     if (i === undefined) { if (enter) flash("miss"); return; }
-    if (run.found.includes(i)) { inp.value = ""; toast(`Already got ${L.answers[i].name}.`); return; }
+    if (run.found.includes(i)) { inp.value = ""; toast(`✅ Already got ${L.answers[i].name}.`); return; }
     run.found.push(i);
     save();
     inp.value = "";
@@ -365,9 +365,9 @@
     const entry = LFI.entries.put({
       id: `trivia-names-${date}`, kind: "trivia", title: `Name Them All #${setNo}`, sub: L.prompt, url: `/trivia/names.html?date=${date}`,
       data: { score: `${n}/${N}` },
-      shareText: `Last Four In · Name Them All #${setNo}\n${L.prompt}\n${n}/${N}${n === N ? ` with ${mmss(left())} left` : ""}`,
+      shareText: `📝 Last Four In · Name Them All #${setNo}\n${L.prompt}\n${n}/${N}${n === N ? ` with ${mmss(left())} left` : ""}`,
     });
-    LFI.share(entry, { kicker: "Your score is in", note: "Send it to your friends. The link shows your score, not the names." });
+    LFI.share(entry, { kicker: "🎉 Your score is in", note: "Send it to your friends. The link shows your score, not the names." });
   }
 
   // Challenge a friend to this sandbox list: the link carries the list and the score to beat. Nothing is saved to
@@ -378,8 +378,8 @@
     const url = `/trivia/names.html?mode=infinite&list=${encodeURIComponent(L.key)}&vs=${encodeURIComponent(who)}&vn=${n}`;
     LFI.share({
       id: `trivia-names-inf-${L.key}`, kind: "trivia", title: "Name Them All", sub: L.prompt, url, data: { score: `${n}/${N}` },
-      shareText: `I named ${n} of ${N} on Last Four In: ${L.prompt} Beat that: ${location.origin}${url}`,
-    }, { kicker: vsHere() ? "Your score back" : "Challenge a friend", note: "Your friend gets the same list and the same clock, with your score to beat.",
+      shareText: `⚔️ I named ${n} of ${N} on Last Four In: ${L.prompt} Beat that: ${location.origin}${url}`,
+    }, { kicker: vsHere() ? "⚔️ Your score back" : "⚔️ Challenge a friend", note: "Your friend gets the same list and the same clock, with your score to beat.",
          challenge: { kind: "names", title: `Name Them All: ${L.prompt}`.slice(0, 120), url } });
   }
 
@@ -395,7 +395,7 @@
     const played = new Set(done.map(([k]) => k));
     let streak = 0, d = played.has(today) ? today : addDays(today, -1);
     while (played.has(d)) { streak++; d = addDays(d, -1); }
-    $("recChip").textContent = streak ? `🔥 ${streak} day${streak > 1 ? "s" : ""}` : "Start today";
+    $("recChip").textContent = streak ? `🔥 ${streak} day${streak > 1 ? "s" : ""}` : "✨ Start today";
     $("stats").innerHTML = [[done.length, "Played"], [streak, "Streak"], [`${avg}%`, "Average"], [`${best}%`, "Best"]]
       .map(([n, l]) => `<div><b class="num">${n}</b><span>${l}</span></div>`).join("");
   }
@@ -421,14 +421,14 @@
   $("mInf").classList.toggle("on", INF);
   if (!INF) {
     useList(T.lists[date], store.days[date] || (store.days[date] = { found: [], startedAt: null, endedAt: null }));
-    $("kicker").textContent = date === today ? "Free daily game" : `Past list · ${pretty(date)}`;
+    $("kicker").textContent = date === today ? "🎮 Free daily game" : `📅 Past list · ${pretty(date)}`;
     render();
     renderSide();
     return;
   }
 
   document.title = "Name Them All: Infinite · Last Four In";
-  $("kicker").textContent = "Infinite sandbox";
+  $("kicker").textContent = "♾️ Infinite sandbox";
   $("intro").textContent = "Today's list is the one that counts. Once it's done, keep going here as long as you like. Nothing in the sandbox is scored, and it never touches your record or streak.";
   $("steps").innerHTML = `
     <li>Play today's list first. It sets your score for the day and keeps your streak going.</li>
@@ -444,7 +444,7 @@
     $("game").innerHTML = `
       <div class="lock-cover">
         <div class="kicker">Infinite sandbox · locked</div>
-        <h2 class="disp big">Today's list first</h2>
+        <h2 class="disp big">Today's list first <span class="em" aria-hidden="true">🔒</span></h2>
         <p>${started ? "You've started today's list. Finish it" : "Play today's list, the one that counts for your record and streak"}, and infinite play opens right after.</p>
         <a class="btn gold" href="names.html" style="font-size:17px;padding:13px 30px">${started ? "Back to today's list" : "Play today's list"}</a>
       </div>`;
@@ -454,14 +454,14 @@
   // the pool is big, so only infinite players download it
   const ps = document.createElement("script");
   ps.src = "pool.js";
-  ps.onerror = () => { $("game").innerHTML = `<p class="note">Couldn't load the lists. Refresh to try again.</p>`; };
+  ps.onerror = () => { $("game").innerHTML = `<p class="note"><span class="em" aria-hidden="true">😬</span> Couldn't load the lists. Refresh to try again.</p>`; };
   ps.onload = () => {
     const daily = new Set(Object.values(T.lists).map((l) => l.key)); // belt and braces: the generator keeps the pool and the daily lists apart
     pool = window.LFI_TRIVIA_POOL.lists.filter((l) => !daily.has(l.key))
       .map((l) => ({ ...l, answers: l.a.map(([name, hint]) => ({ name, hint })) }));
     const want = VS && pool.find((l) => l.key === VS.key);
     if (want && !(inf.cur && inf.cur.key === want.key)) { inf.cur = { key: want.key, found: [], startedAt: null, endedAt: null }; save(); }
-    if (VS && !want) toast("That challenge list isn't around any more. Here's another.");
+    if (VS && !want) toast("🤷 That challenge list isn't around any more. Here's another.");
     const cur = inf.cur && pool.find((l) => l.key === inf.cur.key);
     if (cur) useList(cur, inf.cur); else dealNext();
     render();

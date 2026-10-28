@@ -30,7 +30,7 @@
   <div class="head">
     <div>
       <div class="kicker" id="kicker">Free daily game</div>
-      <h1 class="disp">Daily Five</h1>
+      <h1 class="disp">Daily Five <span class="em" aria-hidden="true">🧠</span></h1>
       <p>Five football questions a day, easy to hard. One shot at each. Come back tomorrow to keep your streak alive.</p>
     </div>
     <div class="headr">
@@ -44,14 +44,14 @@
 
     <aside class="side">
       <section class="card">
-        <div class="card-h"><h2 class="disp">Your streak</h2><span class="chip" id="streakChip"></span></div>
+        <div class="card-h"><h2 class="disp">Your streak <span class="em" aria-hidden="true">🔥</span></h2><span class="chip" id="streakChip"></span></div>
         <div class="card-b">
           <div class="stats4" id="stats"></div>
           <div class="dist" id="dist"></div>
         </div>
       </section>
       <section class="card">
-        <div class="card-h"><h2 class="disp">How it works</h2></div>
+        <div class="card-h"><h2 class="disp">How it works <span class="em" aria-hidden="true">💡</span></h2></div>
         <div class="card-b">
           <ol class="steps">
             <li>A new set of five drops every night at midnight Eastern.</li>
@@ -62,7 +62,7 @@
         </div>
       </section>
       <section class="card">
-        <div class="card-h"><h2 class="disp">Other days</h2></div>
+        <div class="card-h"><h2 class="disp">Other days <span class="em" aria-hidden="true">📅</span></h2></div>
         <div class="card-b"><ul class="days-list" id="daysList"></ul></div>
       </section>
       <p class="credit" id="credit"></p>
@@ -151,10 +151,10 @@
     $("game").innerHTML = `
       <div class="intro">
         <div class="kicker">${esc(pretty(date, { weekday: "long", month: "long", day: "numeric" }))} · Set #${setNo}</div>
-        <h2 class="disp big">${started ? "Pick up where you left off" : "Today's five"}</h2>
+        <h2 class="disp big">${started ? "Pick up where you left off" : "Today's five"} <span class="em" aria-hidden="true">🎯</span></h2>
         <p>${started ? `You're ${d.picks.length} of 5 in. Answers you've given are locked.` : "Five questions, easy to hard. Pure football knowledge, every answer straight from the stat sheet. About two minutes."}</p>
         <div class="rules"><span class="chip easy">1 Easy</span><span class="chip medium">2 Medium</span><span class="chip hard">2 Hard</span></div>
-        <button class="btn gold" id="start" style="font-size:17px;padding:13px 30px">${started ? "Keep going" : "Start"}</button>
+        <button class="btn gold" id="start" style="font-size:17px;padding:13px 30px">${started ? "Keep going" : "Start"} <span class="em" aria-hidden="true">🚀</span></button>
       </div>`;
     $("start").onclick = () => { view = "q"; render(); };
     $("start").focus({ preventScroll: true });
@@ -183,8 +183,8 @@
         <div class="opts">${opts}</div>
         ${picked !== null ? `
         <div class="reveal ${right ? "ok" : "no"}">
-          <div><b>${right ? "Correct" : "Not quite"}</b><p>${esc(q.fact)}</p></div>
-          <button class="btn navy" id="next">${last ? "See your score" : "Next question"}</button>
+          <div><b>${right ? "Correct" : "Not quite"} <span class="em" aria-hidden="true">${right ? "✅" : "😬"}</span></b><p>${esc(q.fact)}</p></div>
+          <button class="btn navy" id="next">${last ? "See your score" : "Next question"} <span class="em" aria-hidden="true">${last ? "🏆" : "👉"}</span></button>
         </div>` : ""}
       </div>`;
     $("game").querySelectorAll(".opt:not(:disabled)").forEach((b) => (b.onclick = () => answer(+b.dataset.j)));
@@ -211,7 +211,7 @@
   function shareText() {
     const d = mine(), s = streaks();
     const grid = qs.map((q, i) => (d.picks[i] === q.a ? "🟩" : "🟥")).join("");
-    return `Last Four In · Daily Five #${setNo}\n${grid} ${scoreFor(date)}/5${s.cur > 1 ? `\n🔥 ${s.cur}-day streak` : ""}`;
+    return `🧠 Last Four In · Daily Five #${setNo}\n${grid} ${scoreFor(date)}/5${s.cur > 1 ? `\n🔥 ${s.cur}-day streak` : ""}`;
   }
 
   function countdown() {
@@ -226,6 +226,7 @@
   function renderDone() {
     const d = mine(), sc = scoreFor(date);
     const words = ["Tough one.", "On the board.", "Not bad.", "Solid day.", "So close to perfect.", "Perfect day."][sc];
+    const wordEm = ["😅", "💪", "👍", "😎", "🤩", "💯"][sc];
     const recap = qs.map((q, i) => {
       const ok = d.picks[i] === q.a;
       return `<li><span class="m ${ok ? "ok" : "no"}">${ok ? "✓" : "✕"}</span><div>${esc(q.q)}<div class="a">${ok ? "" : `You said ${esc(q.choices[d.picks[i]])}. `}Answer: ${esc(q.choices[q.a])}</div></div></li>`;
@@ -234,16 +235,16 @@
       <div class="intro" style="padding-bottom:12px">
         <div class="kicker">Set #${setNo} · ${esc(pretty(date))}</div>
         <div class="disp done-score num">${sc}/5</div>
-        <h2 class="disp" style="font-size:28px;margin:0">${words}</h2>
+        <h2 class="disp" style="font-size:28px;margin:0">${words} <span class="em" aria-hidden="true">${wordEm}</span></h2>
         <div class="grid5" aria-label="Your results">${qs.map((q, i) => (d.picks[i] === q.a ? "🟩" : "🟥")).join("")}</div>
         <div class="btns">
-          <button class="btn gold" id="share">Share score</button>
-          <a class="btn" href="names.html">Play Name Them All</a>
+          <button class="btn gold" id="share">Share score <span class="em" aria-hidden="true">📣</span></button>
+          <a class="btn" href="names.html">Play Name Them All <span class="em" aria-hidden="true">📝</span></a>
         </div>
-        ${date === today ? `<p style="margin:16px auto 0;font-size:14px;color:var(--muted)">Next set in <b class="num" id="cd"></b></p>` : ""}
+        ${date === today ? `<p style="margin:16px auto 0;font-size:14px;color:var(--muted)"><span class="em" aria-hidden="true">⏱️</span> Next set in <b class="num" id="cd"></b></p>` : ""}
       </div>
       <div class="card-b" style="padding-top:6px"><div class="banner" style="margin:0">
-        <div><b>Your score is saved</b><br><span>Every score and pick you make is on My picks. Free sign-in, so your streak follows you to any device, is coming soon.</span></div>
+        <div><b>Your score is saved <span class="em" aria-hidden="true">✅</span></b><br><span>Every score and pick you make is on My picks. Free sign-in, so your streak follows you to any device, is coming soon.</span></div>
         <a class="btn gold" href="/account/">My picks</a>
       </div></div>
       <div class="card-b" style="padding-top:0"><ul class="recap">${recap}</ul></div>`;
@@ -258,7 +259,7 @@
       data: { score: `${scoreFor(date)}/5`, grid: qs.map((q, i) => (d.picks[i] === q.a ? "🟩" : "🟥")).join("") },
       shareText: shareText(),
     });
-    LFI.share(entry, { kicker: "Your score is in", note: "Send it to your friends. The link shows your score, not the answers." });
+    LFI.share(entry, { kicker: "🎉 Your score is in", note: "Send it to your friends. The link shows your score, not the answers." });
   }
 
   let toastT;
@@ -270,7 +271,7 @@
     const done = Object.keys(store.days).filter((k) => isDone(store.days[k]) && T.days[k]);
     const scores = done.map(scoreFor);
     const perfect = scores.filter((x) => x === 5).length;
-    $("streakChip").textContent = s.cur ? `🔥 ${s.cur} day${s.cur > 1 ? "s" : ""}` : "Start today";
+    $("streakChip").textContent = s.cur ? `🔥 ${s.cur} day${s.cur > 1 ? "s" : ""}` : "✨ Start today";
     $("stats").innerHTML = [[s.played, "Played"], [s.cur, "Streak"], [s.best, "Best"], [perfect, "Perfect"]]
       .map(([n, l]) => `<div><b class="num">${n}</b><span>${l}</span></div>`).join("");
     const counts = [0, 0, 0, 0, 0, 0];
@@ -296,7 +297,7 @@
     else if (view === "reveal" && e.key === "Enter" && document.activeElement?.id !== "next") next();
   });
 
-  $("kicker").textContent = date === today ? "Free daily game" : `Past set · ${pretty(date)}`;
+  $("kicker").textContent = date === today ? "🎮 Free daily game" : `📅 Past set · ${pretty(date)}`;
   $("credit").innerHTML = `${esc(T.credit.replace(" (nflverse.com)", ""))} <a href="https://nflverse.com" rel="noopener">nflverse.com</a>. Built ${esc(T.generated)}.`;
   if (mine().picks.length && !isDone(mine())) view = "intro";
   renderStrip();

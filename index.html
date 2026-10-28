@@ -23,6 +23,7 @@
 .hin { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
 .lg-tabs { display: flex; gap: 6px; padding: 12px 0; overflow-x: auto; scrollbar-width: none; }
 .lg-tabs::-webkit-scrollbar { display: none; }
+.lg-tabs .em { margin-right: 5px; }
 .lg-tabs button { flex: none; font-family: var(--f-display); text-transform: uppercase; font-size: 16px; letter-spacing: .03em; padding: 8px 14px; border-radius: 6px; border: 0; background: var(--card); color: var(--quiet); }
 .lg-tabs button:hover { color: var(--ink); }
 .lg-tabs button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
@@ -163,11 +164,11 @@ main.home { padding-bottom: 64px; }
 </section>
 
 <main class="hin home">
-  <div class="sec"><small>Free, every week</small><h2 class="disp" id="secH">Everything on Last Four In</h2></div>
+  <div class="sec"><small>Free, every week <span class="em" aria-hidden="true">🎉</span></small><h2 class="disp" id="secH">Everything on Last Four In</h2></div>
   <div class="tgrid" id="tiles"></div>
 
   <section class="wk">
-    <div class="wk-h"><h2 class="disp">Your week</h2><a href="/account/">All my picks</a></div>
+    <div class="wk-h"><h2 class="disp">Your week <span class="em" aria-hidden="true">📅</span></h2><a href="/account/">All my picks</a></div>
     <div id="mine"></div>
   </section>
 </main>
@@ -194,6 +195,9 @@ main.home { padding-bottom: 64px; }
     l4: { k: "New", one: "l4picks ai", p: "Our AI handicapping model makes a pick on every game. See where it lands, then make your own call.", btn: "See the L4 picks", url: "/l4picks/", card: "model" },
   };
   const ORDER = ["ap", "nfl", "cfb", "fantasy", "money", "l4"];
+  // An emoji on each slide's headline (Sam: more emojis, more playful).
+  const SEMO = { ap: "🗳️", nfl: "🏈", cfb: "🏈", fantasy: "📊", money: "💰", l4: "🤖" };
+  const sem = (k) => SEMO[k] ? ` <span class="em" aria-hidden="true">${SEMO[k]}</span>` : "";
   const live = (s) => !s.cal || CAL.inSeason(s.cal, NOW);
 
   // The week decides the lead slide (Eastern time): college picks Fri-Sat, NFL Thursday and Sunday morning, the AP poll
@@ -234,7 +238,7 @@ main.home { padding-bottom: 64px; }
     return `<div class="slide" role="group" aria-roledescription="slide" aria-label="${i + 1} of ${keys.length}" data-k="${k}">
       <div class="hin"><div class="txt">
         <div class="kp"><b>●</b> <span>${esc(on || s.soon ? s.k : "Off season")}</span></div>
-        <${H} class="hh">${s.one ? `<span class="h-fill h-one">${esc(s.one)}</span>` : `<span class="h-out">${esc(s.o)}</span><span class="h-fill">${esc(s.f)}</span>`}</${H}>
+        <${H} class="hh">${s.one ? `<span class="h-fill h-one">${esc(s.one)}${sem(k)}</span>` : `<span class="h-out">${esc(s.o)}</span><span class="h-fill">${esc(s.f)}${sem(k)}</span>`}</${H}>
         <p>${esc(s.p)}</p>
         <div class="gos">${act}</div>
       </div><div class="dcard" aria-hidden="true">${CARD[s.card]()}</div></div></div>`;
@@ -314,6 +318,8 @@ main.home { padding-bottom: 64px; }
   const back = (x) => { const n = x.out && CAL.next(x.cal, NOW); return n ? +n.at : Infinity; }; // soonest return first
   TILES.sort((a, b) => (a.out ? 2 : a.off ? 1 : 0) - (b.out ? 2 : b.off ? 1 : 0) || back(a) - back(b));
   const LEAGUES = [["all", "All"], ["nfl", "NFL"], ["ncaaf", "NCAAF"], ["ncaab", "NCAAB"], ["nba", "NBA"], ["nhl", "NHL"], ["mlb", "MLB"]];
+  const LEMO = { nfl: "🏈", ncaaf: "🏈", ncaab: "🏀", nba: "🏀", nhl: "🏒", mlb: "⚾" };
+  const STE = { Open: "🔥", "New today": "✨", Draft: "📝", Closed: "🔒" };
   let league = "all";
   const name = (x) => x.sh ? `<span class="lg">${esc(x.t)}</span><span class="sh">${esc(x.sh)}</span>` : esc(x.t);
   function tile(x) {
@@ -323,15 +329,16 @@ main.home { padding-bottom: 64px; }
       return `<div class="t off">${I(ICON[x.ic])}<span><b>${name(x)}</b>${x.d ? `<span class="ds">${esc(x.d)}</span>` : ""}<span class="st">${LOCK}<span class="lg">${esc(back || "Coming soon")}</span><span class="sh">${esc(back.replace("Back in ", "") || "Soon")}</span></span></span></div>`;
     }
     const st = hot ? `<span class="lg">${esc(x.st + (x.more || ""))}</span><span class="sh">This week</span>` : `<span class="lg">${esc(x.st + (x.more || ""))}</span><span class="sh">${esc(x.st)}</span>`;
-    const icon = hot ? `<span class="top-row">${I(ICON[x.ic])}<span class="tag">This week</span></span>` : I(ICON[x.ic]);
+    const icon = hot ? `<span class="top-row">${I(ICON[x.ic])}<span class="tag"><span class="em" aria-hidden="true">🔥</span> This week</span></span>` : I(ICON[x.ic]);
     const head = `${icon}<span><b>${name(x)}</b><span class="ds">${esc(x.d)}</span>`;
-    return `<a class="t${hot ? " hot" : ""}" href="${x.url}">${head}<span class="st"><i></i>${st}</span></span></a>`;
+    const se = hot ? "⚡" : STE[x.st], dot = se ? `<span class="em" aria-hidden="true">${se}</span> ` : "<i></i>"; // status emoji in place of the plain dot
+    return `<a class="t${hot ? " hot" : ""}" href="${x.url}">${head}<span class="st">${dot}${st}</span></span></a>`;
   }
   function renderTiles(animate) {
-    $("lgTabs").innerHTML = LEAGUES.map(([k, l]) => `<button type="button" data-lg="${k}" aria-pressed="${k === league}">${l}</button>`).join("");
+    $("lgTabs").innerHTML = LEAGUES.map(([k, l]) => `<button type="button" data-lg="${k}" aria-pressed="${k === league}">${LEMO[k] ? `<span class="em" aria-hidden="true">${LEMO[k]}</span> ` : ""}${l}</button>`).join("");
     const list = league === "all" ? TILES : TILES.filter((x) => x.lg.includes(league));
     const label = (LEAGUES.find(([k]) => k === league) || [])[1];
-    $("tiles").innerHTML = list.map(tile).join("") + (list.some((x) => !x.off) ? "" : `<p class="soon">${esc(label)} contests are coming soon.</p>`);
+    $("tiles").innerHTML = list.map(tile).join("") + (list.some((x) => !x.off) ? "" : `<p class="soon">${esc(label)} contests are coming soon. <span class="em" aria-hidden="true">⏳</span></p>`);
     if (animate) { // tiles settle in one after another
       const g = $("tiles"); g.classList.remove("swap"); void g.offsetWidth;
       [...g.children].forEach((el, i) => el.style.setProperty("--i", i)); g.classList.add("swap");
@@ -370,7 +377,7 @@ main.home { padding-bottom: 64px; }
   // Your week, from what this browser has saved.
   const list = entries.all().slice(0, 4);
   $("mine").innerHTML = list.length ? `<ul class="lb">${list.map((e) => `<li style="grid-template-columns:minmax(0,1fr) auto"><a class="who" href="${esc(e.url || "/account/")}">${esc(e.title)}</a><span class="chip ${e.result ? "ok" : ""}">${esc(e.result || "Submitted")}</span></li>`).join("")}</ul>`
-    : `<p class="empty">Nothing submitted yet. Make a pick and it shows up here.</p>`;
+    : `<p class="empty">Nothing submitted yet. Make a pick and it shows up here. <span class="em" aria-hidden="true">👀</span></p>`;
 })();
 </script>
 </body>

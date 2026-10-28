@@ -100,8 +100,8 @@
 <main class="page">
   <div class="head">
     <div>
-      <div class="kicker" id="kick">AP Top 25 · every voter, every week</div>
-      <h1 class="disp">AP Voter Tracker</h1>
+      <div class="kicker" id="kick"><span class="em" aria-hidden="true">📊</span> AP Top 25 · every voter, every week</div>
+      <h1 class="disp"><span class="em" aria-hidden="true">🕵️</span> AP Voter Tracker</h1>
       <p id="lede">The AP poll is 70 sportswriters and broadcasters, and every one of their ballots is public. We line each ballot up against the poll and measure how far apart they are, from Normal to Hot takes.</p>
     </div>
   </div>
@@ -116,7 +116,7 @@
           <div class="controls">
             <div class="weekbar"><select id="week" aria-label="Which week"></select></div>
             <div class="seg" role="group" aria-label="Sort">
-              <button type="button" data-sort="hot" aria-pressed="true">Hot takes first</button>
+              <button type="button" data-sort="hot" aria-pressed="true"><span class="em" aria-hidden="true">🔥</span> Hot takes first</button>
               <button type="button" data-sort="normal" aria-pressed="false">Normal first</button>
             </div>
             <input class="search" id="q" type="search" placeholder="Find a voter or outlet" autocomplete="off">
@@ -130,7 +130,7 @@
 
     <aside class="side">
       <section class="card meth" id="how">
-        <div class="card-h"><h2 class="disp">How it's measured</h2></div>
+        <div class="card-h"><h2 class="disp"><span class="em" aria-hidden="true">💡</span> How it's measured</h2></div>
         <div class="card-b">
           <p><b>The poll.</b> Each voter ranks 25 teams. A 1st-place vote is worth 25 points, 2nd is 24, down to 1 point for 25th. Adding up every ballot gives the AP Top 25. We rebuild the poll from the ballots and check it matches AP's published point totals to the point.</p>
           <p><b>Distance from the poll.</b> For every team on a voter's ballot, we count how many spots it is from where the poll has it. A team the poll doesn't rank counts as 26th. A poll team the voter left off counts too. We add it all up and divide by 25.</p>
@@ -140,7 +140,7 @@
             <li><span class="band b0">Normal</span>Closest 40% of voters to the poll</li>
             <li><span class="band b1">Mild</span>Next 30%</li>
             <li><span class="band b2">Spicy</span>Next 20%</li>
-            <li><span class="band b3">Hot takes</span>The 10% furthest from the poll</li>
+            <li><span class="band b3"><span class="em" aria-hidden="true">🔥</span> Hot takes</span>The 10% furthest from the poll</li>
           </ul>
           <p><b>Ballot movement</b> is the same count against that voter's own ballot the week before. <b>Conference lean</b> is how many spots higher or lower than the poll a voter ranks one conference's teams on average, across every week they voted (shown when it's 1.5 spots or more over at least 8 rankings).</p>
           <p>A hot take is not a wrong take. Voters who break from the pack are sometimes the first ones right. This page describes how different each public ballot is; it doesn't judge anyone. Coming next: how well each ballot predicted the games.</p>
@@ -231,7 +231,7 @@
 
   const teamCell = (t) => { const x = D.teams[t]; return `<span class="t">${teamMark(x.abbr, "", "s")}<span>${esc(x.name)}</span></span>`; };
   const tn = (t) => esc(D.teams[t].name);
-  const bandHTML = (r) => `<span class="band b${r.band}">${BANDS[r.band][0]}</span>`;
+  const bandHTML = (r) => `<span class="band b${r.band}">${r.band === 3 ? `<span class="em" aria-hidden="true">🔥</span> ` : ""}${BANDS[r.band][0]}</span>`;
 
   function facts(r) {
     const out = [], vi = r.vi;
@@ -275,7 +275,7 @@
       <div><h3 class="sub-h">Spots off per team, week by week</h3><div class="spark">${spark}</div></div>
       <div><h3 class="sub-h">${esc(w.label)} ballot vs the poll</h3>
         <table class="bal"><thead><tr><th>#</th><th>Team</th><th class="r">Poll</th><th class="r">vs poll</th></tr></thead><tbody>${ballot}</tbody></table>${left}</div>
-      <div class="v-acts"><button class="btn" type="button" data-share="${esc(r.v.slug)}">Share this voter</button></div>
+      <div class="v-acts"><button class="btn" type="button" data-share="${esc(r.v.slug)}"><span class="em" aria-hidden="true">📣</span> Share this voter</button></div>
     </div>`;
   }
 
@@ -296,21 +296,21 @@
           <span class="v-score"><span class="top">${bandHTML(r)}<span class="num">${f1(r.score)}</span></span><span class="scale"><i style="left:calc(6px + ${r.pct.toFixed(3)} * (100% - 12px))"></i></span></span>
           <svg class="v-car" width="14" height="14" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 4l4 4 4-4"/></svg>
         </button>${open ? detail(r) : ""}</li>`;
-    }).join("") : `<li class="empty" style="padding:18px">No voter matches “${esc(q)}”.</li>`;
+    }).join("") : `<li class="empty" style="padding:18px">🕵️ No voter matches “${esc(q)}”.</li>`;
 
     // Three headline facts for the view.
     const hot = all[all.length - 1], cool = all[0];
     let third;
     if (isSeason) {
       const agree = W.map((y) => y.firsts[y.poll25[0]] / y.n);
-      third = `<div class="stat"><small>Ballots counted</small><b>${W.reduce((s, y) => s + y.n, 0).toLocaleString()}</b><span>${W.length} polls this season, ${D.voters.length} voters. On average ${Math.round(avg(agree) * 100)}% agreed on No. 1.</span></div>`;
+      third = `<div class="stat"><small><span class="em" aria-hidden="true">🗳️</span> Ballots counted</small><b>${W.reduce((s, y) => s + y.n, 0).toLocaleString()}</b><span>${W.length} polls this season, ${D.voters.length} voters. On average ${Math.round(avg(agree) * 100)}% agreed on No. 1.</span></div>`;
     } else {
       const top = w.poll25[0];
-      third = `<div class="stat"><small>Agreed on No. 1</small><b>${w.firsts[top]} of ${w.n}</b><span>had ${tn(top)} first.${Object.keys(w.firsts).length > 1 ? " Others: " + Object.entries(w.firsts).filter(([t]) => +t !== top).sort((a, b) => b[1] - a[1]).map(([t, c]) => `${tn(+t)} ${c}`).join(", ") + "." : ""}</span></div>`;
+      third = `<div class="stat"><small><span class="em" aria-hidden="true">🏆</span> Agreed on No. 1</small><b>${w.firsts[top]} of ${w.n}</b><span>had ${tn(top)} first.${Object.keys(w.firsts).length > 1 ? " Others: " + Object.entries(w.firsts).filter(([t]) => +t !== top).sort((a, b) => b[1] - a[1]).map(([t, c]) => `${tn(+t)} ${c}`).join(", ") + "." : ""}</span></div>`;
     }
     $("stats").innerHTML = `
-      <div class="stat hot"><small>${isSeason ? "Hottest takes this season" : "Hottest takes"}</small><b>${esc(hot.v.name)}</b><span>${esc(hot.v.org)} · ${f1(hot.score)} spots off per team</span></div>
-      <div class="stat cool"><small>${isSeason ? "Closest to the poll this season" : "Closest to the poll"}</small><b>${esc(cool.v.name)}</b><span>${esc(cool.v.org)} · ${f1(cool.score)} spots off per team</span></div>${third}`;
+      <div class="stat hot"><small><span class="em" aria-hidden="true">🔥</span> ${isSeason ? "Hottest takes this season" : "Hottest takes"}</small><b>${esc(hot.v.name)}</b><span>${esc(hot.v.org)} · ${f1(hot.score)} spots off per team</span></div>
+      <div class="stat cool"><small><span class="em" aria-hidden="true">🎯</span> ${isSeason ? "Closest to the poll this season" : "Closest to the poll"}</small><b>${esc(cool.v.name)}</b><span>${esc(cool.v.org)} · ${f1(cool.score)} spots off per team</span></div>${third}`;
   }
 
   function setURL() {
@@ -326,9 +326,9 @@
       const v = D.voters.find((x) => x.slug === sh.dataset.share);
       const r = rows().find((x) => x.v.slug === v.slug);
       const url = `${location.origin}/ap-voters/?v=${encodeURIComponent(v.slug)}${view === W.length - 1 ? "" : "&w=" + (view === "season" ? "season" : W[view].key)}`;
-      const text = `${v.name}'s AP ballot: ${BANDS[r.band][0]} (${f1(r.score)} spots off per team). Where does your team's voter land?`;
+      const text = `🗳️ ${v.name}'s AP ballot: ${BANDS[r.band][0]} (${f1(r.score)} spots off per team). Where does your team's voter land?`;
       if (navigator.share) { try { await navigator.share({ title: "AP Voter Tracker", text, url }); return; } catch (err) { if (err && err.name === "AbortError") return; } }
-      toast((await copyText(`${text} ${url}`)) ? "Link copied." : "Couldn't copy the link.");
+      toast((await copyText(`${text} ${url}`)) ? "🔗 Link copied." : "Couldn't copy the link.");
       return;
     }
     const b = e.target.closest(".v-row");
@@ -352,11 +352,11 @@
     view = wq === "season" ? "season" : wi >= 0 ? wi : W.length - 1;
     $("week").innerHTML = W.map((w, i) => `<option value="${i}">${w.label} · ${fmtDate(w.date)}${i === W.length - 1 ? " (latest)" : ""}</option>`).reverse().join("") + `<option value="season">Whole season so far</option>`;
     $("week").value = String(view);
-    $("kick").textContent = `AP Top 25 · ${D.season} season · updated ${fmtDate(W[W.length - 1].date)}`;
+    $("kick").textContent = `📊 AP Top 25 · ${D.season} season · updated ${fmtDate(W[W.length - 1].date)}`;
     $("lede").textContent = `The AP poll is ${W[W.length - 1].n} sportswriters and broadcasters, and every ballot is public. We line each one up against the poll and measure how far apart they are, from Normal to Hot takes.`;
     render();
     if (openSlug && $("v-" + openSlug)) $("v-" + openSlug).scrollIntoView({ block: "start" });
-  }).catch(() => { $("list").innerHTML = `<li class="empty" style="padding:18px">Couldn't load the ballots. Try again in a minute.</li>`; });
+  }).catch(() => { $("list").innerHTML = `<li class="empty" style="padding:18px">😬 Couldn't load the ballots. Try again in a minute.</li>`; });
 })();
 </script>
 </body>

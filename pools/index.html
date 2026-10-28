@@ -73,8 +73,8 @@
 <main class="page">
   <div class="head">
     <div>
-      <div class="kicker" id="kick">Play your friends</div>
-      <h1 class="disp" id="title">Pick'em Pools</h1>
+      <div class="kicker" id="kick"><span class="em" aria-hidden="true">🤝</span> Play your friends</div>
+      <h1 class="disp" id="title"><span class="em" aria-hidden="true">👥</span> Pick'em Pools</h1>
       <p id="lede">A private pool for you and your friends. Everyone's normal pick'em picks count, ranked by week and for the whole season.</p>
     </div>
   </div>
@@ -104,9 +104,9 @@
     <a class="btn gold" href="/signin/?next=${encodeURIComponent(next)}">Sign in or create account</a>`);
 
   async function invite(code, name) {
-    const url = inviteUrl(code), text = `Join my pick'em pool "${name}" on Last Four In. Code ${code}.`;
+    const url = inviteUrl(code), text = `👥 Join my pick'em pool "${name}" on Last Four In. Code ${code}.`;
     if (navigator.share) { try { await navigator.share({ title: "Join my pick'em pool", text, url }); return; } catch (e) { if (e.name === "AbortError") return; } }
-    toast((await copyText(url)) ? "Invite link copied. Paste it to your friends." : "Couldn't copy the link");
+    toast((await copyText(url)) ? "🔗 Invite link copied. Paste it to your friends." : "Couldn't copy the link");
   }
 
   // ---- Invite link: /pools/?join=CODE ----
@@ -114,13 +114,13 @@
     const p = await cloud.poolPeek(code).catch(() => null);
     if (!p) return msg(`<p style="margin:0 0 8px;font-weight:700">That invite link doesn't match a pool.</p><p class="empty" style="margin-top:0">Ask your friend to send it again, or <a class="lnk" href="/pools/">start your own pool</a>.</p>`);
     if (p.is_member) return location.replace(`/pools/?id=${p.id}`);
-    $("kick").textContent = "You're invited";
+    $("kick").textContent = "🎉 You're invited";
     $("title").textContent = p.name;
     $("lede").textContent = `${LEAGUE[p.league].name} pool, ${p.season} season. ${p.members} ${p.members === 1 ? "player" : "players"} so far${p.owner ? `, started by ${p.owner.display_name || "@" + p.owner.username}` : ""}.`;
     if (!cloud.user || !cloud.profile || !cloud.profile.onboarded) return signInBox("Sign in to join this pool.", `/pools/?join=${p.code}`);
     msg(`<p style="margin:0 0 12px;font-weight:700">Join ${esc(p.name)}?</p>
       <p class="empty" style="margin-top:0">Your ${LEAGUE[p.league].name} picks count here automatically. Others see your picks only once each game kicks off.</p>
-      <button class="btn gold" type="button" id="joinBtn">Join the pool</button>`);
+      <button class="btn gold" type="button" id="joinBtn"><span class="em" aria-hidden="true">🤝</span> Join the pool</button>`);
     $("joinBtn").onclick = async (e) => {
       e.target.disabled = true;
       try { const id = await cloud.poolJoin(p.code); location.replace(`/pools/?id=${id}&joined=1`); }
@@ -135,17 +135,17 @@
         <div class="who-b"><a href="/pools/?id=${p.id}">${esc(p.name)}</a><span>${LEAGUE[p.league].name} · ${p.members} ${p.members === 1 ? "player" : "players"}</span></div>
         <div style="text-align:right"><b class="disp" style="font-size:22px">${p.rank ? ord(p.rank) : "–"}</b><div class="lg-tag">${p.correct}-${p.wrong}</div></div></div>`;
     $("body").innerHTML = `<div class="grid2">
-      <div class="stack"><section class="card"><div class="card-h"><h2 class="disp">Your pools</h2>${pools.length ? `<span class="chip">${pools.length}</span>` : ""}</div>
-        <div class="card-b">${pools.length ? pools.map(row).join("") : `<p class="empty" style="margin:0">You're not in a pool yet. Start one and send the link, or join a friend's with their code.</p>`}</div></section></div>
+      <div class="stack"><section class="card"><div class="card-h"><h2 class="disp"><span class="em" aria-hidden="true">👥</span> Your pools</h2>${pools.length ? `<span class="chip">${pools.length}</span>` : ""}</div>
+        <div class="card-b">${pools.length ? pools.map(row).join("") : `<p class="empty" style="margin:0">👥 You're not in a pool yet. Start one and send the link, or join a friend's with their code.</p>`}</div></section></div>
       <aside class="side stack">
-        <section class="card"><div class="card-h"><h2 class="disp">Start a pool</h2></div><div class="card-b">
+        <section class="card"><div class="card-h"><h2 class="disp"><span class="em" aria-hidden="true">➕</span> Start a pool</h2></div><div class="card-b">
           <form class="pool-form col" id="newF" autocomplete="off">
             <div class="weekbar"><select name="lg" aria-label="Which pick'em">${Object.entries(LEAGUE).map(([k, l]) => `<option value="${k}">${esc(l.name)}</option>`).join("")}</select></div>
             <input name="name" maxlength="40" placeholder="Pool name, e.g. The Office" aria-label="Pool name" required>
-            <button class="btn gold block" type="submit">Start the pool</button></form></div></section>
-        <section class="card"><div class="card-h"><h2 class="disp">Join a pool</h2></div><div class="card-b">
+            <button class="btn gold block" type="submit"><span class="em" aria-hidden="true">➕</span> Start the pool</button></form></div></section>
+        <section class="card"><div class="card-h"><h2 class="disp"><span class="em" aria-hidden="true">🤝</span> Join a pool</h2></div><div class="card-b">
           <form class="pool-form" id="joinF" autocomplete="off"><input name="code" maxlength="8" placeholder="6-letter code" aria-label="Pool code" autocapitalize="characters" spellcheck="false" required>
-            <button class="btn gold" type="submit">Join</button></form></div></section>
+            <button class="btn gold" type="submit"><span class="em" aria-hidden="true">🤝</span> Join</button></form></div></section>
       </aside></div>`;
     $("newF").onsubmit = async (e) => {
       e.preventDefault(); const btn = e.target.querySelector("[type=submit]"); btn.disabled = true;
@@ -177,11 +177,11 @@
   }
 
   function pickRows() {
-    if (!data.games.length) return `<p class="empty" style="padding:0 18px 16px;margin:0">No games on the board for this week yet.</p>`;
+    if (!data.games.length) return `<p class="empty" style="padding:0 18px 16px;margin:0">📅 No games on the board for this week yet.</p>`;
     const names = Object.fromEntries(data.members.map((m) => [m.user_id, m]));
     return data.games.map((g) => {
       const final = g.status === "post", when = new Date(g.kickoff);
-      const meta = g.status === "in" ? `● ${esc(g.detail || "Live")}` : final ? esc(g.detail || "Final")
+      const meta = g.status === "in" ? `🔴 ${esc(g.detail || "Live")}` : final ? esc(g.detail || "Final")
         : `${when.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · ${when.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
       const side = (ha) => {
         const t = g[ha], who = Object.entries(g.picks).filter(([, p]) => p === ha).map(([u]) => names[u]).filter(Boolean);
@@ -194,32 +194,32 @@
       };
       return `<div class="pg"><div class="pg-meta"><span>${meta}</span><span>${g.locked ? "" : "🔒 Picks show at kickoff"}</span></div>
         <div class="pg-sides">${side("away")}${side("home")}</div>
-        ${g.locked ? "" : `<div class="pg-hidden">${g.picked} of ${data.members.length} picked so far.</div>`}</div>`;
+        ${g.locked ? "" : `<div class="pg-hidden">🎯 ${g.picked} of ${data.members.length} picked so far.</div>`}</div>`;
     }).join("");
   }
 
   function draw() {
     const P = data.pool, L = LEAGUE[P.league], wk = data.week;
-    $("kick").textContent = `${L.name} pool · ${P.season} season`;
+    $("kick").textContent = `👥 ${L.name} pool · ${P.season} season`;
     $("title").textContent = P.name;
     $("lede").innerHTML = `${data.members.length} ${data.members.length === 1 ? "player" : "players"}. Everyone's normal ${esc(L.name)} picks count here. You see each other's picks once a game kicks off. <a class="lnk" href="${L.url}">Make your picks</a>`;
     const weekOpts = data.weeks.map((w) => `<option value="${w.season_type}-${w.period}"${wk && w.season_type === wk.season_type && w.period === wk.period ? " selected" : ""}>${esc(w.label)}</option>`).join("");
     const others = data.members.filter((m) => !m.is_me);
-    const inviteCard = `<section class="card inv-card${qs.has("new") ? " invite-new" : ""}"><div class="card-h"><h2 class="disp">Invite friends</h2></div><div class="card-b">
+    const inviteCard = `<section class="card inv-card${qs.has("new") ? " invite-new" : ""}"><div class="card-h"><h2 class="disp"><span class="em" aria-hidden="true">🤝</span> Invite friends</h2></div><div class="card-b">
           <p class="empty" style="margin:0">Pool code</p><div class="code-big">${esc(P.code)}</div>
-          <div class="inv-acts"><button class="btn gold" type="button" data-invite>Send invite</button><button class="btn" type="button" data-copy>Copy link</button></div>
+          <div class="inv-acts"><button class="btn gold" type="button" data-invite><span class="em" aria-hidden="true">📣</span> Send invite</button><button class="btn" type="button" data-copy><span class="em" aria-hidden="true">🔗</span> Copy link</button></div>
           <p class="hint-s">Friends sign in free, tap the link and they're in. Their picks count from the start of the season.</p></div></section>`;
     $("body").innerHTML = `<div class="grid2">
       <div class="stack">
         <section class="card">
-          <div class="card-h"><h2 class="disp">Standings</h2><span class="chip">${data.members.length} ${data.members.length === 1 ? "player" : "players"}</span></div>
+          <div class="card-h"><h2 class="disp"><span class="em" aria-hidden="true">📊</span> Standings</h2><span class="chip">${data.members.length} ${data.members.length === 1 ? "player" : "players"}</span></div>
           <div class="board-h"><div class="seg" role="group" aria-label="Standings for"><button type="button" data-view="season" aria-pressed="${view === "season"}">Season</button><button type="button" data-view="week" aria-pressed="${view === "week"}">${esc(wk ? wk.label : "This week")}</button></div></div>
           <ol class="board">${standings()}</ol>
-          ${data.members.length < 2 ? `<p class="empty" style="margin:0;padding:0 18px 16px">Just you so far. Send the invite link and this turns into a race.</p>` : ""}
+          ${data.members.length < 2 ? `<p class="empty" style="margin:0;padding:0 18px 16px">📣 Just you so far. Send the invite link and this turns into a race.</p>` : ""}
         </section>
         <div class="inv-top">${inviteCard}</div>
         <section class="card">
-          <div class="card-h"><h2 class="disp">Everyone's picks</h2>${weekOpts ? `<select class="weeksel" id="weekSel" aria-label="Week">${weekOpts}</select>` : ""}</div>
+          <div class="card-h"><h2 class="disp"><span class="em" aria-hidden="true">🎯</span> Everyone's picks</h2>${weekOpts ? `<select class="weeksel" id="weekSel" aria-label="Week">${weekOpts}</select>` : ""}</div>
           ${pickRows()}
         </section>
       </div>
@@ -234,7 +234,7 @@
           </div>
           ${P.is_owner ? `<p class="hint-s">If you leave, the longest-standing player takes over the pool.</p>` : ""}
         </div></section>
-        <a class="btn gold block" href="/pools/">All my pools</a>
+        <a class="btn gold block" href="/pools/"><span class="em" aria-hidden="true">👥</span> All my pools</a>
       </aside></div>`;
   }
 
@@ -243,8 +243,8 @@
     catch (e) { return msg(`<p style="margin:0 0 8px;font-weight:700">${esc(e.message)}</p><p class="empty" style="margin-top:0"><a class="lnk" href="/pools/">See your pools</a></p>`); }
     if (!data.week || !data.weeks.length) view = "season";
     draw();
-    if (qs.has("new")) toast("Pool started. Send the invite to your friends.");
-    else if (qs.has("joined")) toast(`You're in ${data.pool.name}.`);
+    if (qs.has("new")) toast("🎉 Pool started. Send the invite to your friends.");
+    else if (qs.has("joined")) toast(`🎉 You're in ${data.pool.name}.`);
     qs.delete("new"); qs.delete("joined");
     history.replaceState(null, "", "?" + qs.toString());
   }
@@ -255,7 +255,7 @@
     const v = t.closest("[data-view]");
     if (v) { view = v.dataset.view; return draw(); }
     if (t.closest("[data-invite]")) return invite(P.code, P.name);
-    if (t.closest("[data-copy]")) return toast((await copyText(inviteUrl(P.code))) ? "Invite link copied" : "Couldn't copy the link");
+    if (t.closest("[data-copy]")) return toast((await copyText(inviteUrl(P.code))) ? "🔗 Invite link copied" : "Couldn't copy the link");
     try {
       if (t.closest("#leaveBtn")) {
         if (!confirm(`Leave ${P.name}?${data.members.length === 1 ? " You're the last player, so the pool will be deleted." : " You can rejoin with the code any time."}`)) return;
@@ -281,7 +281,7 @@
   $("body").addEventListener("submit", async (e) => {
     if (e.target.id !== "renameF") return;
     e.preventDefault();
-    try { await cloud.poolRename(data.pool.id, e.target.name.value); toast("Renamed"); poolView(data.pool.id, data.week && data.week.season_type, data.week && data.week.period); }
+    try { await cloud.poolRename(data.pool.id, e.target.name.value); toast("✅ Renamed"); poolView(data.pool.id, data.week && data.week.season_type, data.week && data.week.period); }
     catch (err) { toast(err.message); }
   });
 

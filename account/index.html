@@ -27,7 +27,7 @@
   <div class="head">
     <div>
       <div class="kicker" id="kick">Your account</div>
-      <h1 class="disp">My picks</h1>
+      <h1 class="disp">My picks <span class="em" aria-hidden="true">📋</span></h1>
       <p id="lede">Everything you've submitted, with results as games finish.</p>
     </div>
   </div>
@@ -65,9 +65,9 @@
           <span class="empty" style="padding:4px 0;margin-right:auto">Saved ${new Date(e.saved).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
           <a class="btn" href="${esc(e.url || "/")}">Open</a>
           ${me ? `<button class="btn" type="button" data-post>${e.posted ? "Take down" : "Post"}</button>` : ""}
-          <button class="btn gold" type="button" data-share>Share</button>
+          <button class="btn gold" type="button" data-share><span class="em" aria-hidden="true">📣</span> Share</button>
         </div></div>`).join("")
-      : `<section class="card"><div class="card-b"><p style="margin:0 0 12px;font-weight:600">Nothing here yet.</p><p class="empty" style="margin-top:0">Submit picks, a bracket or an AP poll and it lands here.</p><a class="btn gold" href="/">Find something to play</a></div></section>`;
+      : `<section class="card"><div class="card-b"><p style="margin:0 0 12px;font-weight:600">Nothing here yet. <span class="em" aria-hidden="true">👀</span></p><p class="empty" style="margin-top:0">Submit picks, a bracket or an AP poll and it lands here.</p><a class="btn gold" href="/">Find something to play</a></div></section>`;
   }
 
   // Right column: signed in (profile + account), signed out (sign-in pitch + local name), or sign-in not live yet.
@@ -75,7 +75,7 @@
     if (me) {
       const av = me.avatar_url ? `<img src="${esc(me.avatar_url)}" alt="" referrerpolicy="no-referrer">` : esc((me.display_name || me.username)[0].toUpperCase());
       $("side").innerHTML = `<section class="card" id="profile">
-          <div class="card-h"><h2 class="disp">Your profile</h2><a href="/u/?h=${encodeURIComponent(me.username)}">View →</a></div>
+          <div class="card-h"><h2 class="disp">Your profile <span class="em" aria-hidden="true">👤</span></h2><a href="/u/?h=${encodeURIComponent(me.username)}">View →</a></div>
           <div class="card-b">
             <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px"><span class="avatar" style="width:52px;height:52px;font-size:22px">${av}</span>
               <div style="min-width:0"><b>${esc(me.display_name || me.username)}</b><div class="empty" style="padding:0">@${esc(me.username)}</div></div></div>
@@ -97,11 +97,11 @@
         const username = $("ph").value.trim(), btn = ev.target.querySelector("button");
         if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) { $("perr").textContent = "Handles are 3 to 20 letters, numbers or underscores."; return; }
         btn.disabled = true; $("perr").textContent = "";
-        try { await cloud.updateProfile({ username, display_name: $("pn").value.trim() || null, bio: $("pb").value.trim() || null }); toast("Profile saved"); }
+        try { await cloud.updateProfile({ username, display_name: $("pn").value.trim() || null, bio: $("pb").value.trim() || null }); toast("✅ Profile saved"); }
         catch (e) { $("perr").textContent = e.message; }
         btn.disabled = false;
       };
-      $("so").onclick = async () => { await cloud.signOut(); toast("Signed out"); };
+      $("so").onclick = async () => { await cloud.signOut(); toast("👋 Signed out"); };
       $("del").onclick = async () => {
         if (prompt("This deletes your account, every pick, post and comment. It can't be undone.\n\nType DELETE to confirm.") !== "DELETE") return;
         try { await cloud.deleteAccount(); toast("Account deleted"); } catch (e) { toast(e.message); }
@@ -113,19 +113,19 @@
           <div class="card-h"><h2 class="disp">Sign in</h2><span class="chip ok">Free</span></div>
           <div class="card-b">
             <p class="empty" style="margin-top:0;color:var(--ink-2)">Right now your picks are saved on this phone or computer only. Sign in to keep them on every device, post them to your profile and get on the leaderboards.</p>
-            <a class="btn gold block" href="/signin/?next=/account/" style="min-height:48px">Sign in or create account</a>
+            <a class="btn gold block" href="/signin/?next=/account/" style="min-height:48px"><span class="em" aria-hidden="true">🔑</span> Sign in or create account</a>
           </div></section>` : `<section class="card">
           <div class="card-h"><h2 class="disp">Sign in</h2><span class="chip">Coming soon</span></div>
           <div class="card-b"><p class="empty" style="margin-top:0;color:var(--ink-2)">Right now your picks are saved on this phone or computer only. Free sign-in is coming next: it keeps your picks on every device and puts you on the weekly and season leaderboards.</p></div></section>`}
       <section class="card">
-        <div class="card-h"><h2 class="disp">Your name</h2></div>
+        <div class="card-h"><h2 class="disp">Your name <span class="em" aria-hidden="true">✍️</span></h2></div>
         <div class="card-b">
           <p class="empty" style="margin-top:0">Shown on links you share, so friends know who challenged them.</p>
           <form class="field-row" id="nameForm"><input id="name" maxlength="24" placeholder="e.g. Sam" autocomplete="nickname" aria-label="Your name"><button class="btn navy" type="submit">Save</button></form>
         </div>
       </section>`;
     $("name").value = local.get("lfi-name", "");
-    $("nameForm").addEventListener("submit", (e) => { e.preventDefault(); local.set("lfi-name", $("name").value.trim()); toast("Saved"); LFI.setMe(LFI.me()); });
+    $("nameForm").addEventListener("submit", (e) => { e.preventDefault(); local.set("lfi-name", $("name").value.trim()); toast("✅ Saved"); LFI.setMe(LFI.me()); });
   }
 
   $("list").addEventListener("click", async (e) => {

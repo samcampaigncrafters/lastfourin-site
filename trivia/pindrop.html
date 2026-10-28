@@ -46,7 +46,7 @@
   <div class="head">
     <div>
       <div class="kicker" id="kicker">Free daily game</div>
-      <h1 class="disp">Pin Drop</h1>
+      <h1 class="disp">Pin Drop <span class="em" aria-hidden="true">📍</span></h1>
       <p>Five football places a day: a stadium, a college town, a Super Bowl, where a star played college ball, where a star was born. Drop a pin. The closer you land, the more you score.</p>
     </div>
     <div class="headr">
@@ -60,11 +60,11 @@
 
     <aside class="side">
       <section class="card">
-        <div class="card-h"><h2 class="disp">Your streak</h2><span class="chip" id="streakChip"></span></div>
+        <div class="card-h"><h2 class="disp">Your streak <span class="em" aria-hidden="true">🔥</span></h2><span class="chip" id="streakChip"></span></div>
         <div class="card-b"><div class="stats4" id="stats"></div></div>
       </section>
       <section class="card">
-        <div class="card-h"><h2 class="disp">How it works</h2></div>
+        <div class="card-h"><h2 class="disp">How it works <span class="em" aria-hidden="true">💡</span></h2></div>
         <div class="card-b">
           <ol class="steps">
             <li>A new set of five drops every night at midnight Eastern, the same for everyone.</li>
@@ -76,7 +76,7 @@
         </div>
       </section>
       <section class="card">
-        <div class="card-h"><h2 class="disp">Other days</h2></div>
+        <div class="card-h"><h2 class="disp">Other days <span class="em" aria-hidden="true">📅</span></h2></div>
         <div class="card-b"><ul class="days-list" id="daysList"></ul></div>
       </section>
       <p class="credit" id="credit"></p>
@@ -217,10 +217,10 @@
     $("game").innerHTML = `
       <div class="intro">
         <div class="kicker">${esc(pretty(date, { weekday: "long", month: "long", day: "numeric" }))} · Set #${setNo}</div>
-        <h2 class="disp big">${started ? "Pick up where you left off" : "Today's five places"}</h2>
+        <h2 class="disp big">${started ? "Pick up where you left off" : "Today's five places"} <span class="em" aria-hidden="true">🗺️</span></h2>
         <p>${started ? `You're ${d.g.length} of 5 in. Pins you've locked stay locked.` : "An NFL stadium, a college stadium, a Super Bowl, where a star played college ball and where a star was born. Up to 1,000 points each."}</p>
         <div class="rules"><span class="chip easy">1 Easy</span><span class="chip medium">2 Medium</span><span class="chip hard">2 Hard</span></div>
-        <button class="btn gold" id="start" style="font-size:17px;padding:13px 30px">${started ? "Keep going" : "Start"}</button>
+        <button class="btn gold" id="start" style="font-size:17px;padding:13px 30px">${started ? "Keep going" : "Start"} <span class="em" aria-hidden="true">🚀</span></button>
       </div>`;
     $("start").onclick = () => { view = "q"; render(); };
     $("start").focus({ preventScroll: true });
@@ -242,9 +242,9 @@
         ${g ? `
         <div class="reveal ${g.m <= 100 ? "ok" : g.m > 700 ? "no" : ""}">
           <div><b>${EMOJI[tier(g.m)]} ${fmt(g.m)} miles off · +${fmt(g.p)}</b><p>${esc(q.a)}</p></div>
-          <button class="btn navy" id="next">${last ? "See your score" : "Next place"}</button>
+          <button class="btn navy" id="next">${last ? "See your score" : "Next place"} <span class="em" aria-hidden="true">${last ? "🏆" : "👉"}</span></button>
         </div>` : `
-        <div class="lockrow"><button class="btn gold" id="lock" disabled>Lock it in</button><span class="maphint" id="hint" style="margin:0">Tap the map to drop your pin.</span></div>`}
+        <div class="lockrow"><button class="btn gold" id="lock" disabled>Lock it in <span class="em" aria-hidden="true">🔒</span></button><span class="maphint" id="hint" style="margin:0">📍 Tap the map to drop your pin.</span></div>`}
       </div>`;
     ready.then(() => drawMap(i, !!g));
     $("zin").onclick = () => { zoom = Math.min(4, zoom * 2); if (pin) center = proj([pin[1], pin[0]]); drawMap(i, !!g); };
@@ -256,12 +256,12 @@
       pt.x = e.clientX; pt.y = e.clientY;
       const xy = pt.matrixTransform(svg.getScreenCTM().inverse());
       const ll = proj.invert([xy.x, xy.y]);
-      if (!ll) { toast("Drop it on the map: the US, Alaska or Hawaii."); return; }
+      if (!ll) { toast("🗺️ Drop it on the map: the US, Alaska or Hawaii."); return; }
       pin = [ll[1], ll[0]];
       if (zoom === 1) center = [xy.x, xy.y];
       drawMap(i, false);
       $("lock").disabled = false;
-      $("hint").textContent = "Tap again to move it, or zoom in to fine-tune.";
+      $("hint").textContent = "👆 Tap again to move it, or zoom in to fine-tune.";
     });
   }
 
@@ -296,7 +296,7 @@
   const gridOf = (d) => d.g.map((g) => EMOJI[tier(g.m)]).join("");
   function shareText() {
     const d = mine(), s = streaks();
-    return `Last Four In · Pin Drop #${setNo}\n${gridOf(d)} ${fmt(total(d))}/5,000${s.cur > 1 ? `\n🔥 ${s.cur}-day streak` : ""}`;
+    return `📍 Last Four In · Pin Drop #${setNo}\n${gridOf(d)} ${fmt(total(d))}/5,000${s.cur > 1 ? `\n🔥 ${s.cur}-day streak` : ""}`;
   }
 
   function countdown() {
@@ -310,6 +310,7 @@
   function renderDone() {
     const d = mine(), sc = total(d);
     const words = sc >= 4500 ? "Human GPS." : sc >= 3500 ? "Great day." : sc >= 2500 ? "Solid day." : sc >= 1500 ? "On the board." : "Road trip time.";
+    const wordEm = sc >= 4500 ? "🧭" : sc >= 3500 ? "🎉" : sc >= 2500 ? "👍" : sc >= 1500 ? "💪" : "🚗";
     const recap = qs.map((q, i) => {
       const g = d.g[i];
       return `<li><span class="m pt ${g.m <= 100 ? "ok" : g.m > 700 ? "no" : ""}">${fmt(g.p)}</span><div>${esc(q.q)}<div class="a">${esc(q.a)} · you were ${fmt(g.m)} miles off</div></div></li>`;
@@ -318,13 +319,13 @@
       <div class="intro" style="padding-bottom:12px">
         <div class="kicker">Set #${setNo} · ${esc(pretty(date))}</div>
         <div class="disp done-score num">${fmt(sc)}</div>
-        <h2 class="disp" style="font-size:28px;margin:0">${words}</h2>
+        <h2 class="disp" style="font-size:28px;margin:0">${words} <span class="em" aria-hidden="true">${wordEm}</span></h2>
         <div class="grid5" aria-label="Your results">${gridOf(d)}</div>
         <div class="btns">
-          <button class="btn gold" id="share">Share score</button>
-          <a class="btn" href="./">Play Daily Five</a>
+          <button class="btn gold" id="share">Share score <span class="em" aria-hidden="true">📣</span></button>
+          <a class="btn" href="./">Play Daily Five <span class="em" aria-hidden="true">🧠</span></a>
         </div>
-        ${date === today ? `<p style="margin:16px auto 0;font-size:14px;color:var(--muted)">Next set in <b class="num" id="cd"></b></p>` : ""}
+        ${date === today ? `<p style="margin:16px auto 0;font-size:14px;color:var(--muted)"><span class="em" aria-hidden="true">⏱️</span> Next set in <b class="num" id="cd"></b></p>` : ""}
       </div>
       <div class="card-b" style="padding-top:0"><ul class="recap">${recap}</ul></div>`;
     $("share").onclick = share;
@@ -338,7 +339,7 @@
       data: { score: `${fmt(total(d))} pts`, grid: gridOf(d) },
       shareText: shareText(),
     });
-    LFI.share(entry, { kicker: "Your score is in", note: "Send it to your friends. The link shows your score, not the answers." });
+    LFI.share(entry, { kicker: "🎉 Your score is in", note: "Send it to your friends. The link shows your score, not the answers." });
   }
 
   let toastT;
@@ -347,7 +348,7 @@
   // ---- sidebar ----
   function renderSide() {
     const s = streaks();
-    $("streakChip").textContent = s.cur ? `🔥 ${s.cur} day${s.cur > 1 ? "s" : ""}` : "Start today";
+    $("streakChip").textContent = s.cur ? `🔥 ${s.cur} day${s.cur > 1 ? "s" : ""}` : "✨ Start today";
     $("stats").innerHTML = [[s.played, "Played"], [s.cur, "Streak"], [s.best, "Best"], [fmt(s.top), "Top score"]]
       .map(([n, l]) => `<div><b class="num">${n}</b><span>${l}</span></div>`).join("");
     $("daysList").innerHTML = allDays.slice().reverse().map((k) => {
@@ -364,7 +365,7 @@
     else if (view === "reveal" && document.activeElement?.id !== "next") next();
   });
 
-  $("kicker").textContent = date === today ? "Free daily game" : `Past set · ${pretty(date)}`;
+  $("kicker").textContent = date === today ? "🎮 Free daily game" : `📅 Past set · ${pretty(date)}`;
   $("credit").textContent = P.credit + " Map: US Census via us-atlas.";
   if (mine().g.length && !isDone(mine())) view = "intro";
   render();

@@ -99,12 +99,12 @@
 <main class="page">
   <div class="head">
     <div>
-      <div class="kicker">NFL draft classes since 1999</div>
-      <h1 class="disp">Draft Classes</h1>
+      <div class="kicker"><span class="em" aria-hidden="true">🏈</span> NFL draft classes since 1999</div>
+      <h1 class="disp">Draft Classes <span class="em" aria-hidden="true">🎓</span></h1>
       <p>Every quarterback, running back, receiver and tight end drafted since 1999, judged by the fantasy points their careers actually scored. Mock a class with what you know now, or see how it should have gone.</p>
       <nav class="modes" aria-label="Mode">
-        <button type="button" data-tab="mock" aria-pressed="true">Mock it</button>
-        <button type="button" data-tab="hind" aria-pressed="false">Hindsight redraft</button>
+        <button type="button" data-tab="mock" aria-pressed="true">Mock it <span class="em" aria-hidden="true">📋</span></button>
+        <button type="button" data-tab="hind" aria-pressed="false">Hindsight redraft <span class="em" aria-hidden="true">🔮</span></button>
       </nav>
     </div>
   </div>
@@ -128,7 +128,7 @@
           <p style="margin:0 0 12px;color:var(--ink-2)" id="mockP"></p>
           <div class="bd-tools">
             <input class="search" id="q" type="search" autocomplete="off" placeholder="Search the class" aria-label="Search the class">
-            <label class="hint-t"><input type="checkbox" id="hint"> Show where they went</label>
+            <label class="hint-t"><input type="checkbox" id="hint"> <span class="em" aria-hidden="true">💡</span> Show where they went</label>
           </div>
           <div class="pos-f" id="posF"></div>
           <ul class="board" id="board"></ul>
@@ -136,7 +136,7 @@
       </section>
       <div class="mine-col">
         <div class="lu"><div class="lu-h"><b>Your board</b><span id="mineN">0/10</span></div><ol id="mine"></ol>
-          <div class="lu-f"><button class="btn gold big" type="button" id="lockBtn" disabled>Lock it in</button></div></div>
+          <div class="lu-f"><button class="btn gold big" type="button" id="lockBtn" disabled>Lock it in <span class="em" aria-hidden="true">🔒</span></button></div></div>
       </div>
     </div>
   </section>
@@ -146,9 +146,9 @@
     <div class="res-banner"><div class="kicker" style="color:#fff;opacity:.85" id="resKick"></div><div class="disp" id="resH"></div><p id="resP"></p></div>
     <div class="res-grid" id="resTeams"></div>
     <div class="res-acts">
-      <button class="btn gold big" type="button" id="shareBtn">Share it</button>
-      <button class="btn" type="button" id="againBtn">Mock it again</button>
-      <button class="btn" type="button" id="seeBtn">See the hindsight redraft</button>
+      <button class="btn gold big" type="button" id="shareBtn">Share it <span class="em" aria-hidden="true">📣</span></button>
+      <button class="btn" type="button" id="againBtn">Mock it again <span class="em" aria-hidden="true">🔁</span></button>
+      <button class="btn" type="button" id="seeBtn">See the hindsight redraft <span class="em" aria-hidden="true">🔮</span></button>
     </div>
   </section>
 
@@ -173,6 +173,7 @@
 <script>
 (function () {
   const { $, esc, entries } = LFI;
+  const em = (e) => `<span class="em" aria-hidden="true">${e}</span>`;
   const qs = new URLSearchParams(location.search);
   const N = 10;
   const POSN = ["QB", "RB", "WR", "TE"];
@@ -197,7 +198,7 @@
 
   // ---------- mock ----------
   function drawMock() {
-    $("mockH").textContent = `The ${S.y} class`;
+    $("mockH").innerHTML = `The ${esc(S.y)} class ${em("🎓")}`;
     $("mockChip").textContent = `${CLASS.length} players`;
     $("mockP").innerHTML = `Pick the ${N} players from the ${esc(S.y)} draft who went on to score the most fantasy points. Then see if you beat the teams who actually drafted them.`;
     $("posF").innerHTML = ["", ...POSN].map((p) => `<button type="button" data-p="${p}" aria-pressed="${S.pos === p}">${p || "All"}</button>`).join("");
@@ -234,7 +235,7 @@
     const a = sum(me), b = sum(real), c = sum(best);
     const win = a > b;
     $("resKick").textContent = `${S.y} draft · ${SC_LABEL[S.sc]}`;
-    $("resH").textContent = win ? "You beat the real draft" : a === b ? "Dead even" : "The real draft wins";
+    $("resH").innerHTML = win ? `You beat the real draft ${em("🎉")}` : a === b ? `Dead even ${em("🤝")}` : `The real draft wins ${em("😬")}`;
     $("resP").textContent = `Your ${N}: ${fmt(a)} points. The first ${N} taken: ${fmt(b)}. Perfect hindsight: ${fmt(c)}, so you got ${Math.round((a / c) * 100)}% of the way there.`;
     const card = (title, list, sub) => `<div class="lu"><div class="lu-h"><b>${title}</b><span>${fmt(sum(list))}</span></div><ol>${list.map((p, i) =>
       `<li><span class="slot">${i + 1}</span><span class="nm">${esc(p[0])}<small>${p[1]} · ${sub(p)}</small></span><span class="pts">${fmt(pts(p))}</span></li>`).join("")}</ol></div>`;
@@ -244,7 +245,7 @@
       id: `draft-class-${S.y}-${Date.now()}`, kind: "draft", title: `Mock: ${S.y} draft class`, sub: SC_LABEL[S.sc],
       result: win ? `Beat the real draft by ${fmt(a - b)}` : `Real draft won by ${fmt(b - a)}`,
       data: { me: me.map(row), op: real.map(row), mn: "You", on: "The real draft", mt: Math.round(a * 10) / 10, ot: Math.round(b * 10) / 10, q: `?class=${S.y}&s=${S.sc}` },
-      shareText: `I mocked the ${S.y} NFL draft on Last Four In with hindsight: ${fmt(a)} fantasy points to the real draft's ${fmt(b)}. Can you do better?`,
+      shareText: `🎓 I mocked the ${S.y} NFL draft on Last Four In with hindsight: ${fmt(a)} fantasy points to the real draft's ${fmt(b)}. Can you do better?`,
     });
     tab("mock");
     scrollTo({ top: 0, behavior: "smooth" });
@@ -266,7 +267,7 @@
     $("calls").innerHTML = call("Should have gone first", top[0], `${top[0][1]} · went #${top[0][4]} to the ${esc(team(top[0][5]))} · ${fmt(pts(top[0]))} pts`)
       + call("Biggest steal", steal, steal && `Went #${steal[4]} in round ${steal[3]}, redrafts ${ord(steal.re)}`)
       + call("Biggest miss", miss, miss && `Went #${miss[4]} to the ${esc(team(miss[5]))}, redrafts ${ord(miss.re)} · ${fmt(pts(miss))} pts`);
-    $("hindH").textContent = `${S.y} redrafted`;
+    $("hindH").innerHTML = `${esc(S.y)} redrafted ${em("🔮")}`;
     $("hindChip").textContent = SC_LABEL[S.sc];
     $("posH").innerHTML = ["", ...POSN].map((p) => `<button type="button" data-p="${p}" aria-pressed="${S.posH === p}">${p || "All"}</button>`).join("");
     const list = top.filter((p) => !S.posH || p[1] === S.posH);

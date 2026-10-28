@@ -85,8 +85,8 @@
 <main class="page">
   <div class="head">
     <div>
-      <div class="kicker">Live multiplayer</div>
-      <h1 class="disp">Name Them All Race</h1>
+      <div class="kicker"><span class="em" aria-hidden="true">👥</span> Live multiplayer</div>
+      <h1 class="disp">Name Them All Race <span class="em" aria-hidden="true">🏁</span></h1>
       <p>One list, one clock, up to 8 players. The first person to type a name claims it for good, and nobody else can score it. Most names wins.</p>
     </div>
     <div class="headr">
@@ -98,7 +98,7 @@
     <section class="card"><div class="card-b" id="view"><p class="note">Loading…</p></div></section>
     <aside class="side">
       <section class="card">
-        <div class="card-h"><h2 class="disp">How it works</h2></div>
+        <div class="card-h"><h2 class="disp">How it works <span class="em" aria-hidden="true">💡</span></h2></div>
         <div class="card-b">
           <ol class="steps">
             <li>Open a race room and send the link. Up to 7 friends can join.</li>
@@ -155,11 +155,11 @@
     R = null;
     if (watcher) { watcher.stop(); watcher = null; }
     if (!ME) {
-      return view(`<div class="lock-cover"><div class="kicker">Race your friends</div><h2 class="disp" style="font-size:clamp(34px,5vw,48px);margin:8px 0 12px">Sign in to race</h2>
+      return view(`<div class="lock-cover"><div class="kicker"><span class="em" aria-hidden="true">👥</span> Race your friends</div><h2 class="disp" style="font-size:clamp(34px,5vw,48px);margin:8px 0 12px">Sign in to race</h2>
         <p>The site referees every race so the first name typed is the one that counts. That needs an account. It's free.</p>
         <div class="btns"><a class="btn gold big" href="${LFI.games.signInUrl()}">Sign in free</a><a class="btn" href="names.html?mode=infinite">Play on your own</a></div></div>`);
     }
-    try { await loadPool(); } catch (e) { return view(`<p class="note">Couldn't load the lists. Refresh to try again.</p>`); }
+    try { await loadPool(); } catch (e) { return view(`<p class="note"><span class="em" aria-hidden="true">😬</span> Couldn't load the lists. Refresh to try again.</p>`); }
     if (!PICK) PICK = POOL[Math.floor(Math.random() * POOL.length)];
     view(`<div class="set">
       <div class="pick">
@@ -167,7 +167,7 @@
         <h2 class="prompt">${esc(PICK.prompt)}</h2>
         <p class="note" style="margin:0">${PICK.a.length} names · ${mmss(PICK.seconds)} on the clock${PICK.note ? ` · ${esc(PICK.note)}` : ""}</p>
       </div>
-      <div class="go-row"><button class="btn gold big" type="button" id="open">Open a race room</button><button class="btn" type="button" id="other">Different list</button></div>
+      <div class="go-row"><button class="btn gold big" type="button" id="open">Open a race room <span class="em" aria-hidden="true">🏁</span></button><button class="btn" type="button" id="other">Different list <span class="em" aria-hidden="true">🔀</span></button></div>
       <p class="note" style="margin:0">You get a link to send. Up to 7 friends can join, then you start it when everyone's in.</p>
     </div>`);
     $("other").onclick = () => { PICK = POOL[Math.floor(Math.random() * POOL.length)]; setup(); };
@@ -190,7 +190,7 @@
   async function openGame(code) {
     view(`<p class="note">Opening the race room…</p>`);
     if (!ME) {
-      return view(`<div class="lock-cover"><div class="kicker">You're invited</div><h2 class="disp" style="font-size:clamp(34px,5vw,48px);margin:8px 0 12px">Join the race</h2>
+      return view(`<div class="lock-cover"><div class="kicker">You're invited</div><h2 class="disp" style="font-size:clamp(34px,5vw,48px);margin:8px 0 12px">Join the race <span class="em" aria-hidden="true">🏁</span></h2>
         <p>A friend opened a Name Them All race on Last Four In. Sign in free to join. You'll come right back here.</p>
         <div class="btns"><a class="btn gold big" href="${LFI.games.signInUrl()}">Sign in to join</a></div></div>`);
     }
@@ -213,18 +213,18 @@
         <h2 class="prompt">${esc(s.prompt || "")}</h2>
         <p class="note" style="margin:0">${g.total} names · ${mmss(g.seconds)} on the clock</p>
       </div>
-      <div><div class="set-lbl">In the room</div><div class="roster">${ps.map((p) => `<span><i style="background:${p.color}"></i>${esc(p.name)}${p.me ? " <small>you</small>" : ""}${p.id === g.host.id ? " <small>host</small>" : ""}</span>`).join("")}</div></div>
+      <div><div class="set-lbl"><span class="em" aria-hidden="true">👥</span> In the room</div><div class="roster">${ps.map((p) => `<span><i style="background:${p.color}"></i>${esc(p.name)}${p.me ? " <small>you</small>" : ""}${p.id === g.host.id ? " <small>host</small>" : ""}</span>`).join("")}</div></div>
       ${host ? `
-      <div><div class="set-lbl">Invite people</div><input class="lobby-link" readonly value="${esc(url)}" aria-label="Race link"></div>
-      <div class="go-row"><button class="btn" type="button" id="lbShare">Send the link</button><button class="btn" type="button" id="lbCopy">Copy link</button></div>
+      <div><div class="set-lbl"><span class="em" aria-hidden="true">🔗</span> Invite people</div><input class="lobby-link" readonly value="${esc(url)}" aria-label="Race link"></div>
+      <div class="go-row"><button class="btn" type="button" id="lbShare">Send the link <span class="em" aria-hidden="true">📣</span></button><button class="btn" type="button" id="lbCopy">Copy link <span class="em" aria-hidden="true">🔗</span></button></div>
       <div id="lbFr" hidden><div class="set-lbl">Or invite a friend on Last Four In</div><div class="friend-pick" id="lbFrList"></div></div>
-      <div class="go-row"><button class="btn gold big" type="button" id="lbGo"${ps.length < 2 ? " disabled" : ""}>Start the race</button><button class="btn" type="button" id="lbCancel">Call it off</button></div>
+      <div class="go-row"><button class="btn gold big" type="button" id="lbGo"${ps.length < 2 ? " disabled" : ""}>Start the race <span class="em" aria-hidden="true">🚦</span></button><button class="btn" type="button" id="lbCancel">Call it off</button></div>
       <p class="note" style="margin:0">${ps.length < 2 ? "Waiting for someone to join. This page updates by itself." : "Start whenever everyone's in. Late arrivals can't join once it's going."}</p>`
       : `<div class="go-row"><span class="note" style="margin:0">Waiting for ${esc(firstName(g.host))} to start the race. This page updates by itself.</span><button class="btn" type="button" id="lbLeave">Leave</button></div>`}
     </div>`);
     if (!host) { $("lbLeave").onclick = async () => { try { await LFI.games.leave(g.id); } catch (e) {} location.href = "race.html"; }; return; }
     $("lbShare").onclick = () => LFI.games.shareLink(url, `Race me in Name Them All on Last Four In: ${s.prompt}`);
-    $("lbCopy").onclick = async () => toast((await LFI.copyText(url)) ? "Link copied" : "Couldn't copy the link here");
+    $("lbCopy").onclick = async () => toast((await LFI.copyText(url)) ? "🔗 Link copied" : "Couldn't copy the link here");
     $("lbCancel").onclick = async () => { try { await LFI.games.leave(g.id); } catch (e) {} history.replaceState(null, "", "race.html"); setup(); };
     $("lbGo").onclick = async () => {
       $("lbGo").disabled = true;
@@ -239,7 +239,7 @@
       $("lbFrList").onclick = async (e) => {
         const b = e.target.closest("button[data-h]"); if (!b) return;
         b.disabled = true;
-        try { await LFI.games.challenge(b.dataset.h, "names", "Name Them All race", `/trivia/race.html?g=${g.code}`, s.prompt); b.textContent = "✓ " + b.textContent; toast("Invite sent"); }
+        try { await LFI.games.challenge(b.dataset.h, "names", "Name Them All race", `/trivia/race.html?g=${g.code}`, s.prompt); b.textContent = "✓ " + b.textContent; toast("📨 Invite sent"); }
         catch (err) { toast(err.message); b.disabled = false; }
       };
     });
@@ -279,12 +279,12 @@
       <p class="note">${esc(s.note || "")}</p>
       <div class="play">
         <input id="guess" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Type a name" aria-label="Type a name">
-        <div class="clock" id="clock"><b></b><span>left</span></div>
+        <div class="clock" id="clock"><b></b><span><span class="em" aria-hidden="true">⏱️</span> left</span></div>
         <button class="btn" id="leave">Leave</button>
       </div>
       <div class="board" id="board"></div>
       <div class="slots" id="slots">${s.a.map(([, hint], i) => `<div class="slot" id="s${i}"><small>${esc(hint)}</small><span></span><em></em></div>`).join("")}</div>
-      <div class="cdown" id="count" hidden><div><span>Get ready</span><b id="countN"></b><span id="countP">${esc(s.prompt)}</span></div></div>`);
+      <div class="cdown" id="count" hidden><div><span><span class="em" aria-hidden="true">🚦</span> Get ready</span><b id="countN"></b><span id="countP">${esc(s.prompt)}</span></div></div>`);
     document.querySelector(".play").style.top = document.querySelector(".nav").offsetHeight + "px";
     const inp = $("guess");
     inp.addEventListener("input", () => tryGuess(false));
@@ -342,14 +342,14 @@
       const open = R.last.get(g).filter((j) => !taken(j));
       const coming = () => R.keys.some((k, j) => !taken(j) && j !== open[0] && k.some((x) => x !== g && x.startsWith(g)));
       if (open.length === 1 && (enter || !coming())) i = open[0];
-      else if (enter && open.length > 1) { flash("miss"); toast("More than one still open with that last name. Add the first name."); return; }
-      else if (enter && !open.length) { inp.value = ""; toast("Everyone with that last name is already claimed."); return; }
+      else if (enter && open.length > 1) { flash("miss"); toast("🤔 More than one still open with that last name. Add the first name."); return; }
+      else if (enter && !open.length) { inp.value = ""; toast("🔒 Everyone with that last name is already claimed."); return; }
     }
     if (i === undefined) { if (enter) flash("miss"); return; }
     if (R.own[i] != null) {
       inp.value = "";
       const p = R.ps.find((x) => x.id === R.own[i]);
-      toast(p && p.me ? `You already have ${R.list.a[i][0]}.` : `${firstName(p)} already has ${R.list.a[i][0]}.`);
+      toast(p && p.me ? `✅ You already have ${R.list.a[i][0]}.` : `🔒 ${firstName(p)} already has ${R.list.a[i][0]}.`);
       return;
     }
     if (R.pending.has(i)) { inp.value = ""; return; }
@@ -363,8 +363,8 @@
     try {
       const res = await LFI.games.move(R.id, i, {}, typed);
       if (res.ok) { claim(i, R.g.uid, res.a, true); paintBoard(); }
-      else if (res.why === "taken") toast(`Too slow: someone got ${R.list.a[i][0]} first.`);
-      else if (res.why === "early") toast("Wait for the countdown.");
+      else if (res.why === "taken") toast(`🐢 Too slow: someone got ${R.list.a[i][0]} first.`);
+      else if (res.why === "early") toast("⏳ Wait for the countdown.");
       else if (res.why === "wrong") flash("miss");
     } catch (err) { toast(err.message); }
     R.pending.delete(i);
@@ -405,20 +405,20 @@
     const ord = (k) => k + (["th", "st", "nd", "rd"][(k % 100 > 10 && k % 100 < 14) ? 0 : k % 10] || "th");
     const head = !win.n ? "Nobody scored" : win.me ? "You won!" : `${esc(firstName(win))} won`;
     document.querySelector(".play").outerHTML = `<div class="endline">
-      <div class="kicker" style="color:#fff;opacity:.8">Race over</div>
-      <div class="disp">${head}</div>
+      <div class="kicker" style="color:#fff;opacity:.8"><span class="em" aria-hidden="true">🏁</span> Race over</div>
+      <div class="disp">${head} <span class="em" aria-hidden="true">${!win.n ? "🤷" : win.me ? "🏆" : "👏"}</span></div>
       <p>${claimed} of ${R.N} named between you. You got ${mine.n}, ${ord(place)} of ${st.length}.${claimed < R.N ? " The ones in red got away." : ""}</p>
       <ol class="standings">${st.map((p, k) => `<li><b>${k + 1}</b><i style="background:${p.color}"></i><span>${p.me ? "You" : esc(p.name)}${p.left ? " (left)" : ""}</span><b>${p.n}</b></li>`).join("")}</ol>
-      <div class="go-row"><button class="btn gold" id="shareR">Share result</button><a class="btn" href="race.html">New race</a></div>
+      <div class="go-row"><button class="btn gold" id="shareR">Share result <span class="em" aria-hidden="true">📣</span></button><a class="btn" href="race.html">New race <span class="em" aria-hidden="true">🔁</span></a></div>
     </div>`;
     if (!g.result && g.me === "host") LFI.games.finish(g.id, { winner: win.n ? win.name : null, scores: st.map((p) => [p.handle, p.n]) }).catch(() => {});
     const e = LFI.entries.put({
       id: `trivia-race-${g.code}`, kind: "trivia", title: "Name Them All Race", sub: R.list.prompt, url: "/trivia/race.html",
       result: `${ord(place)} of ${st.length}`, data: { score: `${mine.n}/${R.N}` },
-      shareText: `Last Four In · Name Them All Race\n${R.list.prompt}\n${ord(place)} of ${st.length} with ${mine.n}/${R.N}`,
+      shareText: `🏁 Last Four In · Name Them All Race\n${R.list.prompt}\n${ord(place)} of ${st.length} with ${mine.n}/${R.N}`,
     });
     $("shareR").onclick = () => LFI.share(e, {
-      kicker: "Race result", note: "Send it around. Or challenge a friend to play the same list on their own clock.",
+      kicker: "🏁 Race result", note: "Send it around. Or challenge a friend to play the same list on their own clock.",
       challenge: { kind: "names", title: `Name Them All: ${R.list.prompt}`.slice(0, 120), url: challengeUrl(R.list.key, mine.n) },
     });
     window.scrollTo({ top: 0, behavior: "smooth" });

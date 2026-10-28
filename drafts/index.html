@@ -108,27 +108,27 @@ body.drafting .head { display: none; }
 <main class="page">
   <div class="head">
     <div>
-      <div class="kicker" id="kick">NFL history draft</div>
-      <h1 class="disp" id="h1">Drafts</h1>
+      <div class="kicker" id="kick"><span class="em" aria-hidden="true">🏈</span> NFL history draft</div>
+      <h1 class="disp" id="h1">Drafts <span class="em" aria-hidden="true">📋</span></h1>
       <p id="lede">Pick a pool, then take turns drafting a lineup. Every player named Chris, the all-time Broncos, a whole division. Higher fantasy total wins.</p>
       <nav class="modes" aria-label="Mode">
         <button type="button" data-mode="scored" aria-pressed="true">Scored · 1999 on</button>
         <button type="button" data-mode="fun" aria-pressed="false">For fun · everyone since 1920</button>
       </nav>
-      <p style="margin:10px 0 0;font-size:14.5px"><a href="classes.html">Mock or redraft a real draft class →</a></p>
+      <p style="margin:10px 0 0;font-size:14.5px"><a href="classes.html"><span class="em" aria-hidden="true">🎓</span> Mock or redraft a real draft class →</a></p>
     </div>
   </div>
 
   <!-- 1. Setup -->
   <section class="card" id="setup">
-    <div class="card-h"><h2 class="disp">Set up your draft</h2><span class="chip" id="dataChip">Loading players…</span></div>
+    <div class="card-h"><h2 class="disp">Set up your draft <span class="em" aria-hidden="true">📋</span></h2><span class="chip" id="dataChip">Loading players…</span></div>
     <div class="card-b set">
       <div class="set-row">
         <div class="set-lbl">Draft</div>
         <div class="seg" id="kind">
-          <button type="button" data-v="players" aria-pressed="true">Players<small>Build a lineup</small></button>
-          <button type="button" data-v="jerseys" aria-pressed="false">Jersey numbers<small>Best player in each number</small></button>
-          <button type="button" data-v="coaches" aria-pressed="false">Head coaches<small>Most wins</small></button>
+          <button type="button" data-v="players" aria-pressed="true">Players <span class="em" aria-hidden="true">🏈</span><small>Build a lineup</small></button>
+          <button type="button" data-v="jerseys" aria-pressed="false">Jersey numbers <span class="em" aria-hidden="true">👕</span><small>Best player in each number</small></button>
+          <button type="button" data-v="coaches" aria-pressed="false">Head coaches <span class="em" aria-hidden="true">🧢</span><small>Most wins</small></button>
         </div>
       </div>
 
@@ -202,8 +202,8 @@ body.drafting .head { display: none; }
       <div class="set-row">
         <div class="set-lbl">Opponent</div>
         <div class="seg" id="opp">
-          <button type="button" data-v="cpu" aria-pressed="true">The computer</button>
-          <button type="button" data-v="friend" aria-pressed="false" id="oppFriend">A friend<small>Live draft by link</small></button>
+          <button type="button" data-v="cpu" aria-pressed="true">The computer <span class="em" aria-hidden="true">🤖</span></button>
+          <button type="button" data-v="friend" aria-pressed="false" id="oppFriend">A friend <span class="em" aria-hidden="true">👥</span><small>Live draft by link</small></button>
         </div>
         <div class="pool-count" id="friendNote" hidden></div>
         <div class="seg" id="cpu">
@@ -231,7 +231,7 @@ body.drafting .head { display: none; }
       </div>
 
       <div class="go-row">
-        <button class="btn gold big" type="button" id="startBtn" disabled>Start the draft</button>
+        <button class="btn gold big" type="button" id="startBtn" disabled>Start the draft <span class="em" aria-hidden="true">🚀</span></button>
         <span class="pool-count" id="startNote"></span>
       </div>
     </div>
@@ -271,9 +271,9 @@ body.drafting .head { display: none; }
     <div class="res-banner"><div class="kicker" style="color:#fff;opacity:.85" id="resKick"></div><div class="disp" id="resH"></div><p id="resP"></p></div>
     <div class="res-grid" id="resTeams"></div>
     <div class="res-acts">
-      <button class="btn gold big" type="button" id="shareBtn">Share it</button>
-      <button class="btn" type="button" id="againBtn">Run it back, same pool</button>
-      <button class="btn" type="button" id="newBtn">New pool</button>
+      <button class="btn gold big" type="button" id="shareBtn">Share it <span class="em" aria-hidden="true">📣</span></button>
+      <button class="btn" type="button" id="againBtn">Run it back, same pool <span class="em" aria-hidden="true">🔁</span></button>
+      <button class="btn" type="button" id="newBtn">New pool <span class="em" aria-hidden="true">✨</span></button>
     </div>
   </section>
 
@@ -287,6 +287,7 @@ body.drafting .head { display: none; }
 <script>
 (function () {
   const { $, esc, local, entries, toast } = LFI;
+  const em = (e) => `<span class="em" aria-hidden="true">${e}</span>`;
   const qs = new URLSearchParams(location.search);
   if (qs.get("class")) return location.replace("classes.html" + location.search); // a shared mock of a draft class
   const POSN = ["QB", "RB", "WR", "TE"];
@@ -511,8 +512,9 @@ body.drafting .head { display: none; }
     $("crL").textContent = S.kind === "coaches" ? "Wins count" : "Points count";
     $("crT").textContent = S.pool === "div" ? "Only in this division" : S.pool === "conf" ? "Only in this conference" : "Only with this team";
     $("crAs").textContent = S.kind === "coaches" ? "Every team he coached" : S.kind === "jerseys" ? "In that number, any team" : "Every team he played for";
-    $("h1").textContent = S.kind === "jerseys" ? "Jersey Draft" : S.kind === "coaches" ? "Coaches' Draft" : "Drafts";
-    document.title = `${$("h1").textContent} · Last Four In`;
+    const h1t = S.kind === "jerseys" ? "Jersey Draft" : S.kind === "coaches" ? "Coaches' Draft" : "Drafts";
+    $("h1").innerHTML = `${esc(h1t)} ${em(S.kind === "jerseys" ? "👕" : S.kind === "coaches" ? "🧢" : "📋")}`;
+    document.title = `${h1t} · Last Four In`;
     if (S.mode !== "fun" && S.lu === "full") { S.lu = "fantasy"; paints.forEach((p) => p()); }
     $("cpu").hidden = S.opp !== "cpu";
     $("poolName").hidden = !(S.pool === "first" || S.pool === "last");
@@ -546,8 +548,7 @@ body.drafting .head { display: none; }
       : `<b>${pool.length.toLocaleString()}</b> ${esc(countLabel().replace(/^players/, pool.length === 1 ? "player" : "players").replace(/^head coaches/, pool.length === 1 ? "head coach" : "head coaches"))} since ${S.mode === "fun" ? meta.first : 1999}${why ? ". " + esc(why) + tip : "."}`;
     const friend = S.opp === "friend";
     $("startBtn").disabled = !pool.length || !!why || (friend && !ME);
-    $("startBtn").textContent = friend ? "Create the draft room" : "Start the draft";
-    $("startBtn").textContent = friend ? "Create the draft room" : "Start the draft";
+    $("startBtn").innerHTML = friend ? `Create the draft room ${em("🔗")}` : `Start the draft ${em("🚀")}`;
     $("friendNote").hidden = !friend;
     $("friendNote").innerHTML = !friend ? "" : ME ? "You get a link to send. Your friend opens it signed in, and you take turns live."
       : `Friend drafts need an account so the site can referee. <a href="${LFI.games.signInUrl()}">Sign in free</a>, then come back.`;
@@ -644,7 +645,7 @@ body.drafting .head { display: none; }
     if (D.n >= D.total) return finish();
     const side = sideAt(D.n);
     const mine = side === 0;
-    $("turn").textContent = mine ? `Your pick · ${D.n + 1} of ${D.total}` : `${D.side[1].name.split(" ")[0]} is picking…`;
+    $("turn").textContent = mine ? `👉 Your pick · ${D.n + 1} of ${D.total}` : `⏳ ${D.side[1].name.split(" ")[0]} is picking…`;
     $("quitBtn").textContent = D.game ? "Leave the draft" : "Start over";
     $("turn").className = "dr-turn" + (mine ? " me" : "");
     $("roomNote").textContent = `Round ${Math.floor(D.n / 2) + 1} of ${D.slots.length}`;
@@ -719,7 +720,7 @@ body.drafting .head { display: none; }
     try {
       const res = await LFI.games.move(D.game.id, r.key);
       if (res.ok) { if (draft(0, r)) step(); }
-      else toast(res.why === "taken" ? `${r.name} was just taken.` : res.why === "turn" ? "Hang on, it's not your pick yet." : "The draft is over.");
+      else toast(res.why === "taken" ? `😬 ${r.name} was just taken.` : res.why === "turn" ? "⏳ Hang on, it's not your pick yet." : "The draft is over.");
     } catch (err) { toast(err.message); }
     D.busy = false;
     if (watcher) watcher.poke();
@@ -758,12 +759,12 @@ body.drafting .head { display: none; }
     const unit = D.kind === "coaches" ? "wins" : "fantasy points", f = D.kind === "coaches" ? (n) => String(Math.round(n)) : fmt;
     let result;
     if (D.fun) {
-      $("resH").textContent = "Draft complete"; $("resP").textContent = D.kind === "jerseys" ? "Nothing is scored in the for-fun jersey draft, so this one is up to your friends. Send it and let them pick a winner."
+      $("resH").innerHTML = `Draft complete ${em("✅")}`; $("resP").textContent = D.kind === "jerseys" ? "Nothing is scored in the for-fun jersey draft, so this one is up to your friends. Send it and let them pick a winner."
         : "No stats go back to 1920, so this one is up to your friends. Send it and let them pick a winner.";
       result = "For fun";
     } else {
       const win = a > b, tie = Math.abs(a - b) < .05;
-      $("resH").textContent = tie ? "Dead even" : win ? "You win" : `${op.name.split(" ")[0]} wins`;
+      $("resH").innerHTML = tie ? `Dead even ${em("🤝")}` : win ? `You win ${em("🎉")}` : `${esc(op.name.split(" ")[0])} wins ${em("😬")}`;
       $("resP").textContent = `${f(a)} to ${f(b)} ${unit}.` + (early ? " The draft ended early, so open spots score zero." : win ? "" : " Run it back?");
       result = tie ? `Tied at ${f(a)}` : `${win ? "Won" : "Lost"} ${f(a)} to ${f(b)}`;
     }
@@ -772,9 +773,9 @@ body.drafting .head { display: none; }
     const e = {
       id: D.game ? `draft-g-${D.game.id}` : `draft-${Date.now()}`, kind: "draft", title: `${D.kname}: ${D.label}${D.crt}`, sub: D.val, result,
       data: { me: pack(me), op: pack(op), mn: me.name, on: op.name, mt: D.fun ? null : Math.round(a * 10) / 10, ot: D.fun ? null : Math.round(b * 10) / 10, q: D.setup, u: D.kind === "coaches" ? "wins" : undefined },
-      shareText: D.kind === "jerseys" ? `I ran a jersey draft on Last Four In (${D.label}${D.fun ? "" : ": " + result}). Think you can beat my numbers?`
-        : D.kind === "coaches" ? `I drafted head coaches on Last Four In (${D.label}): ${result}. Think you can beat my staff?`
-        : D.fun ? `I drafted ${D.label.replace(/^Every/, "every").replace(/^All-time/, "the all-time")} on Last Four In. Whose team is better?` : `I drafted ${D.label.replace(/^Every/, "every").replace(/^All-time/, "the all-time")} on Last Four In: ${result}. Think you can beat my lineup?`,
+      shareText: D.kind === "jerseys" ? `👕 I ran a jersey draft on Last Four In (${D.label}${D.fun ? "" : ": " + result}). Think you can beat my numbers?`
+        : D.kind === "coaches" ? `🧢 I drafted head coaches on Last Four In (${D.label}): ${result}. Think you can beat my staff?`
+        : D.fun ? `📋 I drafted ${D.label.replace(/^Every/, "every").replace(/^All-time/, "the all-time")} on Last Four In. Whose team is better?` : `📋 I drafted ${D.label.replace(/^Every/, "every").replace(/^All-time/, "the all-time")} on Last Four In: ${result}. Think you can beat my lineup?`,
     };
     lastEntry = entries.put(e);
     if (D.game && !D.fun) LFI.games.finish(D.game.id, D.game.role === "host" ? { host: e.data.mt, guest: e.data.ot } : { host: e.data.ot, guest: e.data.mt }).catch(() => {});
@@ -804,7 +805,7 @@ body.drafting .head { display: none; }
 
   function lobby(html, h, chip) {
     $("setup").hidden = true; $("room").hidden = true; $("result").hidden = true; $("lobby").hidden = false; document.body.classList.add("drafting");
-    $("lobbyH").textContent = h || "Draft room"; $("lobbyChip").textContent = chip || "";
+    $("lobbyH").innerHTML = `${esc(h || "Draft room")} ${em(h === "You're invited" ? "👥" : "📋")}`; $("lobbyChip").textContent = chip || "";
     $("lobbyB").innerHTML = html;
   }
 
@@ -836,15 +837,15 @@ body.drafting .head { display: none; }
     lobby(`<div><div class="kicker">${esc(g.settings.val || "")}</div><h3 class="disp" style="font-size:30px;margin:4px 0 0">${esc(g.settings.title || "")}</h3></div>
       <p style="margin:0">Send this link to the friend you want to draft against. The draft starts the moment they join. ${g.host_first ? "You pick first." : "They pick first."}</p>
       <input class="lobby-link" readonly value="${esc(url)}" aria-label="Draft link">
-      <div class="go-row"><button class="btn gold big" type="button" id="lbShare">Send the link</button><button class="btn" type="button" id="lbCopy">Copy link</button></div>
+      <div class="go-row"><button class="btn gold big" type="button" id="lbShare">Send the link ${em("📣")}</button><button class="btn" type="button" id="lbCopy">Copy link ${em("🔗")}</button></div>
       <div class="set-row" id="lbFr" hidden><div class="set-lbl">Or challenge a friend on Last Four In</div><div class="friend-pick" id="lbFrList"></div></div>
-      <div class="go-row"><span class="pool-count">Waiting for your friend… this page updates by itself.</span><button class="btn" type="button" id="lbCancel">Call it off</button></div>`,
+      <div class="go-row"><span class="pool-count">${em("⏳")} Waiting for your friend… this page updates by itself.</span><button class="btn" type="button" id="lbCancel">Call it off</button></div>`,
       "Draft room", "Waiting");
     const sk = (g.settings.setup || {}).kind;
-    const text = sk === "jerseys" ? `Jersey draft against me on Last Four In: ${g.settings.title}.` : sk === "coaches" ? `Draft head coaches against me on Last Four In: ${g.settings.title}.`
-      : `Draft ${g.settings.title.replace(/^Every/, "every").replace(/^All-time/, "the all-time")} against me on Last Four In.`;
+    const text = sk === "jerseys" ? `👕 Jersey draft against me on Last Four In: ${g.settings.title}.` : sk === "coaches" ? `🧢 Draft head coaches against me on Last Four In: ${g.settings.title}.`
+      : `📋 Draft ${g.settings.title.replace(/^Every/, "every").replace(/^All-time/, "the all-time")} against me on Last Four In.`;
     $("lbShare").onclick = () => LFI.games.shareLink(url, text);
-    $("lbCopy").onclick = async () => toast((await LFI.copyText(url)) ? "Link copied" : "Couldn't copy the link here");
+    $("lbCopy").onclick = async () => toast((await LFI.copyText(url)) ? "🔗 Link copied" : "Couldn't copy the link here");
     $("lbCancel").onclick = async () => { try { await LFI.games.leave(g.id); } catch (err) {} history.replaceState(null, "", setupQuery()); toSetup(); };
     LFI.games.friends().then((fr) => {
       if (!fr.length || !$("lbFrList")) return;
@@ -853,7 +854,7 @@ body.drafting .head { display: none; }
       $("lbFrList").onclick = async (e) => {
         const b = e.target.closest("button[data-h]"); if (!b) return;
         b.disabled = true;
-        try { await LFI.games.challenge(b.dataset.h, "draft", `${sk === "jerseys" ? "Jersey draft" : sk === "coaches" ? "Coaches' draft" : "Draft"}: ${g.settings.title}`, `/drafts/?g=${g.code}`); b.textContent = "✓ " + b.textContent; toast("Challenge sent"); }
+        try { await LFI.games.challenge(b.dataset.h, "draft", `${sk === "jerseys" ? "Jersey draft" : sk === "coaches" ? "Coaches' draft" : "Draft"}: ${g.settings.title}`, `/drafts/?g=${g.code}`); b.textContent = "✓ " + b.textContent; toast("⚔️ Challenge sent"); }
         catch (err) { toast(err.message); b.disabled = false; }
       };
     });
@@ -877,7 +878,7 @@ body.drafting .head { display: none; }
   function onGame(g) {
     if (g.status === "cancelled" && !D) { lobby(`<p>This draft was called off.</p><div class="go-row"><a class="btn gold" href="./">Set up your own draft</a></div>`, "Draft room", ""); return; }
     if (g.status === "open") return;
-    if (!D) toast(`${(g[g.me === "host" ? "guest" : "host"] || {}).name || "Your friend"} joined. Let's draft.`);
+    if (!D) toast(`🎉 ${(g[g.me === "host" ? "guest" : "host"] || {}).name || "Your friend"} joined. Let's draft.`);
     enter(g);
   }
 
