@@ -1,0 +1,14 @@
+# Public pages and the assets needed to render them may be crawled.
+User-agent: *
+Disallow: /.git/
+Disallow: /.claude/
+Disallow: /private/
+Disallow: /work/
+Disallow: /build/
+Disallow: /supabase/
+Disallow: /test/
+Disallow: /tests/
+
+# Account, admin and Franchise HTML must remain crawlable so their existing
+# noindex tags can be read. They are excluded from the sitemap.
+Sitemap: https://playbubble.app/sitemap.xml

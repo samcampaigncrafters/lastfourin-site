@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<link rel="canonical" href="https://playbubble.app/">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PlayBubble · Free sports prediction contests</title>
 <meta name="description" content="Free weekly sports prediction contests: NFL and college pick'em, build your College Football Playoff bracket, daily trivia, plus an AP poll guess just for fun.">
@@ -169,6 +170,7 @@ main.home { padding-bottom: 64px; }
 <script src="/assets/lfi.js"></script>
 <script src="/assets/calendar.js"></script>
 <script src="/assets/apwindow.js"></script>
+<script src="/assets/cloud.js"></script>
 <script>
 (function () {
   const { $, esc, now, entries } = LFI;
@@ -322,10 +324,30 @@ main.home { padding-bottom: 64px; }
     const se = hot ? "⚡" : STE[x.st], dot = se ? `<span class="em" aria-hidden="true">${se}</span> ` : "<i></i>"; // status emoji in place of the plain dot
     return `<a class="t${hot ? " hot" : ""}" href="${x.url}">${head}<span class="st">${dot}${st}</span></span></a>`;
   }
+  const FRANCHISE = { url: "/franchise/", t: "Franchise Simulator", sh: "Franchise", d: "Build your team, play the season and run the offseason.", st: "Private access", ic: "football" };
+  let franchiseAllowed = false, franchiseUser, franchiseCheck = 0;
   function renderTiles() {
-    $("tiles").innerHTML = TILES.map(tile).join("");
+    $("tiles").innerHTML = (franchiseAllowed ? [FRANCHISE, ...TILES] : TILES).map(tile).join("");
   }
   renderTiles();
+
+  // Use the game's server-side invitation check; never infer access from an email or a browser save.
+  const cloud = LFI.cloud;
+  cloud.ready.then(() => cloud.onChange(async (c) => {
+    const uid = c.user && c.user.id;
+    if (uid === franchiseUser) return;
+    franchiseUser = uid;
+    const check = ++franchiseCheck;
+    franchiseAllowed = false;
+    renderTiles();
+    if (!uid || !c.on || !c.sb) return;
+    try {
+      const { data, error } = await c.sb.rpc("franchise_pack");
+      if (check !== franchiseCheck) return; // An account switch or sign-out invalidates the old response.
+      franchiseAllowed = !error && !!data;
+      renderTiles();
+    } catch (e) { /* Keep the private tile hidden when the access check is unavailable. */ }
+  }));
 
   // AP tile status: a draft until Saturday's Top 25 games end, open until the poll comes out Sunday, then closed.
   (async () => {
