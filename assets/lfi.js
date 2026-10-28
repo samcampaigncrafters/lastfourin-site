@@ -30,8 +30,8 @@
       ["coaches", "/drafts/?kind=coaches", "Coaches' Draft", "Draft head coaches by wins"],
       ["redraft", "/drafts/classes.html", "Draft Classes", "Mock or redraft any class since 1999"],
     ] },
-    { key: "fantasy", label: "Fantasy", href: "/fantasy/", sub: "Fantasy football tools", soon: true },
-    { key: "l4picks", label: "L4 Picks AI", href: "/l4picks/", sub: "AI picks with the stats behind them", soon: true },
+    { key: "fantasy", label: "Fantasy", href: "/fantasy/", sub: "Fantasy football tools" },
+    { key: "l4picks", label: "L4 Picks AI", href: "/l4picks/", sub: "AI picks with the stats behind them" },
   ];
   const LEAGUES = [
     { label: "NFL", items: [
