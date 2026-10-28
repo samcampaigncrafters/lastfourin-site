@@ -200,6 +200,13 @@
   .fr.now { box-shadow: inset 4px 0 0 var(--accent); }
   .fr p { margin: 0; }
   .fr.k-qtr p, .fr.k-half p, .fr.k-final p { font-family: var(--f-display); text-transform: uppercase; letter-spacing: .05em; }
+  /* Coach decisions: the call card with its countdown */
+  .ask { border-top: 5px solid var(--accent); }
+  .ask .opts { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 0; }
+  .ask .opts .btn small { display: block; font-size: 11px; font-weight: 700; opacity: .75; }
+  .ask .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 12px; }
+  .ask .bar i { display: block; height: 100%; background: var(--accent); width: 100%; transition: width 1s linear; }
+  .fr.k-to p { font-weight: 800; }
   .tc img { width: 18px; height: 18px; background: #fff; border-radius: 50%; padding: 1px; margin-right: 5px; flex: none; }
   .bxt { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 6px; }
   .bxt td, .bxt th { padding: 4px 6px; border-top: 1px solid var(--line); text-align: right; }
@@ -909,7 +916,7 @@
   function watch() {
     const g = E.nextGame(lg); if (!g) return;
     const pv = E.previewGame(lg, g);
-    live = { g, pv, times: E.live.times(pv.plays), ms: 0, speed: 1, idx: -1, half: -1, paused: false, committed: false, sync: 0, last: 0 };
+    live = { g, pv, times: E.live.times(pv.plays), ms: 0, speed: 1, idx: -1, half: -1, paused: false, committed: false, sync: 0, last: 0, coach: new Set([lg.user]) };
     liveView();
   }
   function bugSide(i, h) {
@@ -939,8 +946,9 @@
     $("body").onclick = (e) => {
       const b = e.target.closest("button"); if (!b) return;
       if (b.dataset.spd) { L.speed = SPEEDS.find((x) => x[0] === b.dataset.spd)[2]; document.querySelectorAll("[data-spd]").forEach((x) => x.setAttribute("aria-pressed", x === b)); setSpeed(); }
-      else if (b.dataset.pause != null) { if (L.half >= 0 && L.idx === L.half && $("lvBox").innerHTML) return; L.paused = !L.paused; b.setAttribute("aria-pressed", L.paused); b.textContent = L.paused ? "Resume" : "Pause"; }
-      else if (b.dataset.skip != null) { L.paused = false; L.ms = L.times[L.times.length - 1]; $("lvBox").innerHTML = ""; }
+      else if (b.dataset.pause != null) { if (L.asking || (L.half >= 0 && L.idx === L.half && $("lvBox").innerHTML)) return; L.paused = !L.paused; b.setAttribute("aria-pressed", L.paused); b.textContent = L.paused ? "Resume" : "Pause"; }
+      else if (b.dataset.skip != null) { endAsk(); L.skipping = true; L.paused = false; L.ms = L.times[L.times.length - 1]; $("lvBox").innerHTML = ""; }
+      else if (b.dataset.call) { if (L.asking) answerAsk(L.asking, b.dataset.call); }
       else if (b.dataset.hk) { const p = { ...L.h2plan, [b.dataset.hk]: +b.dataset.pv }; L.h2plan = p; b.parentNode.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b)); }
       else if (b.id === "h2Go") secondHalf(true);
       else if (b.id === "h2Keep") secondHalf(false);
@@ -958,7 +966,7 @@
     };
     L.raf = requestAnimationFrame(loop);
   }
-  function stopLive() { if (live) cancelAnimationFrame(live.raf); live = null; }
+  function stopLive() { if (live) { cancelAnimationFrame(live.raf); clearInterval(live.askT); } live = null; }
   function feedRow(p, g, now) {
     const d = downText(p, g);
     return `<div class="fr ${p.big ? "big" : ""} ${now ? "now" : ""} k-${p.k}"><em>${qn(p.q)} ${clk(p.c)}</em><span>${d ? esc(d) : ""}</span><p>${esc(p.t)}</p></div>`;
@@ -981,10 +989,13 @@
   }
   function show(idx) {
     const L = live, plays = L.pv.plays, g = L.g;
+    // Coach decisions: the game stops on the play before the one a decision changes, until it's answered.
+    const a = L.asking || pendingAsk();
+    if (a && idx >= a.at - 1 && !L.inHalf) { idx = a.at - 1; if (!L.asking) { L.paused = true; L.ms = L.times[a.at] - 1; askBox(a); } }
     if (idx === L.idx) return;
     // Halftime: in a solo game the viewer stops here so you can change your second-half plan.
     const hi = plays.findIndex((p) => p.k === "half");
-    if (!L.sync && hi >= 0 && idx >= hi && L.half < 0 && L.idx < hi && L.ms < L.times[L.times.length - 1]) { idx = hi; L.paused = true; L.ms = L.times[hi]; halftime(hi); }
+    if (!L.sync && hi >= 0 && idx >= hi && L.half < 0 && L.idx < hi && L.ms < L.times[L.times.length - 1]) { idx = hi; L.paused = true; L.ms = L.times[hi]; L.inHalf = true; halftime(hi); }
     L.idx = idx;
     $("feed").innerHTML = feedHtml(plays, g, idx);
     const p = plays[idx], nx = plays[idx + 1];
@@ -1032,12 +1043,74 @@
       // The halftime hook: a "half" move, then the same game worked out again. The first half is identical.
       if (E.apply(lg, { t: "half", plan: { ...cur, ...p } })) {
         persist();
-        const before = L.pv.plays.slice(0, L.half + 1).map((x) => x.t).join("|");
-        L.pv = E.previewGame(lg, L.g); L.times = E.live.times(L.pv.plays); L.base = clockBase(L.pv.plays, L.times); L.dr = drivesOf(L.pv.plays);
-        if (L.pv.plays.slice(0, L.half + 1).map((x) => x.t).join("|") !== before) console.warn("first half changed after the halftime move");
+        repreview(L.half + 1, "first half changed after the halftime move");
       }
     }
-    $("lvBox").innerHTML = ""; L.ms = L.times[L.half + 1]; L.paused = false; L.last = performance.now();
+    $("lvBox").innerHTML = ""; L.inHalf = false; L.ms = L.times[L.half + 1]; L.paused = false; L.last = performance.now();
+  }
+  // Work the game out again after a move. Every play before `keep` must come out identical (the engine promises it).
+  function repreview(keep, warn) {
+    const L = live, sig = (pv) => pv.plays.slice(0, keep).map((x) => x.t + x.sc).join("|"), before = sig(L.pv);
+    L.pv = E.previewGame(lg, L.g); L.times = E.live.times(L.pv.plays); L.base = clockBase(L.pv.plays, L.times); L.dr = drivesOf(L.pv.plays);
+    if (sig(L.pv) !== before) console.warn(warn);
+  }
+
+  // ---- Coach decisions during a watched game ----
+  // The engine lists every decision point in the game (pv.asks). The viewer stops before the first one for a team
+  // this person coaches that has no answer yet, shows the call with a countdown, and on an answer (or the default when
+  // time runs out) applies a "call" move and works the game out again from that play on. Real-life frequency only:
+  // most games bring one or two. Replays, "Skip to end" and leaving the game take the defaults.
+  const ASK_SECS = 15;
+  const answered = (a) => !!(lg.calls && lg.calls[a.t] && lg.calls[a.t][a.id] != null);
+  function pendingAsk() {
+    const L = live; if (!L || L.committed || L.skipping || !L.coach) return null;
+    return L.pv.asks.find((a) => L.coach.has(a.t) && !answered(a)) || null;
+  }
+  const ASK_LABEL = { go: "Go for it", punt: "Punt", fg: "Field goal", kick: "Kick the extra point", two: "Go for two", sit: "Sit him", keep: "Keep him in",
+    stay: "Stick with him", bench: "Bring in the backup", run: "Let it run", to: "Call timeout" };
+  function scoreWords(a) {
+    const d = a.sc[a.side] - a.sc[1 - a.side];
+    return d === 0 ? `tied ${a.sc[0]}-${a.sc[1]}` : `${d > 0 ? "up" : "down"} ${Math.abs(d)}`;
+  }
+  function askText(a) {
+    const g = live.g, pn = (id) => { const p = lg.players[id]; return p ? E.short(p) : "a starter"; }, when = `${qn(a.q)} ${clk(a.clock)}`;
+    if (a.kind === "4th") {
+      const x = a.side === 0 ? a.yl : 100 - a.yl, spot = spotText(x, a.side, g), goal = a.yl + a.tg >= 100;
+      return ["Fourth down", `4th &amp; ${goal ? "goal" : a.tg} at ${esc(spot)}, ${scoreWords(a)}, ${when}.`, { fg: `${117 - a.yl} yards` }];
+    }
+    if (a.kind === "2pt") return ["Two-point try?", `Touchdown! You're ${scoreWords(a)} before the try, ${when}.`, {}];
+    if (a.kind === "inj") return ["Banged up", `${esc(pn(a.p))} is banged up (a one or two week knock). Keep him in and he plays on a step slower, and might aggravate it: out for weeks, sometimes the season. Sit him and the backup comes in.`, { keep: "re-injury risk" }];
+    if (a.kind === "qb") return ["Quarterback trouble", `${esc(pn(a.p))} is ${a.cmp} of ${a.att} with ${a.int} interception${a.int === 1 ? "" : "s"} and you're ${scoreWords(a)}, ${when}. Bring in ${esc(pn(a.b))}?`, {}];
+    return ["Clock running", `They're letting the clock run: ${when}, you're ${scoreWords(a)}. A timeout saves about ${a.save} seconds (${a.left} left).`, {}];
+  }
+  function askBox(a) {
+    const L = live; L.asking = a; L.askLeft = ASK_SECS;
+    const [title, text, sub] = askText(a), mine = L.coach.has(a.t) && (!L.party || L.party.mine.has(a.t));
+    const opts = a.opts.map((c) => `<button class="btn${c === a.def ? " gold" : ""}" data-call="${c}" ${mine ? "" : "disabled"}>${ASK_LABEL[c]}<small>${c === a.def ? "default" : sub[c] || "&nbsp;"}</small></button>`).join("");
+    $("lvBox").innerHTML = `<section class="card ask"><div class="card-h"><h2 class="disp">${title}</h2><small class="muted" id="askN">${L.askLeft}s</small></div><div class="card-b">
+      <p style="margin:0">${L.party && !mine ? `${esc(E.teamName(team(a.t)))}'s call. ` : ""}${text}</p><div class="opts">${opts}</div>
+      <div class="bar"><i id="askBar"></i></div><p class="empty" style="margin:6px 0 0">${mine ? "No answer when time runs out = the default." : "Waiting for their coach. No answer = the default."}</p></div></section>`;
+    clearInterval(L.askT);
+    L.askT = setInterval(() => {
+      if (live !== L || L.asking !== a) return clearInterval(L.askT);
+      L.askLeft--;
+      const n = $("askN"), bar = $("askBar"); if (n) n.textContent = Math.max(0, L.askLeft) + "s"; if (bar) bar.style.width = `${Math.max(0, L.askLeft) / ASK_SECS * 100}%`;
+      if (L.askLeft <= 0) askTimeout(a);
+    }, 1000);
+  }
+  function askTimeout(a) { if (live && live.party) partyTimeout(a); else answerAsk(a, a.def); }
+  function endAsk() { const L = live; if (L) { clearInterval(L.askT); L.asking = null; } }
+  function answerAsk(a, c) {
+    const L = live; if (!L || L.asking !== a || !a.opts.includes(c)) return;
+    if (L.party) return partyAnswer(a, c);
+    applyCall(a, c);
+  }
+  // The answer is a move in the save (solo) or the shared answer both screens apply (watch party).
+  function applyCall(a, c) {
+    const L = live; endAsk();
+    if (E.apply(lg, { t: "call", k: a.id, c, team: a.t }) && !L.guest) persist();
+    repreview(a.at, "plays before a coach decision changed");
+    $("lvBox").innerHTML = ""; L.ms = L.times[a.at]; L.paused = false; L.last = performance.now();
   }
   // Play the week for real. It plays out exactly what was shown (same league, same draws).
   function commitLive() {

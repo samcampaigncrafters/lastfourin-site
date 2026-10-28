@@ -19,6 +19,10 @@
    week's game. previewGame shows a game before the week is played; live.times / live.at say which play is on
    screen at any moment, so two browsers with the same start time stay in sync.
 
+   Coach decisions: simGame lists the in-game calls a coach would face (close 4th downs, late two-point tries, a
+   banged-up starter, a struggling quarterback, late timeouts) in res.asks, at real-life frequency. The default is what
+   the engine always did; { t: "call", k, c, team } answers one for this week's game and changes only what follows it.
+
    Locker room (build B): fan mood for the user's coach with fan posts and a weekly headline, team morale and player
    mood, and a league news feed, all worked out from the games (lg.fans, lg.tm, lg.mood, lg.news). New leagues pass
    { lr: 1 }: morale then nudges play a little and unhappy players may refuse to re-sign. Stories stay football-only. */
@@ -162,7 +166,8 @@
 
   // ---- Create a league ----
   // opts: seed (string), team (0-31, the user's franchise), slot (1-32 draft slot, 0 = random),
-  //       userRounds (how many Redraft rounds the user picks; the AI drafts the rest for them).
+  //       userRounds (how many Redraft rounds the user picks; the AI drafts the rest for them),
+  //       straight (1 = the same order every round instead of a snake; the League Redraft page offers it).
   function create(data, opts) {
     if (opts.mode === "real") return createReal(data, opts);
     const seed = String(opts.seed || Date.now().toString(36));
@@ -175,7 +180,7 @@
     }
     const lg = {
       v: 1, seed, data: data.built, year: data.season, user: opts.team | 0,
-      settings: { team: opts.team | 0, slot: opts.slot | 0, userRounds: clamp(opts.userRounds || 15, 1, REDRAFT_ROUNDS), ...(opts.lr ? { lr: 1 } : {}) },
+      settings: { team: opts.team | 0, slot: opts.slot | 0, userRounds: clamp(opts.userRounds || 15, 1, REDRAFT_ROUNDS), ...(opts.lr ? { lr: 1 } : {}), ...(opts.straight ? { straight: 1 } : {}) },
       teams: TEAMS.map((t) => ({ ...t, roster: [] })),
       players, moves: [], phase: "redraft", week: 0, games: [], log: [], history: [], stats: {}, lastRank: null,
       fa: [], notes: [],
@@ -186,7 +191,7 @@
     const others = r.shuffle(lg.teams.map((t) => t.i).filter((i) => i !== lg.user));
     const slot = lg.settings.slot ? lg.settings.slot - 1 : r.int(32);
     others.splice(slot, 0, lg.user);
-    lg.draft = startDraft(lg, "redraft", others, REDRAFT_ROUNDS, true, Object.keys(players));
+    lg.draft = startDraft(lg, "redraft", others, REDRAFT_ROUNDS, !lg.settings.straight, Object.keys(players));
     settle(lg);
     return lg;
   }
@@ -292,6 +297,12 @@
       case "half": { // a second-half plan for this week's game only (the halftime hook)
         const p = cleanPlan(m.plan); if (!p || (lg.phase !== "season" && lg.phase !== "playoffs")) return false;
         lg.h2 = { ...(lg.h2 || {}), [lg.user]: p };
+        return true;
+      }
+      case "call": { // a coach decision during this week's game: { k: decision id from simGame's asks, c: choice, team }
+        const t = m.team == null ? lg.user : m.team;
+        if ((lg.phase !== "season" && lg.phase !== "playoffs") || !lg.teams[t] || typeof m.k !== "string" || !CALL_OPTS[m.c]) return false;
+        lg.calls = { ...(lg.calls || {}), [t]: { ...((lg.calls && lg.calls[t]) || {}), [m.k]: m.c } };
         return true;
       }
       case "name": { // rename your franchise (the page runs the word filter first)
@@ -482,7 +493,10 @@
     intS: 0.017, intD: 0.042, intE: 0.007, fum: 0.006,
     passBase: 0.53, lean: 0.06, blitz: [0.14, 0.27, 0.42], gap: [39, 33, 24], snapT: 6,
     pen: 0.055, rz: 1.1, cmpRz: 0.28,
+    knock: 0.8, agg: 0.3, // coach decisions: a starter kept in with a knock plays this much slower; chance he aggravates it
   };
+  // Coach decisions: the choices each kind of in-game call can take (see "Coach decisions" in simGame).
+  const CALL_OPTS = { go: 1, punt: 1, fg: 1, kick: 1, two: 1, sit: 1, keep: 1, stay: 1, bench: 1, run: 1, to: 1 };
   const GO2 = new Set([-2, -5, -10, -13, 1, 5, 12]); // after the touchdown, trailing or leading by these: go for two
   function edges(lg, o, d, home, mo) {
     // Real Rosters: real teams' units differ much more than an AI Redraft's, so their gaps count for less (realK).
@@ -545,16 +559,42 @@
     const tackler = (D, pass) => pickW(pass ? [[D.L.CB, 0.38], [D.L.S, 0.32], [D.L.LB, 0.3]].map(([a, w]) => [r.pick(a), w])
       : [[D.L.LB, 0.4], [D.L.DL, 0.2], [D.L.ED, 0.15], [D.L.S, 0.15], [D.L.CB, 0.1]].map(([a, w]) => [r.pick(a), w]));
     const newSeries = (side, at) => { o = side; yl = at; dn = 1; tg = Math.min(10, 100 - at); };
+
+    // Coach decisions. At a handful of real decision points (a close 4th down, a two-point question late, a banged-up
+    // starter, a quarterback having a genuinely bad day, the clock in the last two minutes) the game asks the team's
+    // coach. Every point is found from the game state alone, with no random draws, and the default is exactly what the
+    // engine did before decisions existed, so a game nobody answers is unchanged. A person's answer is a "call" move
+    // (lg.calls[team][id]); ids count decision points in order, so everything before an answered call stays identical.
+    // asks lists every point (both teams); at = the play index the decision comes before (the viewer pauses there).
+    const asks = [], calls = lg.calls;
+    const ask = (i, kind, def, opts, at, info) => {
+      const id = kind + asks.length, mine = calls && calls[S[i].t], c = mine && mine[id];
+      const pick = c != null && opts.includes(c) ? c : def;
+      asks.push({ id, kind, t: S[i].t, side: i, def, opts, c: pick, at: plays ? at : 0, q, clock, sc: [sc[0], sc[1]], ...info });
+      return pick;
+    };
+    const tol = [3, 3], toAsk = [0, 0], qbAsked = [false, false];
     const change = (at) => { endPoss(); newSeries(1 - o, at); };
 
     function injure(h) {
       const s = S[h.i], arr = s.L[h.p.g], k = arr.indexOf(h.p);
       if (k < 0) return;
+      // Coach decision: a minor knock (one or two weeks) to a starter. Sitting him is what always happened. Keeping him
+      // in: he plays on a bit slower, misses a week less afterwards, but may aggravate it (out longer, sometimes the year).
+      if (!h.agg && h.w <= 2 && ask(h.i, "inj", "sit", ["sit", "keep"], plays ? plays.length : 0, { p: h.p.id, w: h.w }) === "keep") {
+        const kr = rng(lg.seed, "knock", lg.year, g.wk, g.h, g.a, h.p.id), hurtP = { ...h.p, grade: h.p.grade - PM.knock };
+        arr[k] = hurtP; s.u = unitsOf(s.L); setEdges();
+        if (kr() < PM.agg) { const x = kr(); hurt.push({ i: h.i, p: hurtP, agg: 1, at: Math.min(3599, elapsed() + 60 + kr.int(Math.max(1, 3540 - elapsed()))), w: x < 0.8 ? 3 + kr.int(4) : 30 }); hurt.sort((a, b) => a.at - b.at); }
+        else if (h.w > 1) s.later = [...(s.later || []), { p: h.p.id, t: s.t, w: h.w - 1, hp: hurtP }];
+        mark(); log("inj", `${short(h.p)} is banged up but stays in the game.`, { side: h.i });
+        return;
+      }
+      if (h.agg && s.later) s.later = s.later.filter((x) => x.hp !== h.p);
       s.out.add(h.p.id); injured.push({ p: h.p.id, t: s.t, w: h.w });
       const next = s.L.bench[h.p.g].find((p) => !arr.includes(p) && !s.out.has(p.id)) || { id: null, name: "Replacement", g: h.p.g, grade: 2.5 };
       arr[k] = next; s.u = unitsOf(s.L); setEdges();
       if (s.feat === h.p.id) s.feat = null;
-      mark(); log("inj", `Injury: ${short(h.p)} is out for the game${next.id ? `, ${short(next)} takes over` : ""}.`, { side: h.i });
+      mark(); log("inj", `${h.agg ? `${short(h.p)} aggravates the injury and` : `Injury: ${short(h.p)}`} is out for the game${next.id ? `, ${short(next)} takes over` : ""}.`, { side: h.i });
     }
 
     function kickoff(kicker) {
@@ -576,7 +616,9 @@
       o = side; yl = 98; dn = 0; tg = 2; mark();
       const diff = sc[side] - sc[1 - side], a = S[side].plan.fourth, chart = GO2.has(diff);
       const late = q >= 4 && clock <= 600;
-      const go2 = q < 5 && (late ? (a === 0 ? diff === -2 : chart) : a === 2 && (chart || r() < 0.06));
+      let go2 = q < 5 && (late ? (a === 0 ? diff === -2 : chart) : a === 2 && (chart || r() < 0.06));
+      // Coach decision: only in the last ten minutes, at the scores where the chart makes it a real question.
+      if (q === 4 && clock <= 600 && (chart || diff === -1 || diff === -8)) go2 = ask(side, "2pt", go2 ? "two" : "kick", ["kick", "two"], plays ? plays.length : 0, { diff }) === "two";
       const K = S[side].L.K[0];
       if (go2) {
         T[side].two[1]++;
@@ -736,8 +778,15 @@
           const max = yl >= 95 ? [1, 2, 4][a] : yl >= 60 ? [1, 2, 4][a] : yl >= 45 ? [0, 1, 2][a] : yl >= 28 ? [0, 0, 1][a] : 0;
           go = need <= max;
         }
+        // Coach decision: only the genuinely close calls (short yardage around midfield and in the red zone, or a
+        // field-goal-or-go call late in a close game). Forced calls (trailing late, running out the clock) stay automatic.
+        const forced = (q >= 4 && clock <= 300 && diff < 0 && !(tieOrWinFG && inRange)) || (otPoss && otPoss[1 - o] && diff < 0 && !(tieOrWinFG && inRange)) || (q >= 4 && diff > 0 && clock <= 240);
+        const close = (need <= 1 && yl >= 40 && yl < 90) || (need === 2 && yl >= 50 && yl < 75) || (need <= 2 && yl >= 95) || (q >= 4 && clock <= 600 && Math.abs(diff) <= 8 && inRange && need <= 4);
+        let call = go ? "go" : inRange ? "fg" : "punt";
+        if (!forced && close) call = ask(o, "4th", call, ["go", ...(inRange ? ["fg"] : []), ...(yl < 70 || call === "punt" ? ["punt"] : [])], plays ? plays.length : 0, { dn, tg: need, yl, diff });
+        go = call === "go";
         T[o].d4[1] += go ? 1 : 0;
-        if (!go) return inRange ? fieldGoal() : punt();
+        if (!go) return call === "fg" ? fieldGoal() : punt();
       }
       if (dn === 3) T[o].d3[1]++;
       // Flags before the snap.
@@ -776,8 +825,19 @@
       const stopWin = (q === 2 && clock <= 120) || (q >= 4 && clock <= 300);
       const hurry = twoMin || trailingLate || (otPoss && (diff < 0 || clock <= 240));
       const gap = hurry ? 9 : q >= 4 && diff > 0 && clock <= 480 ? 40 : PM.gap[plan.tempo];
-      use(PM.snapT + (res.inc || (res.oob && stopWin) || yl + res.y >= 100 ? 0 : gap));
+      let runs = !(res.inc || (res.oob && stopWin) || yl + res.y >= 100), toCalled = false;
+      // Coach decision: the clock in the last two minutes of a close game. When the team with the ball (ahead or level)
+      // lets the clock run, the defense may stop it with one of its three timeouts. At most three asks a half.
+      if (runs && q === 4 && clock <= 120 && clock > PM.snapT && gap >= 20 && diff >= 0 && diff <= 8 && yl + res.y > 0 && !(dn === 4 && res.y < tg)) {
+        const who = 1 - o;
+        if (tol[who] > 0 && toAsk[who] < 3) {
+          toAsk[who]++;
+          if (ask(who, "to", "run", ["run", "to"], plays ? plays.length + 1 : 0, { save: gap, left: tol[who] }) === "to") { tol[who]--; runs = false; toCalled = true; }
+        }
+      }
+      use(PM.snapT + (runs ? gap : 0));
       gain(res.y, res.p, res.txt, res.sack ? "sack" : res.inc ? "inc" : isPass && res.p && res.p.g !== "QB" ? "pass" : "run");
+      if (!runs && toCalled) { mark(); log("to", `Timeout, defense (${tol[1 - o]} left).`, { side: 1 - o }); }
     }
     // Take back the stats of a play wiped out by a flag.
     function undo(res) {
@@ -792,7 +852,7 @@
       if (q === 1 || q === 3) { log("qtr", `End of the ${nth[q]} quarter.`); q++; clock = 900; return; }
       if (q === 2) {
         log("half", "Halftime.");
-        q = 3; clock = 900; r = R2; kickNext = recv1; onside = false;
+        q = 3; clock = 900; r = R2; kickNext = recv1; onside = false; tol[0] = tol[1] = 3; toAsk[0] = toAsk[1] = 0;
         // The halftime hook: a person can change their plan for the second half (lg.h2, set by the "half" move).
         S.forEach((s) => { const h2 = lg.h2 && lg.h2[s.t]; if (h2) { s.plan = h2; if (s.feat !== h2.feature) { const skill = [...s.L.bench.QB, ...s.L.bench.RB, ...s.L.bench.WR, ...s.L.bench.TE]; s.feat = skill.some((p) => p.id === h2.feature && !s.out.has(p.id)) ? h2.feature : null; } } });
         return;
@@ -808,13 +868,30 @@
       log("end", "Final. It ends in a tie."); over = true;
     }
 
+    // Coach decision: a quarterback having a genuinely bad day (three picks, or a long day of misses) with his team down
+    // 14+ in the second half. Asked at most once a game, when his team gets the ball; sticking with him is the default.
+    function qbCheck(side) {
+      const s = S[side], qb = s.L.QB[0], x = (qb && st[qb.id]) || {}, att = x.att || 0;
+      const down = sc[1 - side] - sc[side];
+      if (qbAsked[side] || q < 3 || q > 4 || down < 14) return;
+      if (!((x.int || 0) >= 3 || (att >= 18 && (x.cmp || 0) / att < 0.45 && (x.py || 0) / att < 5))) return;
+      const bk = s.L.bench.QB.find((p) => p !== qb && p.id !== qb.id && !s.out.has(p.id));
+      if (!bk) return;
+      qbAsked[side] = true;
+      if (ask(side, "qb", "stay", ["stay", "bench"], plays ? plays.length : 0, { p: qb.id, b: bk.id, cmp: x.cmp || 0, att, int: x.int || 0 }) === "bench") {
+        s.L.QB[0] = bk; s.u = unitsOf(s.L); setEdges(); if (s.feat === qb.id) s.feat = null;
+        mark(); log("inj", `${short(bk)} comes in at quarterback for ${short(qb)}.`, { side });
+      }
+    }
+
     kickNext = 1 - recv1;
-    let guard = 0;
+    let guard = 0, lastO = -1;
     while (!over && guard++ < 600) {
       if (clock <= 0) { endPeriod(); continue; }
       if (kickNext != null) { const k = kickNext; kickNext = null; kickoff(k); continue; }
       otCheck(); if (over) { mark(); log("end", "Final."); break; }
       while (hurt.length && hurt[0].at <= elapsed()) injure(hurt.shift());
+      if (o !== lastO) { lastO = o; qbCheck(o); }
       snap();
     }
     if (!over) { mark(); log("end", "Final."); }
@@ -823,7 +900,8 @@
       const top = Object.entries(x.touch).sort((a, b) => b[1] - a[1])[0];
       return { plays: x.plays, pass: x.pass, run: x.run, blz: x.blz, drop: x.drop, d4: x.d4, two: x.two, top: top ? top[0] : null, topN: top ? top[1] : 0 };
     });
-    return { sc, ot: q >= 5, plays, scoring, st, T, injured, tend, plans: S.map((s) => s.plan),
+    for (const s of S) for (const x of s.later || []) injured.push({ p: x.p, t: x.t, w: x.w }); // played through a knock
+    return { sc, ot: q >= 5, plays, scoring, st, T, injured, tend, asks, plans: S.map((s) => s.plan),
       ls: S.map((s) => GROUPS.flatMap((grp) => s.L[grp].map((p) => p.id).filter(Boolean))) };
   }
 
@@ -863,7 +941,7 @@
   // Two friends' browsers with the same league and the same start time show the same play: each works out
   // live.at(times, now - start). HALF_MS is the halftime window (a "half" move must arrive before it ends).
   const LIVE_MS = { ko: 3500, xp: 2600, "2pt": 3200, run: 5200, pass: 5600, inc: 4400, sack: 5000, kneel: 3000, punt: 5200, fg: 4800,
-    int: 6500, fum: 6500, pen: 3800, qtr: 4000, inj: 3500, end: 0, final: 0 };
+    int: 6500, fum: 6500, pen: 3800, qtr: 4000, inj: 3500, to: 2500, end: 0, final: 0 };
   const HALF_MS = 30000;
   function liveTimes(plays) {
     const t = [0];
@@ -993,7 +1071,7 @@
     const wg = lg.games.filter((g) => g.wk === lg.week);
     for (const g of wg) playGame(lg, g);
     lrWeek(lg, wg);
-    lg.h2 = null;
+    lg.h2 = null; lg.calls = null;
     healWeek(lg);
     if (lg.week >= (lg.weeks || 18)) startPlayoffs(lg);
     return true;
@@ -1085,7 +1163,7 @@
       P.games.push(g);
     }
     lrWeek(lg, games);
-    lg.h2 = null;
+    lg.h2 = null; lg.calls = null;
     healWeek(lg);
     P.round++;
     if (P.round === 4) finishSeason(lg);
