@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Profile · Last Four In</title>
+<meta name="description" content="Picks, record and streaks on Last Four In.">
+<meta property="og:title" content="Profile · Last Four In">
+<meta property="og:description" content="See their picks, record and streaks. Think you can do better? Free to play.">
+<meta property="og:url" content="https://lastfourin.com/u/">
+<meta property="og:site_name" content="Last Four In">
+<meta name="theme-color" content="#0d0820">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/assets/lfi.css">
+<script src="/assets/theme.js"></script>
+<link rel="stylesheet" href="/assets/social.css">
+</head>
+<body>
+
+<header class="nav" data-active="profile"></header>
+
+<main class="page" style="max-width:680px">
+  <div id="note"></div>
+  <div id="prof"><p class="empty">Loading…</p></div>
+  <h2 class="disp" id="feedH" style="font-size:26px;margin:24px 0 10px" hidden>Posts</h2>
+  <div class="feed" id="feed"></div>
+  <div style="text-align:center;margin-top:14px"><button class="btn" type="button" id="more" hidden>Load more</button></div>
+</main>
+<footer class="foot"></footer>
+
+<script src="/assets/cfb-data.js"></script>
+<script src="/assets/lfi.js"></script>
+<script src="/assets/cloud.js"></script>
+<script>
+(function () {
+  const { $, esc, toast, renderEntry, copyText, cloud, KIND } = LFI;
+  const handle = (new URLSearchParams(location.search).get("h") || "").replace(/^@/, "").trim();
+  let P = null, viewer = null, myBlocks = [], last = null, mine = false;
+
+  const initial = (p) => esc(((p.display_name || p.username || "?").trim()[0] || "?").toUpperCase());
+  const av = (p, cls = "avatar") => `<span class="${cls}">${p.avatar_url ? `<img src="${esc(p.avatar_url)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : initial(p)}</span>`;
+  function ago(t) {
+    const d = new Date(t), s = (Date.now() - d) / 1000;
+    if (s < 60) return "now";
+    if (s < 3600) return Math.floor(s / 60) + "m";
+    if (s < 86400) return Math.floor(s / 3600) + "h";
+    if (s < 6 * 86400) return Math.floor(s / 86400) + "d";
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", ...(d.getFullYear() !== new Date().getFullYear() ? { year: "numeric" } : {}) });
+  }
+
+  function drawProfile(p, st) {
+    const w = +st.correct || 0, l = +st.wrong || 0;
+    const badges = [];
+    if (+st.streak >= 3) badges.push(`🔥 ${st.streak} straight right`);
+    if (+st.perfect_weeks) badges.push(`💯 Perfect week${st.perfect_weeks > 1 ? ` ×${st.perfect_weeks}` : ""}`);
+    if (+st.best_streak >= 5) badges.push(`⚡ Best streak ${st.best_streak}`);
+    if (+st.weeks >= 10) badges.push(`📅 ${st.weeks} weeks played`);
+    if (new Date(p.created_at) < new Date("2027-01-01")) badges.push("⭐ Founding member");
+    const share = `<button class="btn" type="button" id="shareP">Share</button>`;
+    const acts = mine ? `<a class="btn" href="/account/#profile">Edit profile</a>${share}`
+      : `${share}${viewer ? `<div class="menu-wrap"><button class="btn" type="button" id="pm" aria-label="More" aria-expanded="false">•••</button></div>` : ""}`;
+    $("prof").innerHTML = `<section class="prof"><div class="prof-cover"></div><div class="prof-in">
+      <div class="prof-top">${av(p, "prof-av")}<div class="prof-acts">${acts}</div></div>
+      <h1>${esc(p.display_name || p.username)}</h1>
+      <div class="handle">@${esc(p.username)}</div>
+      ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ""}
+      <div class="meta">Joined ${new Date(p.created_at).toLocaleDateString(undefined, { month: "long", year: "numeric" })}</div>
+      <div class="prof-stats">
+        <div><b>${w}-${l}</b><span>Pick'em record</span></div>
+        <div><b>${w + l ? Math.round((w / (w + l)) * 100) + "%" : "–"}</b><span>Hit rate</span></div>
+        <div><b>${+st.streak || 0}</b><span>Current streak</span></div>
+        <div><b>${+st.best_week || 0}</b><span>Best week</span></div>
+      </div>
+      ${badges.length ? `<div class="badges">${badges.map((b) => `<span class="badge">${esc(b)}</span>`).join("")}</div>` : ""}
+    </div></section>`;
+    document.title = `${p.display_name || p.username} (@${p.username}) · Last Four In`;
+    $("shareP").onclick = async () => {
+      const url = `${location.origin}/u/${encodeURIComponent(p.username)}`;
+      if (navigator.share) { try { await navigator.share({ title: document.title, text: `${p.display_name || "@" + p.username}'s picks on Last Four In`, url }); return; } catch (e) { if (e.name === "AbortError") return; } }
+      toast((await copyText(url)) ? "Profile link copied" : "Couldn't copy the link");
+    };
+    if ($("pm")) $("pm").onclick = (ev) => openMenu(ev.currentTarget, [
+      myBlocks.includes(p.id) ? ["Unblock @" + p.username, async () => { await cloud.unblock(p.id); myBlocks = myBlocks.filter((x) => x !== p.id); toast("Unblocked"); load(); }]
+        : ["Block @" + p.username, async () => { if (!confirm(`Block @${p.username}? You won't see their comments, and they can't comment on your posts.`)) return; await cloud.block(p.id); myBlocks.push(p.id); toast("Blocked"); load(); }, "danger"],
+      ["Report profile", () => report("profile", p.id)],
+    ]);
+  }
+
+  // ---- Small menus ----
+  let openM = null;
+  function closeMenu() { if (openM) { openM.remove(); openM = null; } }
+  function openMenu(btn, items) {
+    const was = openM && openM.parentNode === btn.parentNode; closeMenu(); if (was) return;
+    const m = document.createElement("div"); m.className = "menu"; m.setAttribute("role", "menu");
+    items.forEach(([label, fn, cls]) => {
+      const b = document.createElement("button"); b.type = "button"; b.textContent = label; if (cls) b.className = cls; b.setAttribute("role", "menuitem");
+      b.onclick = async () => { closeMenu(); try { await fn(); } catch (e) { toast(e.message); } };
+      m.appendChild(b);
+    });
+    btn.parentNode.appendChild(m); openM = m;
+  }
+  document.addEventListener("click", (e) => { if (openM && !e.target.closest(".menu-wrap")) closeMenu(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
+
+  async function report(type, id) {
+    const reasons = { 1: "spam", 2: "harassment", 3: "hate", 4: "sexual", 5: "other" };
+    const pick = prompt("Why are you reporting this?\n1 Spam\n2 Harassment or bullying\n3 Hate speech\n4 Sexual content\n5 Something else\n\nType a number:");
+    if (pick == null) return;
+    const reason = reasons[pick.trim()];
+    if (!reason) return toast("Type a number from 1 to 5.");
+    await cloud.report(type, id, reason);
+    toast("Thanks. A moderator will look at it.");
+  }
+
+  // ---- Feed ----
+  function postHTML(e) {
+    const n = (e.comments && e.comments[0] && e.comments[0].count) || 0;
+    const entry = { id: e.key, kind: e.kind, title: e.title, sub: e.sub, result: e.result, data: e.data };
+    const k = KIND[e.kind] || {};
+    return `<article class="post" id="p-${e.id}" data-id="${e.id}">
+      <div class="post-h">${av(P)}<div style="min-width:0;flex:1"><b>${esc(P.display_name || P.username)}</b> <span class="when">@${esc(P.username)} · ${ago(e.posted_at)}</span></div>
+        ${viewer && !mine ? `<div class="menu-wrap"><button class="linkish" type="button" data-pmenu aria-label="More">•••</button></div>` : ""}
+        ${mine ? `<div class="menu-wrap"><button class="linkish" type="button" data-mymenu aria-label="More">•••</button></div>` : ""}</div>
+      ${e.caption ? `<p class="cap">${esc(e.caption)}</p>` : ""}
+      ${renderEntry(entry)}
+      <div class="post-f"><button class="btn" type="button" data-cm aria-expanded="false">💬 ${n ? n + " comment" + (n === 1 ? "" : "s") : "Comment"}</button>
+        <span class="spacer"></span>${k.url ? `<a class="btn" href="${esc(k.url)}">${esc(k.make || "Play")}</a>` : ""}</div>
+      <div class="cmts" hidden></div></article>`;
+  }
+
+  async function loadFeed(more) {
+    const rows = await cloud.feed(P.id, more ? last : null);
+    if (!more) $("feed").innerHTML = "";
+    $("feedH").hidden = false;
+    if (!rows.length && !more) {
+      $("feed").innerHTML = `<section class="card"><div class="card-b"><p class="empty" style="margin:0">${mine ? `Nothing posted yet. After you submit picks, tap <b>Post to my profile</b> in the pop-up.` : `@${esc(P.username)} hasn't posted any picks yet.`}</p>
+        ${mine ? `<a class="btn gold" href="/" style="margin-top:12px">Make some picks</a>` : ""}</div></section>`;
+    }
+    $("feed").insertAdjacentHTML("beforeend", rows.map(postHTML).join(""));
+    last = rows.length ? rows[rows.length - 1].posted_at : last;
+    $("more").hidden = rows.length < 20;
+    const target = location.hash.match(/^#p-([0-9a-f-]{36})$/);
+    if (target && !more) { const el = $("p-" + target[1]); if (el) { el.scrollIntoView({ block: "start" }); toggleComments(el, true); } }
+  }
+
+  async function toggleComments(post, force) {
+    const box = post.querySelector(".cmts"), btn = post.querySelector("[data-cm]");
+    const open = force ?? box.hidden;
+    box.hidden = !open; btn.setAttribute("aria-expanded", String(open));
+    if (!open) return;
+    box.innerHTML = `<p class="empty" style="margin:0">Loading…</p>`;
+    const list = await cloud.comments(post.dataset.id);
+    const canPost = viewer && viewer.onboarded && !myBlocks.includes(P.id);
+    box.innerHTML = list.map((c) => cmtHTML(c)).join("") + (list.length ? "" : `<p class="empty" style="margin:0">No comments yet.${canPost ? " Start it off." : ""}</p>`)
+      + (canPost ? `<form class="cmt-form"><textarea rows="1" maxlength="280" placeholder="Add a comment" aria-label="Add a comment"></textarea><button class="btn navy" type="submit">Post</button></form>`
+        : viewer ? "" : `<p class="empty" style="margin:0"><a href="/signin/?next=${encodeURIComponent(location.pathname + location.search + "#p-" + post.dataset.id)}">Sign in</a> to comment.</p>`);
+  }
+  function cmtHTML(c) {
+    const p = c.profiles || (viewer && c.user_id === viewer.id ? viewer : { username: "fan" });
+    const canMenu = viewer && (c.user_id === viewer.id || mine || true);
+    return `<div class="cmt${c.hidden ? " hidden-c" : ""}" data-c="${c.id}" data-u="${c.user_id}">${av(p)}
+      <div class="cmt-b"><a class="who" href="/u/?h=${encodeURIComponent(p.username)}">${esc(p.display_name || p.username)}</a><span class="when">@${esc(p.username)} · ${ago(c.created_at)}${c.hidden ? " · hidden" : ""}</span><p>${esc(c.body)}</p></div>
+      ${viewer && canMenu ? `<div class="menu-wrap"><button class="linkish" type="button" data-cmenu aria-label="More">•••</button></div>` : ""}</div>`;
+  }
+
+  $("feed").addEventListener("click", (ev) => {
+    const post = ev.target.closest(".post"); if (!post) return;
+    if (ev.target.closest("[data-cm]")) return toggleComments(post);
+    if (ev.target.closest("[data-pmenu]")) return openMenu(ev.target.closest("[data-pmenu]"), [["Report post", () => report("entry", post.dataset.id)]]);
+    if (ev.target.closest("[data-mymenu]")) return openMenu(ev.target.closest("[data-mymenu]"), [["Take this post down", async () => {
+      const key = (LFI.entries.all().find((x) => x.cloudId === post.dataset.id) || {}).id;
+      if (key) await cloud.setPosted(key, false);
+      else await cloud.sb.from("entries").update({ posted: false }).eq("id", post.dataset.id);
+      post.remove(); toast("Taken down");
+    }, "danger"]]);
+    const cm = ev.target.closest("[data-cmenu]");
+    if (cm) {
+      const c = cm.closest(".cmt"), id = +c.dataset.c, uid = c.dataset.u, hidden = c.classList.contains("hidden-c");
+      const items = [];
+      if (uid === viewer.id) items.push(["Delete comment", async () => { await cloud.deleteComment(id); c.remove(); toast("Deleted"); }, "danger"]);
+      else {
+        if (mine) items.push([hidden ? "Show comment" : "Hide comment", async () => { await cloud.hideComment(id, !hidden); toast(hidden ? "Shown" : "Hidden"); toggleComments(post, true); }]);
+        items.push(["Report comment", () => report("comment", id)]);
+        items.push(["Block this person", async () => { if (!confirm("Block them? You won't see their comments, and they can't comment on your posts.")) return; await cloud.block(uid); myBlocks.push(uid); toast("Blocked"); toggleComments(post, true); }, "danger"]);
+      }
+      openMenu(cm, items);
+    }
+  });
+  $("feed").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const f = ev.target, post = f.closest(".post"), ta = f.querySelector("textarea"), btn = f.querySelector("button");
+    const body = ta.value.trim(); if (!body) return;
+    btn.disabled = true;
+    try {
+      await cloud.addComment(post.dataset.id, body);
+      await toggleComments(post, true);
+      const b = post.querySelector("[data-cm]"), n = post.querySelectorAll(".cmt").length;
+      b.textContent = `💬 ${n} comment${n === 1 ? "" : "s"}`;
+    } catch (e) { toast(e.message); btn.disabled = false; }
+  });
+  $("feed").addEventListener("keydown", (ev) => {
+    if (ev.target.matches(".cmt-form textarea") && ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); ev.target.form.requestSubmit(); }
+  });
+  $("more").onclick = () => loadFeed(true);
+
+  // ---- Sign-in isn't switched on yet: show what a profile looks like, clearly labelled ----
+  function sample() {
+    $("note").innerHTML = `<div class="notice">Sample profile. Accounts switch on soon; this is what yours will look like.</div>`;
+    P = { id: "sample", username: handle || "sam", display_name: "Sam", bio: "Gators fan. Will die on the SEC hill.\nTop 25 truther.", created_at: "2026-10-27", avatar_url: null };
+    drawProfile(P, { correct: 41, wrong: 19, streak: 6, best_streak: 9, best_week: 13, perfect_weeks: 1, weeks: 8 });
+    $("feedH").hidden = false;
+    const demo = [
+      { id: "s1", key: "nfl-demo", kind: "nfl", title: "NFL Pick'em · Week 9", sub: "14 of 14 picked", result: "", posted_at: new Date(Date.now() - 3 * 3600e3).toISOString(), caption: "Lions roll. Book it.", comments: [{ count: 3 }],
+        data: { picks: [["Lions", "Packers", "det"], ["Chiefs", "Bills", "kc"], ["Eagles", "Cowboys", "phi"], ["Ravens", "Steelers", "bal"], ["49ers", "Rams", "sf"], ["Texans", "Colts", "hou"]].map(([p, o, t]) => ({ p, o, a: t.toUpperCase() })) } },
+      { id: "s2", key: "ap-demo", kind: "ap", title: "AP Poll Prediction · Week 10", sub: "Top 25", result: "", posted_at: new Date(Date.now() - 2 * 86400e3).toISOString(), caption: "Indiana top 3 and I'm not sorry.", comments: [{ count: 0 }],
+        data: { top: ["Ohio State", "Texas A&M", "Indiana", "Alabama", "Georgia", "Ole Miss", "Oregon", "Texas Tech", "Miami", "BYU", "Notre Dame", "Vanderbilt"], ids: ["194", "245", "84", "333", "61", "145", "2483", "2641", "2390", "252", "87", "238"],
+                ab: ["OSU", "TA&M", "IU", "ALA", "UGA", "MISS", "ORE", "TTU", "MIA", "BYU", "ND", "VAN"] } },
+    ];
+    $("feed").innerHTML = demo.map(postHTML).join("");
+    $("feed").querySelectorAll("[data-cm]").forEach((b) => { b.disabled = true; });
+  }
+
+  async function load() {
+    if (!cloud.on) return sample();
+    if (!handle) { $("prof").innerHTML = `<section class="card"><div class="card-b"><p style="margin:0 0 12px">No profile picked.</p><a class="btn gold" href="/account/">Go to my account</a></div></section>`; return; }
+    viewer = cloud.profile && cloud.profile.onboarded ? cloud.profile : null;
+    try {
+      P = await cloud.profileByHandle(handle);
+      if (!P || !P.onboarded) {
+        $("prof").innerHTML = `<section class="card"><div class="card-b"><p style="margin:0 0 12px;font-weight:600">No one goes by @${esc(handle)} yet.</p><a class="btn gold" href="/">Find something to play</a></div></section>`;
+        $("feed").innerHTML = ""; $("feedH").hidden = true; return;
+      }
+      if (P.banned && !(viewer && viewer.id === P.id)) { $("prof").innerHTML = `<section class="card"><div class="card-b"><p style="margin:0">This account is paused.</p></div></section>`; return; }
+      mine = !!(viewer && viewer.id === P.id);
+      myBlocks = await cloud.blocks();
+      const st = await cloud.stats(P.id);
+      drawProfile(P, st);
+      if (myBlocks.includes(P.id)) {
+        $("feedH").hidden = true;
+        $("feed").innerHTML = `<section class="card"><div class="card-b"><p class="empty" style="margin:0">You blocked @${esc(P.username)}. Unblock them from the ••• menu to see their posts.</p></div></section>`;
+        return;
+      }
+      await loadFeed(false);
+    } catch (e) {
+      $("prof").innerHTML = `<section class="card"><div class="card-b"><p style="margin:0">Couldn't load this profile. Refresh to try again.</p></div></section>`;
+      console.error(e);
+    }
+  }
+  cloud.ready.then(() => { load(); let uid = cloud.user && cloud.user.id; cloud.onChange((c, what) => { if (what !== "entries" && (c.user && c.user.id) !== uid) { uid = c.user && c.user.id; load(); } }); });
+})();
+</script>
+</body>
+</html>

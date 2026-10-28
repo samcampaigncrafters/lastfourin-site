@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Moderation · Last Four In</title>
+<meta name="description" content="Moderator queue.">
+<meta property="og:title" content="Moderation · Last Four In">
+<meta property="og:description" content="Moderator queue.">
+<meta property="og:url" content="https://lastfourin.com/mod/">
+<meta property="og:site_name" content="Last Four In">
+<meta name="theme-color" content="#0d0820">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/assets/lfi.css">
+<script src="/assets/theme.js"></script>
+<link rel="stylesheet" href="/assets/social.css">
+</head>
+<body>
+
+<header class="nav"></header>
+
+<main class="page" style="max-width:760px">
+  <div class="head"><div><div class="kicker">Moderators</div><h1 class="disp">Reports</h1>
+    <p>Everything people reported, most-reported first. Three reports hide a comment or post automatically until you decide.</p></div></div>
+  <div class="mq" id="q"><p class="empty">Loading…</p></div>
+</main>
+<footer class="foot"></footer>
+
+<script src="/assets/lfi.js"></script>
+<script src="/assets/cloud.js"></script>
+<script>
+(function () {
+  const { $, esc, toast, cloud } = LFI;
+  const WHY = { spam: "Spam", harassment: "Harassment", hate: "Hate", sexual: "Sexual", other: "Other" };
+  let rows = [];
+  async function load() {
+    if (!cloud.on || !cloud.user) { $("q").innerHTML = `<p class="empty">Sign in with a moderator account to see reports. <a href="/signin/?next=/mod/">Sign in</a></p>`; return; }
+    if (!(await cloud.isAdmin())) { $("q").innerHTML = `<p class="empty">This account isn't a moderator.</p>`; return; }
+    try { rows = await cloud.modQueue(); } catch (e) { $("q").innerHTML = `<p class="empty">${esc(e.message)}</p>`; return; }
+    $("q").innerHTML = rows.length ? rows.map((r, i) => `<div class="mq-item" data-i="${i}">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span class="chip ${r.reports >= 3 ? "no" : ""}">${r.reports} report${r.reports > 1 ? "s" : ""}</span>
+          <span class="chip">${esc(r.target_type)}</span>${r.reasons.map((x) => `<span class="chip">${esc(WHY[x] || x)}</span>`).join("")}
+          ${r.hidden ? `<span class="chip lock">Hidden</span>` : ""}${r.author_banned ? `<span class="chip no">Author banned</span>` : ""}
+        </div>
+        <div class="what">${esc(r.content || "(gone)")}</div>
+        <div class="empty" style="padding:0 0 8px">By ${r.author ? `<a href="/u/?h=${encodeURIComponent(r.author)}">@${esc(r.author)}</a>` : "unknown"} · first reported ${new Date(r.first_reported).toLocaleString()}
+          ${r.entry_id && r.link_handle ? ` · <a href="/u/?h=${encodeURIComponent(r.link_handle)}#p-${r.entry_id}">See it in context</a>` : ""}</div>
+        ${r.notes && r.notes.length ? `<div class="empty" style="padding:0 0 8px">Notes: ${r.notes.map(esc).join(" · ")}</div>` : ""}
+        <div class="post-acts">
+          ${r.target_type !== "profile" ? `<button class="btn" type="button" data-a="hide">${r.hidden ? "Show it again" : "Hide it"}</button>` : ""}
+          ${r.author_id ? `<button class="btn" type="button" data-a="ban" style="color:var(--loss)">${r.author_banned ? "Unban author" : "Ban author"}</button>` : ""}
+          <button class="btn navy" type="button" data-a="done">Done</button>
+        </div></div>`).join("") : `<section class="card"><div class="card-b"><p class="empty" style="margin:0">Nothing to review. 🎉</p></div></section>`;
+  }
+  $("q").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-a]"); if (!b) return;
+    const r = rows[+b.closest("[data-i]").dataset.i];
+    b.disabled = true;
+    try {
+      if (b.dataset.a === "hide") {
+        if (r.target_type === "comment") await cloud.hideComment(+r.target_id, !r.hidden);
+        else await cloud.modHideEntry(r.target_id, !r.hidden);
+        toast(r.hidden ? "Shown" : "Hidden");
+      } else if (b.dataset.a === "ban") {
+        if (!r.author_banned && !confirm(`Ban @${r.author}? Their profile, posts and comments disappear and they can't post.`)) { b.disabled = false; return; }
+        await cloud.modBan(r.author_id, !r.author_banned); toast(r.author_banned ? "Unbanned" : "Banned");
+      } else { await cloud.modResolve(r.target_type, r.target_id); toast("Cleared"); }
+    } catch (err) { toast(err.message); }
+    load();
+  });
+  cloud.ready.then(() => cloud.onChange((c, what) => { if (what !== "entries") load(); }));
+})();
+</script>
+</body>
+</html>

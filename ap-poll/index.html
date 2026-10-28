@@ -9,12 +9,22 @@
 <meta property="og:description" content="Can you call the AP Top 25 before the voters do? Free weekly contest.">
 <meta property="og:url" content="https://lastfourin.com/ap-poll/">
 <meta property="og:site_name" content="Last Four In">
-<meta name="theme-color" content="#0a1a33">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='8' fill='%23f2b33d'/%3E%3Cpath d='M8 8h5v5h4M8 22h5v-5M17 13v4h5' fill='none' stroke='%231b1204' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#0d0820">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/assets/lfi.css">
+<script src="/assets/theme.js"></script>
+<style>
+/* Two modes on one page: the scored weekly contest, and a blank never-scored sandbox (?sandbox). */
+.modes { display: inline-flex; margin-top: 16px; background: var(--card); border: 1px solid var(--line-2); border-radius: 8px; padding: 3px; gap: 3px; }
+.modes a { padding: 8px 14px; border-radius: 6px; text-decoration: none; font-family: var(--f-display); text-transform: uppercase; font-size: 16px; letter-spacing: .03em; color: var(--ink-2); white-space: nowrap; }
+.modes a.on { background: var(--field); color: #fff; }
+.fun .contest-only, .fun-only { display: none; }
+.fun .fun-only { display: block; }
+.fun .submitbar .fun-only { display: inline-flex; }
+</style>
 </head>
 <body>
 
@@ -26,6 +36,7 @@
       <div class="kicker" id="kick">Free weekly contest</div>
       <h1 class="disp">Predict the AP Poll</h1>
       <p id="lede">Rank the Top 25 you think the AP voters will release on Sunday. Start from this week's poll and move teams for how you think the games go.</p>
+      <nav class="modes" aria-label="Mode"><a href="./" id="mContest">Weekly contest</a><a href="?sandbox" id="mFun">Build for fun</a></nav>
     </div>
   </div>
 
@@ -39,34 +50,35 @@
         </div>
         <div class="submitbar">
           <span id="submitNote">Rank 25 teams, then submit.</span>
+          <button class="btn fun-only" type="button" id="clearBtn">Start over</button>
           <button class="btn gold" type="button" id="submitBtn" disabled>Submit my AP poll</button>
         </div>
       </section>
     </div>
 
     <aside class="side">
-      <section class="card">
+      <section class="card fun-only">
+        <div class="card-h"><h2 class="disp">Just for fun</h2></div>
+        <div class="card-b"><p class="empty" style="color:var(--ink-2)">Start from a blank board and rank any 25 teams however you like. Nothing locks and nothing is scored. Your board saves on this device so you can come back to it. Want it to count? Switch to the weekly contest.</p></div>
+      </section>
+      <section class="card contest-only">
         <div class="card-h"><h2 class="disp">Locks in</h2></div>
         <div class="card-b">
           <div class="count sm" id="lockClock"></div>
           <p class="empty" id="lockWhen" style="margin-top:8px"></p>
         </div>
       </section>
-      <section class="card">
+      <section class="card contest-only">
         <div class="card-h"><h2 class="disp">Scoring</h2></div>
         <div class="card-b">
           <ul class="rules-list">
-            <li><span class="pts">5</span><span><b>Team in the real Top 25</b>For every team on your ballot that the AP also ranks.</span></li>
-            <li><span class="pts">+5</span><span><b>Exact spot</b>Bonus when you have that team at its exact rank.</span></li>
-            <li><span class="pts">+3</span><span><b>One spot off</b>Bonus when you are one rank away.</span></li>
-            <li><span class="pts">+1</span><span><b>Two or three off</b>Small bonus for being close.</span></li>
+            <li><span class="pts">5</span><span><b>Exact spot</b>You have the team at its exact AP rank.</span></li>
+            <li><span class="pts">3</span><span><b>One spot off</b>You are one rank away.</span></li>
+            <li><span class="pts">2</span><span><b>Two or three off</b>You are two or three ranks away.</span></li>
+            <li><span class="pts">1</span><span><b>On the ballot</b>The team is in the real Top 25, just further from where you had it.</span></li>
           </ul>
-          <p class="empty" style="margin-top:10px">A perfect ballot scores 250. Scored against the real AP poll on Sunday afternoon.</p>
+          <p class="empty" style="margin-top:10px">Each team on your ballot scores once, the best line it hits. Not in the real Top 25: 0. A perfect ballot scores 125. Scored against the real AP poll on Sunday afternoon.</p>
         </div>
-      </section>
-      <section class="card">
-        <div class="card-h"><h2 class="disp">The lock rule</h2></div>
-        <div class="card-b"><p class="empty" style="color:var(--ink-2)">Ballots lock at the first kickoff of the week involving a Top 25 team. After that the games decide it, so nobody can wait for scores. The next ballot opens when the new AP poll comes out Sunday.</p></div>
       </section>
     </aside>
   </div>
@@ -78,18 +90,19 @@
 <script src="/assets/ranker.js"></script>
 <script>
 (function () {
-  const { $, esc, now, local, entries, toast, countdown, cfbLogo, scoreboard } = LFI;
+  const { $, esc, now, local, entries, toast, countdown, scoreboard } = LFI;
   const RANKINGS = "https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings";
   const T = {};           // id -> team info
   let poll = [], others = [], season, week, pollDate, lockAt = null, order = [], ranker, key;
 
   const fmtDay = (d) => d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
   const fmtWhen = (d) => d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }) + " at " + d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-  const locked = () => lockAt && now() >= lockAt;
+  const FUN = new URLSearchParams(location.search).has("sandbox"); // never scored, never locks
+  const locked = () => !FUN && lockAt && now() >= lockAt;
 
   function addTeam(r, apRank) {
     const t = r.team;
-    T[t.id] = { id: t.id, name: t.location, logo: (t.logos && t.logos[0] && t.logos[0].href) || cfbLogo(t.id), color: "#" + (t.color || "64748b"),
+    T[t.id] = { id: t.id, name: t.location, abbr: t.abbreviation, nick: t.name, color: "#" + (t.color || "64748b"),
                 rec: r.recordSummary && r.recordSummary !== "0-0" ? r.recordSummary : "", ap: apRank, votes: r.points || 0 };
   }
 
@@ -106,13 +119,13 @@
       pollDate = new Date(ap.date);
     } catch (e) {
       // Offline fallback: the bracket's built-in poll.
-      for (const [name, x] of Object.entries(CFB.teams)) T[x.id] = { id: x.id, name, logo: cfbLogo(x.id), color: x.acc, rec: x.rec, ap: null, votes: 0 };
+      for (const [name, x] of Object.entries(CFB.teams)) T[x.id] = { id: x.id, name, abbr: x.abbr, nick: x.nick, color: x.acc, rec: x.rec, ap: null, votes: 0 };
       poll = CFB.ap.map((n) => CFB.teams[n].id); poll.forEach((id, i) => T[id].ap = i + 1);
       others = Object.keys(T).filter((id) => !poll.includes(id));
       season = 2026; week = 9; pollDate = new Date("2026-10-25T14:00:00-04:00");
     }
     // Make sure every power-conference team is addable, not only vote-getters.
-    for (const [name, x] of Object.entries(CFB.teams)) if (!T[x.id]) { T[x.id] = { id: x.id, name, logo: cfbLogo(x.id), color: x.acc, rec: "", ap: null, votes: 0 }; others.push(x.id); }
+    for (const [name, x] of Object.entries(CFB.teams)) if (!T[x.id]) { T[x.id] = { id: x.id, name, abbr: x.abbr, nick: x.nick, color: x.acc, rec: "", ap: null, votes: 0 }; others.push(x.id); }
   }
 
   async function loadLock() {
@@ -124,41 +137,63 @@
 
   const target = () => { const d = new Date(pollDate); d.setDate(d.getDate() + 7); return d; };
   const entryId = () => `ap-${season}-w${(week || 0) + 1}`;
+  const submitted = () => !FUN && !!entries.get(entryId()); // one submission per week, then the ballot is final
 
   function render() {
     ranker.render();
     const n = order.length, sub = entries.get(entryId());
     const btn = $("submitBtn");
-    btn.disabled = locked() || n !== 25;
-    btn.textContent = sub ? "Update & share my AP poll" : "Submit my AP poll";
-    $("submitNote").textContent = locked() ? (sub ? "Your ballot is locked in. Scored when the AP poll drops Sunday." : "Ballots are locked for this week.")
-      : n !== 25 ? `${n} of 25 ranked. Add ${25 - n} more to submit.` : sub ? "Submitted. You can still change it until the lock." : "All 25 ranked. Lock it in.";
+    if (FUN) {
+      btn.disabled = n === 0;
+      btn.textContent = "Share my poll";
+      $("submitNote").textContent = n ? `${n} of 25 ranked. Just for fun, never scored.` : "Add teams from the list to start your poll.";
+      return;
+    }
+    btn.disabled = sub ? false : locked() || n !== 25;
+    btn.textContent = sub ? "Share my AP poll" : "Submit my AP poll";
+    $("submitNote").textContent = sub ? "Submitted. Your ballot is final and gets scored when the AP poll drops Sunday."
+      : locked() ? "Ballots are locked for this week."
+      : n !== 25 ? `${n} of 25 ranked. Add ${25 - n} more to submit.` : "All 25 ranked. You only get one submission, so make it count.";
+    if (sub) { $("lockChip").textContent = "Submitted"; $("lockChip").className = "chip ok"; }
   }
 
   function boot() {
-    key = `lfi-ap-${season}-w${(week || 0) + 1}`;
+    key = FUN ? "lfi-ap-sandbox" : `lfi-ap-${season}-w${(week || 0) + 1}`;
     const draft = local.get(key, null);
-    order = draft && Array.isArray(draft) ? draft.filter((id) => T[id]) : poll.slice();
+    order = draft && Array.isArray(draft) ? draft.filter((id) => T[id]) : FUN ? [] : poll.slice();
+    $(FUN ? "mFun" : "mContest").classList.add("on");
+    if (FUN) {
+      document.body.classList.add("fun");
+      document.title = "Build Your Own AP Poll · Last Four In";
+      $("kick").textContent = "Sandbox · never scored";
+      document.querySelector("h1").textContent = "Build Your Own AP Poll";
+      $("lede").textContent = "A blank board. Rank any 25 teams however you see it, just for fun. It never locks and never counts toward the weekly contest.";
+      $("ballotH").textContent = "Your Top 25";
+      $("lockChip").textContent = "Just for fun";
+      $("lockChip").className = "chip";
+    }
     const tgt = target();
-    $("ballotH").textContent = `Your ballot · ${fmtDay(tgt)}`;
-    $("lede").textContent = `Rank the Top 25 you think the AP voters will release on ${fmtDay(tgt)}. You start from the current poll (${fmtDay(pollDate)}); move teams for how you think this week's games go.`;
-    $("lockChip").textContent = locked() ? "🔒 Locked" : "Open";
-    $("lockChip").className = "chip " + (locked() ? "lock" : "ok");
-    $("lockWhen").textContent = `${locked() ? "Locked" : "Locks"} ${fmtWhen(lockAt)}, the first kickoff with a ranked team.`;
-    if (locked()) {
-      $("lockNote").hidden = false;
-      $("lockNote").textContent = "This week's ballots are locked. The next one opens when the new AP poll comes out on Sunday.";
-      $("lockClock").innerHTML = `<div><b>0</b><span>Locked</span></div>`;
-    } else {
-      countdown($("lockClock"), lockAt, { onDone: () => location.reload() });
+    if (!FUN) {
+      $("ballotH").textContent = `Your ballot · ${fmtDay(tgt)}`;
+      $("lede").textContent = `Rank the Top 25 you think the AP voters will release on ${fmtDay(tgt)}. You start from the current poll (${fmtDay(pollDate)}); move teams for how you think this week's games go.`;
+      $("lockChip").textContent = locked() ? "🔒 Locked" : "Open";
+      $("lockChip").className = "chip " + (locked() ? "lock" : "ok");
+      $("lockWhen").textContent = `${locked() ? "Locked" : "Locks"} ${fmtWhen(lockAt)}, the first kickoff with a ranked team.`;
+      if (locked()) {
+        $("lockNote").hidden = false;
+        $("lockNote").textContent = "This week's ballots are locked. The next one opens when the new AP poll comes out on Sunday.";
+        $("lockClock").innerHTML = `<div><b>0</b><span>Locked</span></div>`;
+      } else {
+        countdown($("lockClock"), lockAt, { onDone: () => location.reload() });
+      }
     }
 
     ranker = LFI.Ranker($("ranker"), {
       max: 25,
       order: () => order,
       setOrder: (ids) => { order = ids; local.set(key, order); render(); },
-      locked,
-      team: (id) => { const t = T[id]; return { name: t.name, logo: t.logo, color: t.color, sub: [t.rec, t.ap ? `AP #${t.ap}` : t.votes ? `${t.votes} vote${t.votes === 1 ? "" : "s"}` : "Unranked"].filter(Boolean).join(" · ") }; },
+      locked: () => locked() || submitted(),
+      team: (id) => { const t = T[id]; return { name: t.name, abbr: t.abbr, nick: t.nick, color: t.color, sub: [t.rec, t.ap ? `AP #${t.ap}` : t.votes ? `${t.votes} vote${t.votes === 1 ? "" : "s"}` : "Unranked"].filter(Boolean).join(" · ") }; },
       pool: () => Object.keys(T).filter((id) => !order.includes(id)).sort((a, b) => (T[a].ap || 99) - (T[b].ap || 99) || T[b].votes - T[a].votes || T[a].name.localeCompare(T[b].name)),
       poolTag: (id) => T[id].ap ? `AP #${T[id].ap}` : "",
       right: (id, i) => {
@@ -171,16 +206,32 @@
     render();
   }
 
-  $("submitBtn").addEventListener("click", () => {
+  $("clearBtn").addEventListener("click", () => {
+    if (!order.length || !confirm("Clear your board and start from scratch?")) return;
+    order = []; local.set(key, order); render();
+  });
+
+  $("submitBtn").addEventListener("click", async () => {
+    if (FUN) {
+      if (!order.length) return;
+      const text = `My AP Top 25 (just for fun):\n${order.map((id, i) => `${i + 1}. ${T[id].name}`).join("\n")}\n\nBuild yours: https://lastfourin.com/ap-poll/?sandbox`;
+      try {
+        if (navigator.share) await navigator.share({ text });
+        else { await navigator.clipboard.writeText(text); toast("Copied your poll. Paste it anywhere."); }
+      } catch (e) {}
+      return;
+    }
+    const sub = entries.get(entryId());
+    if (sub) return LFI.share(sub);
     if (locked() || order.length !== 25) return;
-    const had = !!entries.get(entryId());
+    if (!confirm("Submit your AP poll? You only get one submission each week, and you can't change it after.")) return;
     const e = entries.put({
       id: entryId(), kind: "ap", title: `AP Poll · ${fmtDay(target())}`, sub: `Locks ${fmtDay(lockAt)}`, url: "/ap-poll/",
-      data: { top: order.map((id) => T[id].name), ids: order },
+      data: { top: order.map((id) => T[id].name), ids: order, ab: order.map((id) => T[id].abbr) },
       shareText: `Here's my AP Top 25 prediction for ${fmtDay(target())}. Think you can call it better?`,
     });
     render();
-    LFI.share(e, { updated: had });
+    LFI.share(e);
   });
 
   Promise.all([loadPoll()]).then(loadLock).then(boot);

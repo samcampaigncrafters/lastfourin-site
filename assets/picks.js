@@ -1,6 +1,6 @@
-/* Weekly pick'em engine shared by NFL Pick'em (/pickem/) and College Picks (/college/).
-   PREVIEW MODE: games come straight from ESPN's public scoreboard and picks are kept in this browser.
-   The live version swaps both for the Supabase database (picks locked server-side at kickoff).
+/* Weekly pick'em engine shared by NFL Pick'em (/pickem/) and College Pick'em (/college/).
+   Games come straight from ESPN's public scoreboard and picks are kept in this browser. Signed in, every tap
+   also goes to the account's picks table (locked server-side at kickoff, graded by the server).
    The page sets window.PICKS = { league: "nfl" | "cfb", name: "NFL Pick'em" } before loading this file. */
 (function () {
   const { $, esc, now, local, toast, entries, scoreboard, stripHTML, fmtTime, fmtShort } = LFI;
@@ -27,6 +27,31 @@
     }
     $("weekSel").value = String(week);
     render();
+    mergeCloud();
+  }
+
+  // Signed in: the account's picks win (another phone may have newer ones); picks only made here go up.
+  async function mergeCloud() {
+    const c = await cloudReady();
+    if (!c || !c.profile || !c.profile.onboarded || !games.length) return;
+    const wk = week, remote = await c.myPicks(league, games.map((g) => g.id));
+    if (wk !== week) return;
+    let changed = false;
+    const up = {};
+    for (const g of games) {
+      if (remote[g.id] && picks[g.id] !== remote[g.id]) { picks[g.id] = remote[g.id]; changed = true; }
+      else if (!remote[g.id] && picks[g.id] && isOpen(g)) up[g.id] = picks[g.id];
+    }
+    if (Object.keys(up).length) c.savePicks(league, up);
+    if (changed) { local.set(storeKey, picks); render(); }
+  }
+  // cloud.js loads after this file; wait for it briefly (it isn't required for the page to work).
+  function cloudReady() {
+    return new Promise((res) => {
+      let n = 0;
+      const t = () => LFI.cloud ? LFI.cloud.ready.then(res) : ++n > 100 ? res(null) : setTimeout(t, 50);
+      t();
+    });
   }
 
   function teamBtn(g, ha) {
@@ -35,8 +60,8 @@
     const lost = g.winner && g.winner !== ha;
     return `<button class="tm ${ha}${mine ? " pick" : ""}${lost ? " lost" : ""}" style="--tc:${LFI.fillColor(t.color)}" data-g="${g.id}" data-s="${ha}"
        ${open ? "" : "disabled"} aria-pressed="${mine}" aria-label="Pick ${esc(t.city)} ${esc(t.nick)}">
-       <img src="${esc(t.logo)}" alt="" loading="lazy">
-       <span class="tn"><span class="city">${t.rank ? `#${t.rank} · ` : ""}${esc(league === "nfl" ? t.city : t.nick)}</span><span class="nick" style="display:block">${esc(league === "nfl" ? t.nick : t.city)}</span><span class="rec">${esc(t.rec)}</span></span>
+       ${LFI.teamMark(t.abbr, t.nick, ha === "home" ? "r" : "")}
+       <span class="tn"><span class="nick" style="display:block">${t.rank ? `<small>#${t.rank}</small> ` : ""}${esc(t.city)}</span><span class="rec">${esc(t.rec)}</span></span>
        <span class="ts">${showScore ? t.score : ""}</span></button>`;
   }
 
@@ -106,7 +131,7 @@
   function entry() {
     const list = games.filter((g) => picks[g.id]).map((g) => {
       const side = picks[g.id], other = side === "home" ? "away" : "home";
-      return { p: label(g[side]), o: label(g[other]), l: g[side].logo };
+      return { p: label(g[side]), o: label(g[other]), a: g[side].abbr };
     });
     const r = record();
     return {
@@ -123,7 +148,8 @@
     const side = b.dataset.s;
     if (picks[g.id] === side) delete picks[g.id]; else picks[g.id] = side;
     local.set(storeKey, picks);
-    // Patch the clicked card in place so logos don't reload and flicker.
+    if (LFI.cloud && LFI.cloud.savePicks) LFI.cloud.savePicks(league, { [g.id]: picks[g.id] || null });
+    // Patch the clicked card in place instead of redrawing the whole slate.
     const card = $("g" + g.id);
     card.querySelectorAll(".tm").forEach((t) => {
       const on = picks[g.id] === t.dataset.s;

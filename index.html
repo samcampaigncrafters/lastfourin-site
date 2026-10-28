@@ -9,149 +9,340 @@
 <meta property="og:description" content="Free weekly pick'em, AP poll predictions and the CFP bracket builder. Challenge your friends.">
 <meta property="og:url" content="https://lastfourin.com/">
 <meta property="og:site_name" content="Last Four In">
-<meta name="theme-color" content="#0a1a33">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='8' fill='%23f2b33d'/%3E%3Cpath d='M8 8h5v5h4M8 22h5v-5M17 13v4h5' fill='none' stroke='%231b1204' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#0d0820">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/assets/lfi.css">
+<script src="/assets/theme.js"></script>
 </head>
 <body>
-
-<div class="strip" aria-label="This week's games">
-  <div class="strip-lbl"><b id="stripLg">NFL</b><span id="stripWeek">This week</span></div>
-  <div class="strip-games" id="strip"></div>
-</div>
+<style>
+/* Home: league tabs, featured "this week" hero, the tile grid, your week. Copied from the approved mock. */
+.hin { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+.lg-tabs { display: flex; gap: 6px; padding: 12px 0; overflow-x: auto; scrollbar-width: none; }
+.lg-tabs::-webkit-scrollbar { display: none; }
+.lg-tabs button { flex: none; font-family: var(--f-display); text-transform: uppercase; font-size: 16px; letter-spacing: .03em; padding: 8px 14px; border-radius: 6px; border: 0; background: var(--card); color: var(--quiet); }
+.lg-tabs button:hover { color: var(--ink); }
+.lg-tabs button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.fh { position: relative; overflow: hidden; background: linear-gradient(160deg, var(--field) 0%, var(--field-deep) 100%); }
+.fh svg.bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fh .hin { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 40px; align-items: center; padding-top: 60px; padding-bottom: 64px; }
+.fh .kp { font-weight: 800; font-size: 15px; letter-spacing: .24em; text-transform: uppercase; color: #fff; }
+.fh .kp b { color: var(--accent); }
+.fh .hh { margin: 0; }
+.h-out, .h-fill { display: block; font-family: var(--f-display); font-weight: 400; text-transform: uppercase; letter-spacing: .005em; white-space: nowrap; }
+.h-out { font-size: 96px; line-height: .92; color: transparent; -webkit-text-stroke: 2px #fff; margin-top: 14px; }
+.h-fill { font-size: 176px; line-height: .88; color: #fff; text-shadow: 1px 1px 0 #000, 2px 2px 0 #000, 3px 3px 0 #000, 4px 4px 0 #000, 5px 5px 0 #000, 6px 6px 0 #000, 7px 7px 0 #000, 8px 8px 0 #000, 9px 9px 0 #000, 10px 10px 0 #000; }
+.fh p { margin: 22px 0 28px; font-size: 20px; line-height: 1.4; font-weight: 600; max-width: 36ch; color: #fff; }
+.go { display: inline-flex; align-items: center; gap: 10px; height: 60px; padding: 0 30px; background: #fff; color: #000; border-radius: 8px; box-shadow: 6px 6px 0 #000; font-family: var(--f-display); text-transform: uppercase; font-size: 23px; letter-spacing: .03em; text-decoration: none; transition: transform .08s, box-shadow .08s; }
+.go:hover { transform: translate(-1px, -1px); box-shadow: 7px 7px 0 #000; }
+.go:active { transform: translate(3px, 3px); box-shadow: 3px 3px 0 #000; }
+.gos { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: center; }
+.go.alt { background: transparent; color: #fff; box-shadow: none; border: 3px solid #fff; }
+.go.alt:hover { background: rgba(255,255,255,.12); box-shadow: none; }
+.go.alt[hidden] { display: none; }
+.fh .h-one { font-style: italic; font-synthesis: style; text-transform: none; color: #fff; margin-top: 14px; } /* Sam: l4picks ai, one line, italic, white */
+.go.later { background: transparent; color: #fff; box-shadow: none; border: 3px dashed rgba(255,255,255,.7); cursor: default; }
+.go.later:hover, .go.later:active { transform: none; box-shadow: none; }
+/* Carousel: one slide per contest, swipe on phones, arrows + dots on desktop, never moves on its own */
+.car-track { position: relative; display: flex; align-items: flex-start; transition: height .32s var(--ease); overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; outline: none; }
+.car-track::-webkit-scrollbar { display: none; }
+.slide { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; }
+.fh .slide .hin { padding-bottom: 104px; }
+.car-ctl { position: absolute; left: 0; right: 0; bottom: 30px; display: flex; justify-content: center; align-items: center; gap: 18px; pointer-events: none; }
+.car-ctl > * { pointer-events: auto; }
+.car-arr { width: 46px; height: 46px; border-radius: 50%; border: 0; background: #fff; color: #000; box-shadow: 4px 4px 0 #000; display: grid; place-items: center; padding: 0; }
+.car-arr svg { width: 22px; height: 22px; }
+.car-arr:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+.car-arr:disabled { opacity: .35; cursor: default; transform: none; box-shadow: 4px 4px 0 #000; }
+.car-dots { display: flex; gap: 8px; }
+.car-dots button { width: 11px; height: 11px; border-radius: 6px; border: 0; padding: 0; background: rgba(255,255,255,.4); transition: width .3s var(--ease), background .3s var(--ease); }
+.car-dots button[aria-current="true"] { width: 30px; background: #fff; }
+.dcard .big { font-family: var(--f-display); font-size: 64px; line-height: 1; color: var(--field); margin: -4px 0 8px; }
+.t .fr { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 16px; }
+.t .fr .st { margin-top: 0; }
+.t .cover { position: absolute; inset: 0; z-index: 1; }
+.dcard { transform: rotate(4deg); background: #fff; color: #0d0820; border-radius: 14px; box-shadow: 10px 10px 0 #000; padding: 22px 22px 18px; }
+.dcard h3 { margin: 0 0 14px; font-family: var(--f-display); font-weight: 400; text-transform: uppercase; font-size: 30px; line-height: 1; }
+.dcard .row { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; align-items: center; height: 42px; border-top: 2px solid #e7e2f7; }
+.dcard .row b { font-family: var(--f-display); font-weight: 400; font-size: 24px; color: var(--field); }
+.dcard .row i { display: block; height: 12px; border-radius: 3px; background: #ece8f8; }
+.dcard .row em { font-style: normal; font-family: var(--f-display); font-size: 13px; letter-spacing: .06em; background: var(--field); color: #fff; border-radius: 4px; padding: 2px 6px; }
+.dcard .mu { grid-template-columns: minmax(0, 1fr) 22px minmax(0, 1fr); }
+.dcard .mu b { font-size: 16px; text-align: center; color: #8a7fb8; }
+.dcard .mu i.on { background: var(--field); }
+.dcard small { display: block; margin-top: 10px; font-weight: 800; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: #6c5fa0; }
+.sec { padding: 52px 0 20px; }
+.sec small { display: block; font-weight: 800; font-size: 14px; letter-spacing: .24em; text-transform: uppercase; color: var(--accent); }
+.sec h2 { margin: 8px 0 0; font-size: 54px; line-height: .95; }
+.tgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.t { aspect-ratio: 1; position: relative; overflow: hidden; border-radius: 14px; background: var(--card); border: 1px solid var(--line); padding: 26px; display: flex; flex-direction: column; justify-content: space-between; text-decoration: none; color: var(--ink); transition: border-color .12s, transform .12s; }
+a.t:hover { border-color: var(--quiet); transform: translateY(-2px); }
+.t svg.ic { width: 52px; height: 52px; }
+.t b { display: block; font-family: var(--f-display); font-weight: 400; text-transform: uppercase; font-size: 36px; line-height: .98; letter-spacing: .01em; }
+.t .ds { display: block; margin-top: 10px; font-size: 16.5px; line-height: 1.4; font-weight: 500; color: var(--quiet); }
+.st { display: flex; align-items: center; gap: 7px; margin-top: 16px; font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.st i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+.t .top-row { display: flex; justify-content: space-between; align-items: flex-start; }
+.tag { font-family: var(--f-display); text-transform: uppercase; font-size: 16px; letter-spacing: .04em; background: #fff; color: #0d0820; padding: 6px 10px; border-radius: 6px; box-shadow: 3px 3px 0 #000; }
+.t.hot { background: var(--field); border-color: var(--field); color: #fff; }
+.t.hot .ds, .t.hot .st { color: #fff; }
+.t.hot .st i { background: #fff; }
+.t.off { background: transparent; border-style: dashed; color: #8a82ad; }
+.t.off b, .t.off .ds, .t.off .st { color: #8a82ad; }
+.t .sh, .st .sh { display: none; }
+.soon { grid-column: 1 / -1; margin: 0; padding: 18px 0 4px; color: var(--quiet); font-size: 17px; font-weight: 600; }
+.wk { margin: 30px 0 0; padding: 24px 28px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); }
+.wk-h { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+.wk-h h2 { margin: 0; font-size: 32px; }
+.wk-h a { font-weight: 800; font-size: 14px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); text-decoration: none; white-space: nowrap; }
+.wk p.empty { margin: 6px 0 0; font-size: 17px; color: var(--quiet); font-weight: 500; padding: 0; }
+.wk .lb { margin-top: 8px; }
+main.home { padding-bottom: 64px; }
+@media (max-width: 900px) {
+  .fh .hin { grid-template-columns: minmax(0, 1fr); }
+  .dcard { display: none; }
+  .t { padding: 18px; }
+  .t b { font-size: 26px; }
+  .t .ds { font-size: 15px; }
+}
+@media (max-width: 640px) {
+  .hin { padding: 0 16px; }
+  .lg-tabs { padding: 0 0 12px; }
+  .lg-tabs button { font-size: 15px; padding: 8px 12px; }
+  .fh .hin { padding-top: 28px; padding-bottom: 30px; }
+  .fh .kp { font-size: 12.5px; letter-spacing: .22em; }
+  .h-out { font-size: 58px; -webkit-text-stroke-width: 1.6px; margin-top: 12px; }
+  .h-fill { font-size: 96px; line-height: .9; text-shadow: 1px 1px 0 #000, 2px 2px 0 #000, 3px 3px 0 #000, 4px 4px 0 #000, 5px 5px 0 #000, 6px 6px 0 #000; }
+  .fh p { margin: 16px 0 20px; font-size: 16.5px; max-width: 30ch; }
+  .go { display: flex; justify-content: center; height: 54px; padding: 0 16px; font-size: 20px; box-shadow: 5px 5px 0 #000; }
+  .gos { flex-direction: column; align-items: stretch; gap: 12px; }
+  .go.alt { box-shadow: none; }
+  .fh .slide .hin { padding-bottom: 62px; }
+  .car-ctl { bottom: 22px; }
+  .car-arr { display: none; }
+  .t .fr { margin-top: 5px; gap: 5px; }
+  .t .fr .st { display: none; }
+  .sec { padding: 30px 0 14px; }
+  .sec small { font-size: 12px; letter-spacing: .22em; }
+  .sec h2 { font-size: 30px; margin-top: 6px; }
+  .tgrid { gap: 8px; }
+  .t { padding: 10px; border-radius: 10px; }
+  .t svg.ic { width: 34px; height: 34px; }
+  .t b { font-size: 17px; line-height: 1; }
+  .t .ds, .t .lg, .st .lg, .t .tag { display: none; }
+  .t .sh, .st .sh { display: inline; }
+  .st { font-size: 10.5px; letter-spacing: .1em; gap: 5px; margin-top: 5px; }
+  .st i { width: 6px; height: 6px; }
+  .st svg { width: 11px; height: 11px; }
+  .soon { font-size: 15px; }
+  .wk { margin-top: 26px; padding: 16px; border-radius: 10px; }
+  .wk-h h2 { font-size: 22px; }
+  .wk-h a { font-size: 13px; letter-spacing: .08em; }
+  .wk p.empty { font-size: 15px; margin-top: 8px; }
+}
+</style>
 
 <header class="nav" data-active="home"></header>
 
-<main class="page stack">
-  <section class="hero" aria-labelledby="heroH">
-    <div class="kicker" id="heroK">This week</div>
-    <h1 class="disp" id="heroH">Make your picks</h1>
-    <p id="heroP">Free to play. Pick the games, beat your friends.</p>
-    <a class="btn gold big" id="heroBtn" href="/pickem/">Make your picks</a>
-    <div class="also" id="heroAlso"></div>
-  </section>
+<div class="hin"><nav class="lg-tabs" id="lgTabs" aria-label="Leagues"></nav></div>
 
-  <div class="grid2">
-    <div class="stack">
-      <section class="card">
-        <div class="card-h"><div><div class="kicker">Weekly contest</div><h2 class="disp">Make your AP poll predictions for next week</h2></div></div>
-        <div class="card-b">
-          <p style="margin:0 0 14px;color:var(--ink-2)" id="apP">Rank the Top 25 you think the AP voters will release on Sunday. Ballots lock at the first kickoff with a ranked team, then the games decide it.</p>
-          <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between">
-            <div><div class="empty" style="padding:0 0 6px" id="apLockLbl">Locks in</div><div class="count sm" id="apClock"></div></div>
-            <a class="btn navy" href="/ap-poll/" id="apBtn">Build your AP poll</a>
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="card-h"><h2 class="disp">How scoring works</h2></div>
-        <div class="card-b">
-          <ul class="rules-list">
-            <li><span class="pts">1<small>PT</small></span><span><b>NFL and college pick'em</b>One point for every winner you call. Each pick locks at that game's kickoff. Weekly and season records.</span></li>
-            <li><span class="pts">250<small>MAX</small></span><span><b>AP poll prediction</b>5 points for every team you have in the real Top 25, plus 5 for the exact spot, 3 for one spot off, 1 for two or three off.</span></li>
-            <li><span class="pts">12<small>TEAMS</small></span><span><b>CFP bracket</b>Points for every team you put in the 12-team field, more for the exact seed, then more for each playoff game you call. Locks when the committee reveals the field on Selection Day.</span></li>
-            <li><span class="pts">5<small>Q'S</small></span><span><b>Daily trivia</b>Same questions for everyone, every day. Keep your streak alive.</span></li>
-          </ul>
-          <p class="empty" style="margin-top:12px">Every contest is free. Leaderboards and season-long rankings switch on with sign-in.</p>
-        </div>
-      </section>
-    </div>
-
-    <aside class="side">
-      <section class="card">
-        <div class="card-h"><div><div class="kicker" id="sdK">Countdown</div><h2 class="disp" id="sdH">Selection Day</h2></div></div>
-        <div class="card-b">
-          <div class="count" id="sdClock"></div>
-          <p class="empty" id="sdP" style="margin:10px 0 12px"></p>
-          <a class="btn gold block" id="sdBtn" href="/bracket/">Build your playoff bracket</a>
-        </div>
-      </section>
-      <section class="card">
-        <div class="card-h"><h2 class="disp">Your week</h2><a href="/account/">All my picks</a></div>
-        <div class="card-b" id="mine"></div>
-      </section>
-    </aside>
+<section class="fh car" id="car" aria-roledescription="carousel" aria-label="Featured contests">
+  <svg class="bg" viewBox="0 0 1280 600" preserveAspectRatio="none" aria-hidden="true"><polygon points="760,0 1000,0 640,600 400,600" fill="#7b3dff" opacity=".5"/><polygon points="1060,0 1110,0 750,600 700,600" fill="#ff3dbb" opacity=".35"/><polygon points="1180,0 1280,0 1280,600 840,600" fill="#2a0a7a" opacity=".55"/><polygon points="0,420 220,260 120,600 0,600" fill="#2a0a7a" opacity=".55"/></svg>
+  <div class="car-track" id="carTrack" tabindex="-1"></div>
+  <div class="car-ctl">
+    <button class="car-arr" type="button" id="carPrev" aria-label="Previous slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="car-dots" id="carDots"></div>
+    <button class="car-arr" type="button" id="carNext" aria-label="Next slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
   </div>
+</section>
 
-  <section>
-    <div class="day" style="margin-top:0">Everything you can play</div>
-    <div class="tiles">
-      <a class="tile" href="/pickem/"><b>NFL Pick'em</b><span>Pick every game straight up, every week.</span></a>
-      <a class="tile" href="/college/"><b>College Picks</b><span>Every game with a Top 25 team, every Saturday.</span></a>
-      <a class="tile" href="/ap-poll/"><b>Predict the AP Poll</b><span>Call next Sunday's Top 25 before the voters do.</span></a>
-      <a class="tile" href="/bracket/"><b>CFP Bracket</b><span>Rank the Top 25 and the 12-team playoff builds itself.</span></a>
-      <a class="tile" href="/head-to-head/"><b>Head-to-Head</b><span>Two teams look close? See how the committee calls it.</span></a>
-      <a class="tile" href="/trivia/"><b>Daily Trivia</b><span>Name 'em all and five quick questions, new every day.</span></a>
-    </div>
+<main class="hin home">
+  <div class="sec"><small>Free, every week</small><h2 class="disp">Everything on Last Four In</h2></div>
+  <div class="tgrid" id="tiles"></div>
+
+  <section class="wk">
+    <div class="wk-h"><h2 class="disp">Your week</h2><a href="/account/">All my picks</a></div>
+    <div id="mine"></div>
   </section>
 </main>
 <footer class="foot"></footer>
 
+<script src="/assets/cfb-data.js"></script>
 <script src="/assets/lfi.js"></script>
+<script src="/assets/calendar.js"></script>
 <script>
 (function () {
-  const { $, esc, now, entries, countdown, selectionDay, scoreboard, stripHTML } = LFI;
+  const { $, esc, now, entries } = LFI;
 
-  // The big button follows the football week (Eastern time).
-  function et(d) { const p = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", hourCycle: "h23" }).formatToParts(d); return { dow: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(p.find((x) => x.type === "weekday").value), hour: +p.find((x) => x.type === "hour").value }; }
-  const PH = {
-    cfb: { k: "College football Saturday", h: "Make your picks for college", p: "Every game with a Top 25 team is on the board. Each pick locks at kickoff.", btn: "Make your picks for college", url: "/college/", lg: "cfb" },
-    cfbFri: { k: "Saturday is coming", h: "Make your picks for college", p: "Get your college picks in before the first ranked kickoff.", btn: "Make your picks for college", url: "/college/", lg: "cfb" },
-    nflDay: { k: "NFL Sunday", h: "Make your picks for the day", p: "Every NFL game, straight up. Picks lock at each kickoff.", btn: "Make your picks for the day", url: "/pickem/", lg: "nfl" },
-    nflWeek: { k: "Thursday night kicks off the week", h: "Make your NFL picks for the week", p: "Get every game in before Thursday night. Each pick locks at its kickoff.", btn: "Make your picks for the week", url: "/pickem/", lg: "nfl" },
-    ap: { k: "The new AP poll is out", h: "Build your AP poll", p: "Call next Sunday's Top 25 before the voters do. Locks at the first ranked kickoff.", btn: "Build your AP poll", url: "/ap-poll/", lg: "nfl" },
-    bracket: { k: "Selection Day is almost here", h: "Build your playoff bracket", p: "Rank the Top 25 and the 12-team field builds itself. Lock it in before the committee does.", btn: "Build your bracket", url: "/bracket/", lg: "cfb" },
+  const CAL = window.LFI_CAL, NOW = now();
+  // Carousel slides, in Sam's order. o = outlined line, f = solid line. cal = the calendar window the contest runs in.
+  // Coming-soon slides never link anywhere; the $1,000 Challenge only shows while its season runs (it ends Super Bowl weekend).
+  const SLIDES = {
+    ap: { cal: "apPoll", k: "The new AP poll is out", o: "Build your", f: "AP Poll", p: "Call next Sunday's Top 25 before the voters do. Locks at the first ranked kickoff.",
+          btn: "Enter the weekly contest", url: "/ap-poll/", card: "ap" },
+    nfl: { cal: "nfl", k: "Free every week", o: "Make your NFL", f: "Picks", p: "Every NFL game, straight up. Each pick locks at its kickoff.", btn: "Make your NFL picks", url: "/pickem/", card: "picks" },
+    cfb: { cal: "cfb", k: "Free every Saturday", o: "Make your college", f: "Picks", p: "Every game with a Top 25 team is on the board. Each pick locks at kickoff.", btn: "Make your college picks", url: "/college/", card: "picks" },
+    fantasy: { soon: true, k: "Coming soon", o: "Fantasy football", f: "Challenges", p: "A new fantasy challenge every week of the NFL season. Free to play.", card: "lineup" },
+    money: { soon: true, cal: "sbWeekend", hideOff: true, k: "Coming soon", o: "The $1,000", f: "Challenge", p: "Start with $1,000 in pretend money and bet it on real games through Super Bowl weekend. No real money in and no prize out: it's for bragging rights.", card: "bank" },
+    l4: { soon: true, k: "Coming soon", one: "l4picks ai", p: "Our AI handicapping model makes a pick on every game. See where it lands, then make your own call.", card: "model" },
   };
-  function phase() {
-    const n = now(), { dow, hour } = et(n), sd = selectionDay();
-    const days = (sd.at - n) / 864e5;
-    if (sd.key === "cfp" && days < 7 && dow !== 6) return PH.bracket;
-    if (dow === 6) return PH.cfb;
-    if (dow === 5) return PH.cfbFri;
-    if (dow === 0 && hour < 14) return PH.nflDay;
-    if (dow === 4) return PH.nflWeek;
-    return PH.ap; // Sunday afternoon through Wednesday
+  const ORDER = ["ap", "nfl", "cfb", "fantasy", "money", "l4"];
+  const live = (s) => !s.cal || CAL.inSeason(s.cal, NOW);
+
+  // The week decides the lead slide (Eastern time): college picks Fri-Sat, NFL Thursday and Sunday morning, the AP poll
+  // from Sunday afternoon through Wednesday. Out of season the next contest that is running leads instead.
+  function et(d) { const p = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", hourCycle: "h23" }).formatToParts(d); return { dow: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(p.find((x) => x.type === "weekday").value), hour: +p.find((x) => x.type === "hour").value }; }
+  function lead() {
+    const { dow, hour } = et(NOW), on = (k) => CAL.inSeason(k, NOW);
+    if (on("cfb") && dow === 6) return ["cfb", "College football Saturday"];
+    if (on("cfb") && dow === 5) return ["cfb", "Saturday is coming"];
+    if (on("nfl") && dow === 0 && hour < 14) return ["nfl", "NFL Sunday"];
+    if (on("nfl") && dow === 4) return ["nfl", "Thursday night kicks off the week"];
+    if (on("apPoll")) return ["ap", "The new AP poll is out"];
+    if (on("nfl")) return ["nfl", "Free every week"];
+    if (on("cfb")) return ["cfb", "Bowl season"];
+    return [on("sbWeekend") ? "money" : "l4", "Coming soon"];
   }
-  const ph = phase();
-  $("heroK").textContent = ph.k; $("heroH").textContent = ph.h; $("heroP").textContent = ph.p;
-  $("heroBtn").textContent = ph.btn + " →"; $("heroBtn").href = ph.url;
-  const also = [["/pickem/", "NFL Pick'em"], ["/college/", "College Picks"], ["/ap-poll/", "AP Poll"], ["/bracket/", "CFP Bracket"], ["/trivia/", "Trivia"]].filter(([u]) => u !== ph.url);
-  $("heroAlso").innerHTML = "Also this week: " + also.map(([u, l]) => `<a href="${u}">${l}</a>`).join("");
+  const [leadKey, leadK] = lead();
+  SLIDES[leadKey].k = leadK;
+  const ph = SLIDES[leadKey];
+  // Lead first, the rest in Sam's order, contests out of season last with when they come back.
+  let keys = [leadKey, ...ORDER.filter((k) => k !== leadKey)].filter((k) => live(SLIDES[k]) || !SLIDES[k].hideOff);
+  keys = [...keys.filter((k) => live(SLIDES[k]) || SLIDES[k].soon), ...keys.filter((k) => !live(SLIDES[k]) && !SLIDES[k].soon)];
 
-  // Selection Day clock
-  const sd = selectionDay();
-  $("sdK").textContent = sd.when; $("sdH").textContent = sd.label;
-  $("sdP").textContent = sd.key === "cfp" ? "The committee reveals the 12-team field. Get your bracket in before they do." : "The NCAA tournament field is revealed. Bracketology opens in February.";
-  $("sdBtn").textContent = sd.cta; $("sdBtn").href = sd.url;
-  countdown($("sdClock"), sd.at);
+  const ARROW = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+  const rows = (n, f) => Array.from({ length: n }, (_, i) => f(i)).join("");
+  const CARD = {
+    ap: () => `<h3>Your Top 25</h3>${rows(6, (i) => `<div class="row"><b>${i + 1}</b><i></i></div>`)}<small>+ 19 more spots</small>`,
+    picks: () => `<h3>Your picks</h3>${rows(5, (i) => `<div class="row mu"><i${i % 3 === 1 ? "" : ' class="on"'}></i><b>@</b><i${i % 3 === 1 ? ' class="on"' : ""}></i></div>`)}<small>Each pick locks at kickoff</small>`,
+    lineup: () => `<h3>Your lineup</h3>${["QB", "RB", "WR", "TE", "FLEX"].map((x) => `<div class="row" style="grid-template-columns:54px minmax(0,1fr)"><b>${x}</b><i></i></div>`).join("")}<small>A new challenge every week</small>`,
+    bank: () => `<h3>Your bankroll</h3><div class="big">$1,000</div>${rows(3, (i) => `<div class="row mu"><i${i === 1 ? "" : ' class="on"'}></i><b>@</b><i${i === 1 ? ' class="on"' : ""}></i></div>`)}<small>Pretend money · no prize</small>`,
+    model: () => `<h3>L4 Picks</h3>${rows(5, (i) => `<div class="row mu"><i${i % 2 ? "" : ' class="on"'}></i><b>@</b><i${i % 2 ? ' class="on"' : ""}></i></div>`)}<small>The model's pick on every game</small>`,
+  };
+  function slideHTML(k, i) {
+    const s = SLIDES[k], on = live(s), H = i ? "h2" : "h1";
+    const act = s.soon ? `<span class="go later">Coming soon</span>`
+      : !on ? `<span class="go later">${esc(CAL.backNote(s.cal, NOW))}</span>`
+      : `<a class="go" href="${s.url}"><span>${esc(s.btn)}</span>${ARROW}</a>${s.btn2 ? `<a class="go alt" href="${s.url2}">${esc(s.btn2)}</a>` : ""}`;
+    return `<div class="slide" role="group" aria-roledescription="slide" aria-label="${i + 1} of ${keys.length}" data-k="${k}">
+      <div class="hin"><div class="txt">
+        <div class="kp"><b>●</b> <span>${esc(on || s.soon ? s.k : "Off season")}</span></div>
+        <${H} class="hh">${s.one ? `<span class="h-fill h-one">${esc(s.one)}</span>` : `<span class="h-out">${esc(s.o)}</span><span class="h-fill">${esc(s.f)}</span>`}</${H}>
+        <p>${esc(s.p)}</p>
+        <div class="gos">${act}</div>
+      </div><div class="dcard" aria-hidden="true">${CARD[s.card]()}</div></div></div>`;
+  }
+  const track = $("carTrack");
+  track.innerHTML = keys.map(slideHTML).join("");
+  $("carDots").innerHTML = keys.map((k, i) => `<button type="button" data-i="${i}" aria-label="Slide ${i + 1}: ${esc(SLIDES[k].one || SLIDES[k].o + " " + SLIDES[k].f)}"${i ? "" : ' aria-current="true"'}></button>`).join("");
+  const slides = [...track.children];
+  // at = the slide we are on or heading to, so quick repeated arrow taps keep moving while the scroll animates.
+  let at = 0, auto = 0;
+  const cur = () => Math.round(track.scrollLeft / track.clientWidth);
+  function go(i, smooth = true) {
+    at = Math.max(0, Math.min(slides.length - 1, i));
+    clearTimeout(auto); auto = setTimeout(() => { auto = 0; at = cur(); sync(); }, 900);
+    track.scrollTo({ left: at * track.clientWidth, behavior: smooth ? "smooth" : "auto" });
+    sync();
+  }
+  $("carPrev").onclick = () => go(at - 1);
+  $("carNext").onclick = () => go(at + 1);
+  $("carDots").addEventListener("click", (e) => { const b = e.target.closest("button[data-i]"); if (b) go(+b.dataset.i); });
+  track.addEventListener("keydown", (e) => { if (e.key === "ArrowRight") go(at + 1); if (e.key === "ArrowLeft") go(at - 1); });
+  function sync() {
+    if (!auto) at = cur();
+    const c = at;
+    $("carDots").querySelectorAll("button").forEach((b, i) => b.setAttribute("aria-current", i === c));
+    $("carPrev").disabled = c === 0; $("carNext").disabled = c === slides.length - 1;
+    slides.forEach((s, i) => s.inert = i !== c);
+    track.style.height = slides[c].offsetHeight + "px"; // the hero is as tall as the slide showing, not the tallest one
+  }
+  track.addEventListener("scroll", () => requestAnimationFrame(sync), { passive: true });
+  sync();
 
-  // AP poll lock clock: first kickoff with a ranked team this week.
+  // Shrink each slide's two headline lines until they fit their column (never grow past the design size).
+  function fit() {
+    for (const s of slides) {
+      const w = s.querySelector(".txt").clientWidth;
+      for (const el of s.querySelectorAll(".h-out, .h-fill")) {
+        el.style.fontSize = "";
+        const full = parseFloat(getComputedStyle(el).fontSize), need = el.scrollWidth + (el.classList.contains("h-fill") ? 12 : 4);
+        if (need > w) el.style.fontSize = Math.floor(full * w / need) + "px";
+      }
+    }
+  }
+  fit(); sync(); if (document.fonts) document.fonts.ready.then(() => { fit(); sync(); }); addEventListener("resize", () => { fit(); go(at, false); });
+
+  // Tiles, in Sam's order. sh = the short phone label.
+  const I = (d, sw) => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw || 1.8}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const ICON = {
+    football: '<ellipse cx="12" cy="12" rx="9.5" ry="6" transform="rotate(-40 12 12)"/><path d="M9.5 14.5l5-5M10.2 12.2l1.6 1.6M11.7 10.7l1.6 1.6"/>',
+    flag: '<path d="M5 3v18"/><path d="M5 4.5l14 4.5-14 4.5"/>',
+    ballot: '<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+    q: '<circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.3a2.8 2.8 0 1 1 3.9 2.6c-.8.4-1.2 1-1.2 1.8v.5"/><path d="M12 17.3v.1"/>',
+    list: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" stroke-width="3.2"/>',
+    baseball: '<circle cx="12" cy="12" r="9.5"/><path d="M6.5 5.2c2 2 2 11.6 0 13.6M17.5 5.2c-2 2-2 11.6 0 13.6"/>',
+    target: '<circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="5"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/>',
+    basketball: '<circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5v19M5.3 5.3c3 3 3 10.4 0 13.4M18.7 5.3c-3 3-3 10.4 0 13.4"/>',
+    hockey: '<path d="M15 3L9 18c-.4 1-1.3 1.5-2.3 1.5H3"/><ellipse cx="17.5" cy="18.5" rx="3.5" ry="1.8"/>',
+  };
+  const LOCK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+  const TILES = [
+    { lg: ["nfl"], cal: "nfl", url: "/pickem/", t: "L4 NFL Pick'em", d: "Pick every game straight up, every week.", st: "Open", more: " · each pick locks at kickoff", ic: "football" },
+    { lg: ["ncaaf"], cal: "cfb", url: "/college/", t: "L4 College Pick'em", d: "Every game with a Top 25 team, every Saturday.", st: "Open", more: " · each pick locks at kickoff", ic: "flag" },
+    { lg: ["ncaaf"], cal: "apPoll", url: "/ap-poll/", t: "Predict AP Poll", sh: "AP Poll", d: "Call next Sunday's Top 25 before the voters do.", st: "Open", more: " · locks at first ranked kickoff", ic: "ballot", id: "ap" },
+    { lg: [], url: "/trivia/", t: "L4 Daily Trivia", d: "Five questions, same for everyone, every day.", st: "New today", ic: "q" },
+    { lg: [], url: "/trivia/names.html", t: "L4 Name Them All", d: "How many can you name?", st: "New today", ic: "list" },
+    { lg: ["mlb"], off: true, cal: "mlb", t: "L4 MLB Pick'em", ic: "baseball" },
+    { lg: [], off: true, t: "L4 Free to Play Stakes", sh: "L4 F2P Stakes", d: "Free-to-play betting challenge.", ic: "target" },
+    { lg: ["ncaab"], off: true, cal: "ncaab", t: "L4 NCAAB Pick'em", ic: "basketball" },
+    { lg: ["nba"], off: true, cal: "nba", t: "L4 NBA Pick'em", ic: "basketball" },
+    { lg: ["nhl"], off: true, cal: "nhl", t: "L4 NHL Pick'em", ic: "hockey" },
+  ];
+  // The calendar decides each tile's state: open contests first, then coming-soon ones whose sport is in season,
+  // then anything out of season, labelled with the month it comes back.
+  for (const x of TILES) x.out = !!x.cal && !CAL.inSeason(x.cal, NOW);
+  const back = (x) => { const n = x.out && CAL.next(x.cal, NOW); return n ? +n.at : Infinity; }; // soonest return first
+  TILES.sort((a, b) => (a.out ? 2 : a.off ? 1 : 0) - (b.out ? 2 : b.off ? 1 : 0) || back(a) - back(b));
+  const LEAGUES = [["all", "All"], ["nfl", "NFL"], ["ncaaf", "NCAAF"], ["ncaab", "NCAAB"], ["nba", "NBA"], ["nhl", "NHL"], ["mlb", "MLB"]];
+  let league = "all";
+  const name = (x) => x.sh ? `<span class="lg">${esc(x.t)}</span><span class="sh">${esc(x.sh)}</span>` : esc(x.t);
+  function tile(x) {
+    const hot = !x.off && !x.out && x.url === ph.url;
+    if (x.off || x.out) {
+      const back = x.out ? CAL.backNote(x.cal, NOW) : "";
+      return `<div class="t off">${I(ICON[x.ic])}<span><b>${name(x)}</b>${x.d ? `<span class="ds">${esc(x.d)}</span>` : ""}<span class="st">${LOCK}<span class="lg">${esc(back || "Coming soon")}</span><span class="sh">${esc(back.replace("Back in ", "") || "Soon")}</span></span></span></div>`;
+    }
+    const st = hot ? `<span class="lg">${esc(x.st + (x.more || ""))}</span><span class="sh">This week</span>` : `<span class="lg">${esc(x.st + (x.more || ""))}</span><span class="sh">${esc(x.st)}</span>`;
+    const icon = hot ? `<span class="top-row">${I(ICON[x.ic])}<span class="tag">This week</span></span>` : I(ICON[x.ic]);
+    const head = `${icon}<span><b>${name(x)}</b><span class="ds">${esc(x.d)}</span>`;
+    return `<a class="t${hot ? " hot" : ""}" href="${x.url}">${head}<span class="st"><i></i>${st}</span></span></a>`;
+  }
+  function renderTiles(animate) {
+    $("lgTabs").innerHTML = LEAGUES.map(([k, l]) => `<button type="button" data-lg="${k}" aria-pressed="${k === league}">${l}</button>`).join("");
+    const list = league === "all" ? TILES : TILES.filter((x) => x.lg.includes(league));
+    const label = (LEAGUES.find(([k]) => k === league) || [])[1];
+    $("tiles").innerHTML = list.map(tile).join("") + (list.some((x) => !x.off) ? "" : `<p class="soon">${esc(label)} contests are coming soon.</p>`);
+    if (animate) { // tiles settle in one after another
+      const g = $("tiles"); g.classList.remove("swap"); void g.offsetWidth;
+      [...g.children].forEach((el, i) => el.style.setProperty("--i", i)); g.classList.add("swap");
+    }
+  }
+  $("lgTabs").addEventListener("click", (e) => { const b = e.target.closest("button[data-lg]"); if (b && b.dataset.lg !== league) { league = b.dataset.lg; renderTiles(true); } });
+  renderTiles();
+
+  // AP tile status: open until the first ranked kickoff after the latest poll, then locked until the next poll.
   (async () => {
-    let lock = null;
     try {
-      // The ballot is for the poll after the latest one, so the lock is the first ranked kickoff after that poll.
       const rk = await (await fetch("https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings")).json();
       const ap = rk.rankings.find((r) => /AP/.test(r.name)) || rk.rankings[0];
-      const r = await LFI.firstRankedKickoff(new Date(ap.date)), sb = r.sb;
-      lock = r.at;
-      $("stripLg").textContent = ph.lg === "cfb" ? "CFB" : "NFL";
-      if (ph.lg === "cfb") { sb.games.forEach((g) => g.href = "/college/"); $("strip").innerHTML = stripHTML(sb.games); $("stripWeek").textContent = `Week ${sb.week}`; }
+      const lock = (await LFI.firstRankedKickoff(new Date(ap.date))).at;
+      const t = TILES.find((x) => x.id === "ap");
+      if (!t.out && (!lock || lock <= now())) { t.st = "Locked"; t.more = ""; renderTiles(); }
     } catch (e) {}
-    if (lock && lock > now()) {
-      countdown($("apClock"), lock, { onDone: () => location.reload() });
-      $("apLockLbl").textContent = "Locks " + lock.toLocaleDateString(undefined, { weekday: "long" }) + " at " + LFI.fmtTime(lock) + ". Time left:";
-    } else {
-      $("apLockLbl").textContent = "This week's ballots are locked";
-      $("apClock").innerHTML = `<div><b>🔒</b><span>Opens Sun</span></div>`;
-      $("apP").textContent = "This week's ballots are locked and the games are deciding them. The next ballot opens Sunday afternoon when the new AP poll comes out.";
-    }
-  })();
-  if (ph.lg === "nfl") (async () => {
-    try { const sb = await LFI.thisWeek("nfl"); sb.games.forEach((g) => g.href = "/pickem/"); $("strip").innerHTML = stripHTML(sb.games, LFI.local.get("lfi-preview-picks", {})); $("stripWeek").textContent = `Week ${sb.week}`; } catch (e) {}
   })();
 
   // Your week, from what this browser has saved.

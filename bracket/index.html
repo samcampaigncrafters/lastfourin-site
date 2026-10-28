@@ -9,12 +9,13 @@
 <meta property="og:description" content="Build your College Football Playoff field. Rank the Top 25, the bracket fills itself.">
 <meta property="og:url" content="https://lastfourin.com/bracket/">
 <meta property="og:site_name" content="Last Four In">
-<meta name="theme-color" content="#0a1a33">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='8' fill='%23f2b33d'/%3E%3Cpath d='M8 8h5v5h4M8 22h5v-5M17 13v4h5' fill='none' stroke='%231b1204' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#0d0820">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/assets/lfi.css">
+<script src="/assets/theme.js"></script>
 </head>
 <body>
 <style>
@@ -24,27 +25,27 @@
 .bk-top p { margin: 8px 0 0; color: var(--ink-2); max-width: 60ch; }
 .bk-clock small { display: block; font-family: var(--f-display); font-weight: 700; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
 .bubble { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-.bub { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 8px 14px 8px 10px; }
-.bub img { width: 30px; height: 30px; object-fit: contain; }
+.bub { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 8px 14px 8px 10px; }
+.bub .tmk { --tmk-size: 26px; --tmk-nick: 10px; flex: none; min-width: 52px; }
 .bub small { display: block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
 .bub strong { font-family: var(--f-display); font-size: 19px; font-weight: 800; text-transform: uppercase; line-height: 1.05; }
 .bub.in { border-left: 4px solid var(--win); }
 .bub.out { border-left: 4px solid var(--loss); }
 .field { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; margin-bottom: 14px; }
-.fcard { position: relative; background: #fff; border: 1px solid var(--line); border-radius: var(--r); padding: 18px 4px 8px; display: grid; justify-items: center; gap: 4px; overflow: hidden; }
+.fcard { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 18px 4px 8px; display: grid; justify-items: center; gap: 4px; overflow: hidden; }
 .fcard::before { content: ""; position: absolute; inset: 0 0 auto; height: 4px; background: var(--tc); }
 .fcard .sd { font-family: var(--f-display); font-weight: 800; font-size: 13px; color: var(--muted); position: absolute; top: 6px; left: 7px; }
-.fcard img { width: 40px; height: 40px; object-fit: contain; }
-.fcard .ab { font-family: var(--f-display); font-weight: 800; font-size: 15px; letter-spacing: .03em; }
+.fcard .tmk { --tmk-size: 26px; --tmk-nick: 10px; align-items: center; text-align: center; }
+.fcard.bye .tmk small { color: var(--on-brand-2); }
 .fcard .tg { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .fcard.bye { background: var(--navy); border-color: var(--navy); color: #fff; }
 .fcard.bye .sd, .fcard.bye .tg { color: var(--gold); }
 .fcard .tg.auto { color: var(--win); }
 @media (max-width: 980px) { .field { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
-@media (max-width: 480px) { .field { grid-template-columns: repeat(4, minmax(0, 1fr)); } .fcard img { width: 34px; height: 34px; } }
+@media (max-width: 480px) { .field { grid-template-columns: repeat(4, minmax(0, 1fr)); } .fcard .tmk { --tmk-size: 22px; --tmk-nick: 9.5px; } }
 .rules { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-bottom: 20px; }
-.rule { background: #fff; padding: 12px 14px; display: grid; gap: 2px; }
-.rule .n { font-family: var(--f-display); font-weight: 800; font-style: italic; font-size: 26px; line-height: 1; color: var(--navy); }
+.rule { background: var(--card); padding: 12px 14px; display: grid; gap: 2px; }
+.rule .n { font-family: var(--f-display); font-weight: 800; font-style: var(--disp-style); font-size: 26px; line-height: 1; color: var(--navy); }
 .rule span:last-child { color: var(--ink-2); font-size: 13px; }
 @media (max-width: 860px) { .rules { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .bk-main { display: grid; grid-template-columns: minmax(320px, 420px) minmax(0, 1fr); gap: 20px; align-items: start; }
@@ -57,29 +58,31 @@
 .wires path { fill: none; stroke: var(--line-2); stroke-width: 1.5; }
 .wires path.hot { stroke: var(--gold); stroke-width: 2.5; }
 .col { display: flex; flex-direction: column; position: relative; z-index: 1; }
-.col h3 { font-family: var(--f-display); font-weight: 800; font-style: italic; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin: 0 0 10px; }
+.col h3 { font-family: var(--f-display); font-weight: 800; font-style: var(--disp-style); font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin: 0 0 10px; }
 .bk-games { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 16px; min-height: 540px; }
-.game { background: #fff; border: 1px solid var(--line-2); border-radius: 6px; overflow: hidden; }
-.gnote { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--muted); padding: 4px 10px; background: #f5f7fa; border-bottom: 1px solid var(--line); }
-.slot { position: relative; width: 100%; display: grid; grid-template-columns: 18px 24px minmax(0, 1fr); gap: 8px; align-items: center; text-align: left; border: 0; background: #fff; padding: 7px 10px; min-height: 42px; }
+.game { background: var(--card); border: 1px solid var(--line-2); border-radius: 6px; overflow: hidden; }
+.gnote { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--muted); padding: 4px 10px; background: var(--card-2); border-bottom: 1px solid var(--line); }
+.slot { position: relative; width: 100%; display: grid; grid-template-columns: 18px 44px minmax(0, 1fr); gap: 8px; align-items: center; text-align: left; border: 0; background: var(--card); padding: 7px 10px; min-height: 42px; }
 .slot::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--tc, transparent); }
 .slot + .slot { border-top: 1px solid var(--line); }
-.slot:hover:not(:disabled) { background: #f5f7fa; }
+.slot:hover:not(:disabled) { background: var(--card-2); }
 .slot:disabled { cursor: default; }
 .slot .sd { font-family: var(--f-display); font-weight: 800; font-size: 14px; color: var(--muted); text-align: right; }
-.slot img { width: 24px; height: 24px; object-fit: contain; }
+.slot .tmk { --tmk-size: 17px; }
+@media (max-width: 600px) { .slot { grid-template-columns: 16px 40px minmax(0, 1fr); gap: 5px; padding: 7px 8px; } .slot .tmk { --tmk-size: 14px; } }
 .slot .n { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.slot.tbd .n { color: var(--muted); font-weight: 500; font-style: italic; }
+.slot.tbd .n { color: var(--muted); font-weight: 500; font-style: var(--disp-style); }
 .slot.win { background: var(--tc); color: #fff; }
 .slot.win .sd { color: rgba(255,255,255,.8); }
 .slot.win::after { content: "✓"; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; border-radius: 50%; background: var(--gold); color: var(--gold-ink); font-size: 11px; font-weight: 800; display: grid; place-items: center; }
 .slot.lose { opacity: .45; }
 .champ { position: relative; border-radius: var(--r); padding: 22px 14px; text-align: center; display: grid; gap: 8px; justify-items: center; background: var(--navy); color: #fff; overflow: hidden; border-top: 5px solid var(--tc, var(--gold)); }
 .champ .lbl { font-family: var(--f-display); font-weight: 700; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); }
-.champ img { width: 84px; height: 84px; object-fit: contain; background: #fff; border-radius: 50%; padding: 8px; }
-.champ .big { font-family: var(--f-display); font-weight: 800; font-style: italic; font-size: 28px; text-transform: uppercase; line-height: 1; }
-.champ .ph-logo { width: 84px; height: 84px; border-radius: 50%; border: 2px dashed rgba(255,255,255,.35); display: grid; place-items: center; color: #c9d4e3; font-family: var(--f-display); font-size: 38px; font-weight: 800; }
-.champ .sub2 { font-size: 12px; color: #c9d4e3; }
+.champ .tmk { --tmk-size: 64px; --tmk-nick: 13px; align-items: center; text-align: center; }
+.champ .tmk small { color: var(--on-brand-2); }
+.champ .big { font-family: var(--f-display); font-weight: 800; font-style: var(--disp-style); font-size: 28px; text-transform: uppercase; line-height: 1; }
+.champ .ph-logo { width: 84px; height: 84px; border-radius: 50%; border: 2px dashed rgba(255,255,255,.35); display: grid; place-items: center; color: var(--on-brand-2); font-family: var(--f-display); font-size: 38px; font-weight: 800; }
+.champ .sub2 { font-size: 12px; color: var(--on-brand-2); }
 /* Phones: no sideways scrolling, rounds stack top to bottom. */
 @media (max-width: 760px) {
   .bscroll { overflow: visible; }
@@ -98,17 +101,70 @@
 .report > div { padding: 16px 18px 18px; min-width: 0; }
 .report > div + div { border-left: 1px solid var(--line); }
 @media (max-width: 600px) { .report > div + div { border-left: 0; border-top: 1px solid var(--line); } }
-.report h4 { margin: 0 0 10px; font-family: var(--f-display); font-weight: 800; font-style: italic; font-size: 16px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); }
+.report h4 { margin: 0 0 10px; font-family: var(--f-display); font-weight: 800; font-style: var(--disp-style); font-size: 16px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); }
 .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
-.list li { display: grid; grid-template-columns: 22px 22px minmax(0, 1fr); gap: 9px; align-items: center; font-size: 14px; }
+.list li { display: grid; grid-template-columns: 22px 40px minmax(0, 1fr); gap: 9px; align-items: center; font-size: 14px; }
 .list .s { font-family: var(--f-display); font-weight: 800; color: var(--muted); text-align: right; }
-.list img { width: 22px; height: 22px; object-fit: contain; }
+.list .tmk { --tmk-size: 16px; color: var(--ink-2); }
 .list .why { color: var(--muted); font-size: 12.5px; }
-.flag { border-left: 4px solid var(--loss); background: #fdf1ef; padding: 10px 12px; border-radius: 4px; font-size: 13.5px; margin-bottom: 12px; color: var(--ink-2); }
+.flag { border-left: 4px solid var(--loss); background: var(--loss-soft); padding: 10px 12px; border-radius: 4px; font-size: 13.5px; margin-bottom: 12px; color: var(--ink-2); }
 .flag b { color: var(--ink); }
 .champs-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .champs-grid label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; color: var(--muted); display: grid; gap: 5px; }
-.champs-grid select { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 600; color: var(--ink); width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid var(--line-2); border-radius: 6px; background: #fff; }
+.champs-grid select { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 600; color: var(--ink); width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--card); }
+/* Head-to-head, folded in from the old /head-to-head/ page */
+.tape { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 22px 18px; border-radius: var(--r) var(--r) 0 0; color: #fff;
+  background: linear-gradient(100deg, var(--ca) 0%, var(--navy) 46%, var(--navy) 54%, var(--cb) 100%); }
+.tside { display: grid; gap: 10px; justify-items: start; min-width: 0; }
+.tside.b { justify-items: end; text-align: right; }
+.tside .tmk { --tmk-size: 60px; --tmk-nick: 13px; }
+.tside .tmk small { color: rgba(255,255,255,.85); }
+.tside select { max-width: 100%; appearance: none; -webkit-appearance: none; font-family: var(--f-display); font-weight: 800; font-style: var(--disp-style); font-size: 22px; text-transform: uppercase; color: #fff; background: rgba(0,0,0,.28); border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 8px 12px; }
+.vs { font-family: var(--f-display); font-weight: 800; font-style: var(--disp-style); font-size: 38px; color: var(--gold); }
+@media (max-width: 520px) { .tside .tmk { --tmk-size: 44px; --tmk-nick: 11.5px; } .tside select { font-size: 17px; padding: 7px 8px; } .vs { font-size: 28px; } }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { border: 1px solid var(--line-2); background: var(--card); border-radius: 6px; padding: 9px 14px; font-size: 14px; font-weight: 700; color: var(--ink-2); min-height: 42px; }
+.seg button[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); color: #fff; }
+/* Conference championship status, one column per team */
+.ccg { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.ccg-side { display: grid; gap: 6px; align-content: start; }
+.ccg-side h4 { margin: 0 0 2px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.ccg-side.b { text-align: right; }
+.ccg-side button { border: 1px solid var(--line-2); background: var(--card); border-radius: 6px; padding: 8px 10px; font-size: 13.5px; font-weight: 700; color: var(--ink-2); min-height: 42px; line-height: 1.2; }
+.ccg-side button[aria-pressed="true"] { background: var(--field); border-color: var(--field); color: #fff; }
+.ccg-side p { margin: 0; font-size: 13.5px; color: var(--muted); }
+.stats { margin-top: 14px; }
+.stat { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.stat .l { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; text-align: center; white-space: nowrap; }
+.stat .va, .stat .vb { font-weight: 700; font-size: 15px; }
+.stat .vb { text-align: right; }
+.stat .edge { color: var(--win); }
+.stat .edge::before { content: "▲ "; font-size: 11px; }
+.verdict { margin-top: 16px; border-left: 4px solid var(--gold); background: var(--accent-soft); border-radius: 4px; padding: 14px 16px; display: grid; gap: 12px; }
+.verdict p { margin: 0; color: var(--ink-2); }
+.verdict b { color: var(--ink); }
+.tally { display: flex; align-items: baseline; gap: 12px; margin: 0 0 14px; }
+.tally .tbig { white-space: nowrap; font-family: var(--f-display); font-weight: 800; font-style: var(--disp-style); font-size: 52px; line-height: .9; color: #fff; }
+.tally span:last-child { color: var(--ink-2); font-size: 14px; }
+.prec { display: grid; gap: 10px; }
+.prec article { border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 6px; }
+.prec .top { display: flex; align-items: center; gap: 8px; }
+.prec .yr { font-family: var(--f-display); font-weight: 800; font-size: 20px; margin-right: 4px; }
+.prec .gt { color: var(--muted); font-size: 13px; }
+.prec .res { margin-left: auto; }
+.prec p { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+.prec .hd { font-weight: 700; font-size: 14px; }
+.prec .src { font-size: 12px; color: var(--link); text-decoration: none; font-weight: 700; }
+.h2h .grid2 { grid-template-columns: minmax(0, 1fr) minmax(340px, 420px); }
+@media (max-width: 980px) { .h2h .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.cm-h { white-space: nowrap; font-size: clamp(21px, 2.1vw, 26px) !important; }
+.cm-sit { margin: 0 0 14px; color: var(--ink-2); font-size: 14px; }
+.cm-sit b { color: var(--ink); }
+.cm-wide { margin: -6px 0 14px; font-size: 12.5px; color: var(--muted); }
+/* Did they play each other? */
+.met { display: grid; gap: 8px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.met h4 { margin: 0; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.met .seg button[aria-pressed="true"] { background: var(--field); border-color: var(--field); color: #fff; }
 </style>
 
 <header class="nav" data-active="bracket"></header>
@@ -118,9 +174,8 @@
     <div>
       <div class="kicker">2026–27 College Football Playoff</div>
       <h1 class="disp">Build the field</h1>
-      <p>Rank your Top 25. The 12-team bracket seeds itself under this season's selection rules, then you pick every game to a champion.</p>
+      <p>Rank your Top 25. The 12-team bracket seeds itself under this season's selection rules, then you pick every game to a champion. Share it and argue it out.</p>
     </div>
-    <div class="bk-clock"><small id="clockLbl">CFP Selection Day · Sun, Dec 6</small><div class="count sm" id="clock"></div></div>
   </div>
 
   <div class="bubble" id="bubble"></div>
@@ -135,7 +190,7 @@
 
   <div class="bk-main">
     <section class="card" id="rankings">
-      <div class="card-h"><div><h2 class="disp">Your Top 25</h2><p>Starts from this week's AP poll. Tap a team for its moves, or drag the dots. Tap a crown to name a conference champion.</p></div></div>
+      <div class="card-h"><div><h2 class="disp">Your Top 25</h2><p>Starts from this week's AP poll. Hold and drag a team to move it, or tap the dots on the right for more moves. Tap a crown to name a conference champion.</p></div></div>
       <div class="card-b"><div id="ranker"></div><p class="empty" style="margin-top:10px">Faded crown: projected champion, the top-ranked team in its conference. Gold crown: your pick.</p></div>
     </section>
 
@@ -157,9 +212,36 @@
           </div>
         </div>
       </section>
-      <a class="tile" href="/head-to-head/"><b>Two teams look close?</b><span>Line them up head-to-head the way the committee does, with real playoff-era precedents.</span></a>
     </div>
   </div>
+
+  <section class="h2h" id="h2h" aria-labelledby="h2hH">
+    <div class="head" style="margin:34px 0 16px"><div><div class="kicker">Two teams look close?</div><h2 class="disp" id="h2hH" style="font-size:clamp(34px,5vw,52px);margin:6px 0 0">Head-to-Head</h2><p>Line two teams up the way the committee does when they look close. Rankings come from your Top 25 above.</p></div></div>
+  <div class="grid2">
+    <section class="card">
+      <div class="tape" id="tape"></div>
+      <div class="card-b">
+        <div class="met" id="hMet"></div>
+        <div class="ccg" id="hRes"></div>
+        <div class="stats" id="hStats"></div>
+        <div class="verdict" id="hVerdict"></div>
+      </div>
+    </section>
+    <aside class="side">
+      <section class="card">
+        <div class="card-h"><h2 class="disp cm-h">When the committee faced it</h2></div>
+        <div class="card-b">
+          <p class="cm-sit" id="cmSit"></p>
+          <div class="tally" id="cmTally"></div>
+          <p class="cm-wide" id="cmWide" hidden></p>
+          <div class="prec" id="prec"></div>
+          <div style="margin-top:10px"><button class="btn" type="button" id="cmMore" hidden></button></div>
+          <p class="empty" style="margin-top:12px">Every final College Football Playoff ranking from 2014 to 2025, counting any two teams the committee ranked within five spots of each other. Records are as of selection day. Sources: each season's final CFP ranking and every ranked team's schedule, via Wikipedia.</p>
+        </div>
+      </section>
+    </aside>
+  </div>
+  </section>
 
   <div class="dock">
     <div class="card submitbar">
@@ -177,9 +259,8 @@
 <script>
 (function () {
   const { $, esc, toast, entries, countdown, selectionDay } = LFI;
-  const { S, save, CONF, P4, GAMES, ROUNDS, ORDER_GAMES, TEAMS, conf, rec, rankOf, L, logo, champFor, computeField, resolve, cleanPicks, champion } = CFP;
+  const { S, save, CONF, P4, GAMES, ROUNDS, ORDER_GAMES, TEAMS, conf, rec, rankOf, L, mark, champFor, computeField, resolve, cleanPicks, champion } = CFP;
   const CROWN = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 5l3 2.5L8 3l3 4.5L14 5l-1.2 7H3.2z"/></svg>';
-  const img = (t, cls = "") => logo(t) ? `<img${cls ? ` class="${cls}"` : ""} src="${logo(t)}" alt="" loading="lazy">` : "";
   const tc = (t) => `--tc:${L(t).acc}`;
   let F;
 
@@ -199,7 +280,7 @@
     cut: { after: 12, label: "Playoff line" },
     order: () => S.order,
     setOrder: (ids) => { S.order = ids; render(); },
-    team: (t) => ({ name: t, logo: logo(t), color: L(t).acc, sub: [CONF[conf(t)], rec(t)].filter(Boolean).join(" · ") }),
+    team: (t) => ({ name: t, abbr: L(t).abbr, nick: TEAMS[t] && TEAMS[t].nick, color: L(t).acc, sub: [CONF[conf(t)], rec(t)].filter(Boolean).join(" · ") }),
     pool: () => Object.keys(TEAMS).filter((t) => !S.order.includes(t)).sort((a, b) => a.localeCompare(b)),
     poolTag: (t) => conf(t) === "IND" ? "IND" : conf(t),
     right: (t) => {
@@ -219,6 +300,7 @@
     F = computeField();
     cleanPicks(F);
     renderHero(); ranker.render(); renderBracket(); renderReport(); renderSubmit();
+    if (window.LFI_H2H) window.LFI_H2H();
     save();
   }
 
@@ -226,11 +308,11 @@
     $("field").innerHTML = F.seeds.map((t, i) => {
       const auto = F.reasons[t].kind === "auto";
       const tag = i < 4 ? "Bye" : auto ? "Auto" : "At-large";
-      return `<div class="fcard${i < 4 ? " bye" : ""}" style="${tc(t)}" title="${esc(t)}"><span class="sd">${i + 1}</span>${img(t)}<span class="ab">${esc(L(t).abbr)}</span><span class="tg${auto && i >= 4 ? " auto" : ""}">${tag}</span></div>`;
+      return `<div class="fcard${i < 4 ? " bye" : ""}" style="${tc(t)}" title="${esc(t)}"><span class="sd">${i + 1}</span>${mark(t)}<span class="tg${auto && i >= 4 ? " auto" : ""}">${tag}</span></div>`;
     }).join("");
     const lastIn = F.seeds.filter((t) => F.reasons[t].kind === "large").pop();
     const firstOut = F.firstOut[0];
-    const b = (lbl, t, cls) => t ? `<div class="bub ${cls}">${img(t)}<div><small>${lbl}</small><strong>${esc(t)}</strong></div></div>` : "";
+    const b = (lbl, t, cls) => t ? `<div class="bub ${cls}">${mark(t)}<div><small>${lbl}</small><strong>${esc(t)}</strong></div></div>` : "";
     $("bubble").innerHTML = b("Last team in", lastIn, "in") + b("First team out", firstOut, "out");
   }
 
@@ -239,7 +321,7 @@
     const slot = (id, side, t, other) => {
       if (!t) return `<button class="slot tbd" disabled type="button" data-side="${id}-${side}"><span class="sd"></span><span></span><span class="n">Winner advances</span></button>`;
       const p = S.picks[id], cls = p === t ? "win" : (p ? "lose" : "");
-      return `<button class="slot ${cls}" type="button" data-side="${id}-${side}" data-g="${id}" data-t="${esc(t)}" style="${tc(t)}" ${other ? "" : "disabled"} aria-label="Pick ${esc(t)}"><span class="sd">${seedOf(t)}</span>${img(t)}<span class="n">${esc(t)}</span></button>`;
+      return `<button class="slot ${cls}" type="button" data-side="${id}-${side}" data-g="${id}" data-t="${esc(t)}" style="${tc(t)}" ${other ? "" : "disabled"} aria-label="Pick ${esc(t)}"><span class="sd">${seedOf(t)}</span>${mark(t, "s")}<span class="n">${esc(t)}</span></button>`;
     };
     let html = ROUNDS.map((r) => `<div class="col"><h3>${r.t}</h3><div class="bk-games">${r.ids.map((id) => {
       const a = resolve(GAMES[id].a, F), b = resolve(GAMES[id].b, F);
@@ -249,7 +331,7 @@
     const champ = champion(F);
     html += `<div class="col"><h3>Champion</h3><div class="bk-games"><div class="champ" data-game="champ" ${champ ? `style="${tc(champ)}"` : ""}>
       <span class="lbl">National champion</span>
-      ${champ ? img(champ) : `<span class="ph-logo">?</span>`}
+      ${champ ? mark(champ) : `<span class="ph-logo">?</span>`}
       <span class="big">${champ ? esc(champ) : "Pick a winner"}</span>
       <span class="sub2">${champ ? "No. " + seedOf(champ) + " seed" : "Advance a team through the title game"}</span></div></div></div>`;
     html += `<svg class="wires" id="wires" aria-hidden="true"></svg>`;
@@ -280,14 +362,14 @@
   function renderReport() {
     $("seedlist").innerHTML = F.seeds.map((t, i) => {
       const r = F.reasons[t], rk = rankOf(t);
-      return `<li><span class="s">${i + 1}</span>${img(t)}<span><b>${esc(t)}</b> <span class="why">· No. ${rk >= 0 ? rk + 1 : "25+"} · ${r.why}${i < 4 ? " · bye" : ""}</span></span></li>`;
+      return `<li><span class="s">${i + 1}</span>${mark(t, "s")}<span><b>${esc(t)}</b> <span class="why">· No. ${rk >= 0 ? rk + 1 : "25+"} · ${r.why}${i < 4 ? " · bye" : ""}</span></span></li>`;
     }).join("");
     const flags = [];
     if (F.bumped.length) flags.push(`<div class="flag"><b>${F.bumped.map(esc).join(" and ")}</b> ${F.bumped.length > 1 ? "are" : "is"} in your top 12 but out of the field, bumped by the automatic bid${F.bumpers.length > 1 ? "s" : ""} for ${F.bumpers.map(esc).join(" and ")}.</div>`);
     const missing = P4.filter((c) => !champFor(c));
     if (missing.length) flags.push(`<div class="flag">No ${missing.map((c) => CONF[c]).join(" or ")} team in your Top 25. Pick a champion so that bid counts.</div>`);
     $("flags").innerHTML = flags.join("");
-    $("firstout").innerHTML = F.firstOut.map((t) => `<li><span class="s">${rankOf(t) + 1}</span>${img(t)}<span>${esc(t)} <span class="why">· ${CONF[conf(t)]}</span></span></li>`).join("") || `<li><span></span><span></span><span class="why">Add more teams to see who is next.</span></li>`;
+    $("firstout").innerHTML = F.firstOut.map((t) => `<li><span class="s">${rankOf(t) + 1}</span>${mark(t, "s")}<span>${esc(t)} <span class="why">· ${CONF[conf(t)]}</span></span></li>`).join("") || `<li><span></span><span></span><span class="why">Add more teams to see who is next.</span></li>`;
     const byRank = (a, b) => { const ra = rankOf(a), rb = rankOf(b); return (ra < 0 ? 99 : ra) - (rb < 0 ? 99 : rb) || a.localeCompare(b); };
     $("champs").innerHTML = P4.map((c) => {
       const opts = Object.keys(TEAMS).filter((t) => conf(t) === c).sort(byRank);
@@ -323,18 +405,198 @@
     lines.push("", "Champion: " + (champ || "not picked yet"));
     const e = entries.put({
       id: ENTRY_ID, kind: "bracket", title: "CFP Bracket", sub: champ ? `${champ} wins it all` : "Field only", url: "/bracket/",
-      data: { seeds: F.seeds, ids: F.seeds.map((t) => TEAMS[t].id), champ: champ || "", champId: champ ? TEAMS[champ].id : "" },
+      data: { seeds: F.seeds, ids: F.seeds.map((t) => TEAMS[t].id), ab: F.seeds.map((t) => TEAMS[t].abbr), champ: champ || "", champId: champ ? TEAMS[champ].id : "",
+              champAb: champ ? TEAMS[champ].abbr : "", champNick: champ ? TEAMS[champ].nick : "" },
       shareText: champ ? `I've got ${champ} winning the College Football Playoff. Build your bracket and prove me wrong.` : "Here's my 12-team College Football Playoff field. Build yours and prove me wrong.",
       text: lines.join("\n"),
     });
     LFI.share(e, { updated: had });
   });
 
-  const sd = selectionDay();
-  $("clockLbl").textContent = `${sd.label} · ${sd.when}`;
-  countdown($("clock"), sd.at);
   if (window.ResizeObserver) new ResizeObserver(() => drawWires()).observe($("bracketGrid"));
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawWires);
+  window.LFI_BRACKET_RENDER = render;
+  render();
+})();
+</script>
+<script>
+(function () {
+  const { $, esc, toast } = LFI;
+  const { S, save, CONF, P4, TEAMS, conf, rec, rankOf, L, mark, champFor, computeField, committeeCases, historySource } = CFP;
+  if (!$("tape")) return;
+  let F;
+
+  // Did the two teams play each other? Stored per pair: "none", "yes" (winner not picked yet) or the winner's name.
+  if (!S.h2h.met) S.h2h.met = {};
+  const pairKey = (a, b) => [a, b].sort().join("|");
+  const metOf = (a, b) => S.h2h.met[pairKey(a, b)] || "none";
+  const h2hWinner = (a, b) => { const m = metOf(a, b); return m === a || m === b ? m : ""; };
+
+  // Conference championship game per team: won / lost / none (didn't play). A crowned champion counts as won.
+  if (!S.h2h.ccg) S.h2h.ccg = {};
+  function ccg(t) {
+    if (conf(t) === "IND") return "none";
+    const ch = P4.includes(conf(t)) ? champFor(conf(t)) : null;
+    if (ch && ch.t === t && !ch.projected) return "won";
+    const v = S.h2h.ccg[t];
+    return v === "won" && P4.includes(conf(t)) ? "none" : v || "none";
+  }
+  function setCcg(t, v) {
+    const c = conf(t);
+    if (P4.includes(c)) {
+      if (v === "won") S.champs[c] = t;
+      else if (S.champs[c] === t) S.champs[c] = "";
+    }
+    S.h2h.ccg[t] = v;
+    window.LFI_BRACKET_RENDER(); // re-seeds the field, then redraws this section
+  }
+
+  function facts(t) {
+    const c = conf(t), rk = rankOf(t), ch = P4.includes(c) ? champFor(c) : null, seed = F.seeds.indexOf(t);
+    return {
+      rank: rk >= 0 ? "No. " + (rk + 1) : "Unranked", rankN: rk >= 0 ? rk : 99,
+      rec: rec(t) || "—", conf: CONF[c],
+      title: { won: "Won", lost: "Lost title game", none: c === "IND" ? "Independent" : "Didn't play" }[ccg(t)],
+      hasTitle: ccg(t) === "won",
+      bracket: seed >= 0 ? (seed < 4 ? "Seed " + (seed + 1) + " · bye" : "Seed " + (seed + 1)) : (F.bumped.includes(t) ? "Bumped" : "Out"),
+    };
+  }
+
+  function render() {
+    F = computeField();
+    const byRank = (a, b) => { const ra = rankOf(a), rb = rankOf(b); return (ra < 0 ? 99 : ra) - (rb < 0 ? 99 : rb) || a.localeCompare(b); };
+    const all = Object.keys(TEAMS).sort(byRank);
+    const opt = (sel) => all.map((t) => `<option ${t === sel ? "selected" : ""}>${esc(t)}</option>`).join("");
+    const { a, b } = S.h2h;
+    const tape = $("tape");
+    tape.style.setProperty("--ca", L(a).c);
+    tape.style.setProperty("--cb", L(b).c);
+    tape.innerHTML = `<div class="tside a">${mark(a)}<select id="hA" aria-label="Team A">${opt(a)}</select></div>
+      <div class="vs">VS</div>
+      <div class="tside b">${mark(b, "r")}<select id="hB" aria-label="Team B">${opt(b)}</select></div>`;
+    const m = metOf(a, b), played = m !== "none";
+    $("hMet").innerHTML = a === b ? "" : `<h4>Did ${esc(a)} and ${esc(b)} play each other this season?</h4>
+      <div class="seg" role="group" aria-label="Did they play each other"><button type="button" data-met="none" aria-pressed="${!played}">No</button><button type="button" data-met="yes" aria-pressed="${played}">Yes</button></div>
+      ${played ? `<h4 style="margin-top:4px">Who won?</h4><div class="seg" role="group" aria-label="Who won"><button type="button" data-met="${esc(a)}" aria-pressed="${m === a}">${esc(a)}</button><button type="button" data-met="${esc(b)}" aria-pressed="${m === b}">${esc(b)}</button></div>` : ""}`;
+    const CH = [["won", "Won the conference championship"], ["lost", "Lost the conference championship"], ["none", "Didn't play"]];
+    $("hRes").innerHTML = [["a", a], ["b", b]].map(([k, t]) => `<div class="ccg-side ${k}" role="group" aria-label="${esc(t)} conference championship"><h4>${esc(t)}</h4>${
+      conf(t) === "IND" ? `<p>Independent, so no conference championship game.</p>`
+        : CH.map(([v, l]) => `<button type="button" data-team="${esc(t)}" data-ccg="${v}" aria-pressed="${ccg(t) === v}">${l}</button>`).join("")}</div>`).join("");
+
+    const fa = facts(a), fb = facts(b);
+    const row = (lbl, va, vb, edge) => `<div class="stat"><span class="va ${edge === "a" ? "edge" : ""}">${va}</span><span class="l">${lbl}</span><span class="vb ${edge === "b" ? "edge" : ""}">${vb}</span></div>`;
+    const rankEdge = fa.rankN < fb.rankN ? "a" : fb.rankN < fa.rankN ? "b" : "";
+    const titleEdge = fa.hasTitle && !fb.hasTitle ? "a" : fb.hasTitle && !fa.hasTitle ? "b" : "";
+    const hw = h2hWinner(a, b);
+    $("hStats").innerHTML =
+      row("Your ranking", fa.rank, fb.rank, rankEdge) +
+      row("Record", fa.rec, fb.rec, "") +
+      row("Conference", fa.conf, fb.conf, "") +
+      row("Conf. title", fa.title, fb.title, titleEdge) +
+      row("Head-to-head", hw ? (hw === a ? "Won" : "Lost") : m === "yes" ? "Played" : "Didn't play", hw ? (hw === b ? "Won" : "Lost") : m === "yes" ? "Played" : "Didn't play", hw === a ? "a" : hw === b ? "b" : "") +
+      row("Your bracket", fa.bracket, fb.bracket, "");
+
+    let html;
+    const ra = rankOf(a), rb = rankOf(b);
+    if (a === b) html = `<p>Pick two different teams.</p>`;
+    else if (fa.hasTitle !== fb.hasTitle) {
+      const w = fa.hasTitle ? a : b, l = fa.hasTitle ? b : a, rw = rankOf(w), rl = rankOf(l);
+      html = `<p><b>${esc(w)} won its conference championship and ${esc(l)} didn't.</b> When two teams look close, a conference title is one of the first things the committee weighs, along with strength of schedule, head-to-head and common opponents.</p>`
+        + (rl >= 0 && (rw < 0 || rw > rl) ? `<div><button class="btn gold" type="button" id="applyH2H" data-w="${esc(w)}" data-l="${esc(l)}">Move ${esc(w)} ahead of ${esc(l)}</button></div>` : "");
+    } else if (fa.hasTitle) html = `<p><b>Both won their conference championships.</b> The title cancels out, so the committee moves on to strength of schedule, head-to-head and results against common opponents.</p>`;
+    else {
+      const lost = [a, b].filter((t) => ccg(t) === "lost");
+      html = `<p><b>Neither has a conference title.</b> ${lost.length ? `${lost.map(esc).join(" and ")} lost ${lost.length > 1 ? "their title games" : "its title game"}, which adds a loss but also a game against a good team. ` : ""}The committee goes on the whole résumé: strength of schedule, head-to-head and results against common opponents.</p>`;
+    }
+    $("hVerdict").innerHTML = html;
+
+    renderHistory(a, b);
+    save();
+  }
+
+  // "When the committee faced it": every final ranking since 2014 where two close teams matched this situation.
+  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const md = (s) => { const [mo, d] = s.split("/"); return MON[mo - 1] + " " + d; };
+  const poss = (t) => esc(t) + (/s$/.test(t) ? "'" : "'s");
+  const lossWord = (n) => n === 1 ? "one loss" : n === 2 ? "two losses" : n + " losses";
+  const fewer = (n) => (n === 1 ? "one" : n === 2 ? "two" : n) + " fewer loss" + (n === 1 ? "" : "es");
+  const T3 = { W: "won", L: "lost", N: "none" };
+  function titleLine(x, tx, y, ty) {
+    if (tx === ty) return { W: "Both won their conference title games.", L: "Both lost their conference title games.", N: "Neither played for a conference title." }[tx];
+    const one = (n, v) => v === "W" ? `${n} won its conference title` : v === "L" ? `${n} lost its conference title game` : `${n} didn't play for a conference title`;
+    const order = "WLN";
+    return order.indexOf(tx) < order.indexOf(ty) ? `${one(x, tx)}; ${one(y, ty)}.` : `${one(y, ty)}; ${one(x, tx)}.`;
+  }
+  function caseLine(f, a, b, sym) {
+    const { c, aAhead } = f, hi = c.hi, lo = c.lo;
+    const g = c.met.map((m) => `${esc(m[0])} won ${m[2]} (${md(m[3])}${m[4] ? ", title game" : ""})`).join(". ");
+    const tl = (x) => x.note ? `${esc(x.t)}: ${esc(x.note)}.` : "";
+    const ti = hi.note || lo.note ? [tl(hi), tl(lo)].filter(Boolean).join(" ") : titleLine(esc(hi.t), hi.title, esc(lo.t), lo.title);
+    const fav = aAhead ? a : b;
+    return `<article>
+      <div class="top"><span class="yr">${c.yr}</span>${sym ? "" : `<span class="pill ${f.withFav ? "auto" : "out"} res">${poss(fav)} spot ahead</span>`}</div>
+      <span class="hd">No. ${hi.rk} ${esc(hi.t)} (${hi.w}–${hi.l}) ahead of No. ${lo.rk} ${esc(lo.t)} (${lo.w}–${lo.l})</span>
+      <p>${sym ? "" : `${esc(aAhead ? hi.t : lo.t)} was in ${poss(a)} spot. `}${g ? g + "." : "They didn't play each other."} ${ti}</p>
+      <a class="src" href="${historySource(c.yr)}" target="_blank" rel="noopener">${c.yr} final ranking source</a></article>`;
+  }
+  let showAll = false, lastPair = "";
+  function renderHistory(a, b) {
+    if (pairKey(a, b) !== lastPair) { showAll = false; lastPair = pairKey(a, b); }
+    if (a === b) { $("cmSit").innerHTML = ""; $("cmTally").innerHTML = ""; $("cmWide").hidden = true; $("prec").innerHTML = ""; $("cmMore").hidden = true; return; }
+    const loss = (t) => { const m = /(\d+)\D+(\d+)/.exec(rec(t) || ""); return m ? +m[2] : null; };
+    const tt = (t) => ({ won: "W", lost: "L", none: "N" })[ccg(t)];
+    const la = loss(a), lb = loss(b), hw = h2hWinner(a, b);
+    const r = committeeCases({ l: la, title: tt(a) }, { l: lb, title: tt(b) }, hw === a ? "a" : hw === b ? "b" : "none");
+
+    const recLine = la == null || lb == null ? `Records aren't in yet, so any loss gap counts.`
+      : la === lb ? (la === 0 ? `Both are unbeaten.` : `Same record in the loss column: both have ${lossWord(la)}.`)
+      : `<b>${esc(la < lb ? a : b)}</b> has ${fewer(Math.abs(la - lb))} (${esc(rec(la < lb ? a : b))} to ${esc(rec(la < lb ? b : a))}).`;
+    const h2hLine = hw ? `<b>${esc(hw)}</b> won when they played.` : metOf(a, b) === "yes" ? `They played; pick the winner to the left.` : `They haven't played each other.`;
+    $("cmSit").innerHTML = `${recLine} ${h2hLine} ${titleLine(`<b>${esc(a)}</b>`, tt(a), `<b>${esc(b)}</b>`, tt(b))}`;
+
+    const n = r.found.length, k = r.found.filter((f) => f.aAhead).length;
+    const favA = k >= n - k, fav = favA ? a : b, top = favA ? k : n - k;
+    r.found.forEach((f) => { f.withFav = f.aAhead === favA; });
+    if (metOf(a, b) === "yes" && !hw) {
+      $("cmTally").innerHTML = `<span>Pick who won their game to see how the committee handled it.</span>`;
+      $("cmWide").hidden = true; $("prec").innerHTML = ""; $("cmMore").hidden = true; return;
+    }
+    if (!n) $("cmTally").innerHTML = `<span>The committee hasn't faced this in a final ranking since 2014.</span>`;
+    else if (r.sym) $("cmTally").innerHTML = `<span class="tbig">${n}</span><span>times two teams in this exact spot finished within five places of each other. Nothing here separates them, so the rest of the résumé decided it.</span>`;
+    else $("cmTally").innerHTML = `<span class="tbig">${top} of ${n}</span><span>times the committee put the team in ${poss(fav)} spot ahead.</span>`;
+    const WIDE = ["", "No exact match came up three or more times, so a lost title game counts the same as not playing for one.",
+      "No exact match came up three or more times, so any loss gap in the same direction counts, and a lost title game counts the same as not playing for one.",
+      "No exact match came up three or more times, so the loss gap is left out: head-to-head and conference titles still match.",
+      "No exact match came up three or more times, so conference titles are left out: head-to-head and which team has fewer losses still match."];
+    $("cmWide").hidden = !r.level || !n;
+    $("cmWide").textContent = WIDE[r.level] || "";
+    const list = r.found.slice().sort((x, y) => y.c.yr - x.c.yr || x.c.hi.rk - y.c.hi.rk);
+    $("prec").innerHTML = (showAll ? list : list.slice(0, 6)).map((f) => caseLine(f, a, b, r.sym)).join("");
+    $("cmMore").hidden = list.length <= 6;
+    $("cmMore").textContent = showAll ? "Show fewer" : `Show all ${list.length}`;
+  }
+  $("cmMore").addEventListener("click", () => { showAll = !showAll; render(); });
+  $("hMet").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-met]"); if (!btn) return;
+    S.h2h.met[pairKey(S.h2h.a, S.h2h.b)] = btn.dataset.met;
+    render();
+  });
+
+  $("tape").addEventListener("change", (e) => {
+    if (e.target.id === "hA") S.h2h.a = e.target.value;
+    if (e.target.id === "hB") S.h2h.b = e.target.value;
+    render();
+  });
+  $("hRes").addEventListener("click", (e) => { const b = e.target.closest("button[data-ccg]"); if (b) setCcg(b.dataset.team, b.dataset.ccg); });
+  $("hVerdict").addEventListener("click", (e) => {
+    const btn = e.target.closest("#applyH2H"); if (!btn) return;
+    const w = btn.dataset.w, l = btn.dataset.l;
+    const wi = rankOf(w); if (wi >= 0) S.order.splice(wi, 1);
+    S.order.splice(rankOf(l), 0, w);
+    if (S.order.length > 25) S.order.length = 25;
+    window.LFI_BRACKET_RENDER(); toast(`${w} moved ahead of ${l} in your bracket`);
+  });
+  window.LFI_H2H = render;
   render();
 })();
 </script>

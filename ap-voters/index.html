@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AP Voter Tracker · Last Four In</title>
+<meta name="description" content="Every AP Top 25 voter, ranked by how far their ballot is from the poll. From Normal to Hot takes, every week, with the math shown.">
+<meta property="og:title" content="AP Voter Tracker · Last Four In">
+<meta property="og:description" content="Which AP voters have the hottest takes? Every ballot, measured against the poll, every week.">
+<meta property="og:url" content="https://lastfourin.com/ap-voters/">
+<meta property="og:site_name" content="Last Four In">
+<meta name="theme-color" content="#0d0820">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/assets/lfi.css">
+<script src="/assets/theme.js"></script>
+<style>
+  /* The Normal -> Hot takes scale */
+  :root { --b0: #6f62b0; --b1: #8f4dff; --b2: #d43dd6; --b3: #ff3d6e; }
+  .scale { position: relative; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--b0) 0 40%, var(--b1) 40% 70%, var(--b2) 70% 90%, var(--b3) 90% 100%); }
+  .scale i { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--card); border: 3px solid var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+  .scale-lbls { display: flex; justify-content: space-between; font-family: var(--f-display); font-weight: 700; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+  .band { font-family: var(--f-display); font-weight: 800; font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; color: #fff; white-space: nowrap; }
+  .band.b0 { background: var(--b0); } .band.b1 { background: var(--b1); } .band.b2 { background: var(--b2); } .band.b3 { background: var(--b3); }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+  .controls .search { margin: 0; flex: 1 1 220px; }
+  .seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 6px; overflow: hidden; background: var(--card); }
+  .seg button { border: 0; background: none; padding: 9px 12px; font-weight: 700; font-size: 14px; color: var(--ink-2); white-space: nowrap; }
+  .seg button[aria-pressed="true"] { background: var(--navy); color: #fff; }
+
+  .stats3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; border-top: 4px solid var(--navy); min-width: 0; }
+  .stat small { display: block; font-family: var(--f-display); font-weight: 700; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .stat b { display: block; font-family: var(--f-display); font-weight: 800; font-size: 22px; line-height: 1.05; text-transform: uppercase; margin-top: 3px; overflow-wrap: anywhere; }
+  .stat span { font-size: 13px; color: var(--ink-2); }
+  .stat.hot { border-top-color: var(--b3); } .stat.cool { border-top-color: var(--b0); }
+  @media (max-width: 700px) { .stats3 { grid-template-columns: minmax(0, 1fr); gap: 8px; } .stat b { font-size: 20px; } }
+
+  .vlist { list-style: none; margin: 0; padding: 0; }
+  .v { border-bottom: 1px solid var(--line); }
+  .v:last-child { border-bottom: 0; }
+  .v-row { width: 100%; display: grid; grid-template-columns: 34px minmax(0, 1fr) 132px 22px; gap: 12px; align-items: center; padding: 12px 18px; border: 0; background: none; text-align: left; }
+  .v-row:hover { background: var(--card-2); }
+  .v-n { font-family: var(--f-display); font-weight: 800; font-size: 22px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+  .v-who { min-width: 0; }
+  .v-who b { display: block; font-weight: 700; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .v-who span { display: block; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .v-score { display: grid; gap: 6px; }
+  .v-score .top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .v-score .num { font-size: 17px; font-weight: 800; }
+  .v-score .scale { height: 6px; }
+  .v-score .scale i { width: 12px; height: 12px; margin: -6px 0 0 -6px; border-width: 2px; }
+  .v-car { color: var(--muted); transition: transform .15s; }
+  .v.open .v-car { transform: rotate(180deg); }
+  @media (max-width: 560px) {
+    .v-row { grid-template-columns: 28px minmax(0, 1fr) 18px; padding: 12px 14px; gap: 10px; }
+    .v-score { grid-column: 2 / 3; }
+    .v-car { grid-row: 1; grid-column: 3; }
+  }
+
+  .v-body { padding: 4px 18px 18px 64px; display: grid; gap: 14px; }
+  @media (max-width: 560px) { .v-body { padding: 2px 14px 16px; } }
+  .facts { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .facts li { position: relative; padding-left: 16px; font-size: 14.5px; color: var(--ink-2); }
+  .facts li::before { content: ""; position: absolute; left: 2px; top: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+  .facts b { color: var(--ink); }
+  .spark { display: flex; align-items: end; gap: 4px; height: 54px; }
+  .spark div { flex: 1; display: grid; justify-items: center; gap: 3px; }
+  .spark span { width: 100%; max-width: 26px; border-radius: 3px 3px 0 0; background: var(--line-2); }
+  .spark .on span { background: var(--navy); }
+  .spark small { font-size: 10.5px; color: var(--muted); font-weight: 600; }
+  .sub-h { font-family: var(--f-display); font-weight: 800; font-style: var(--disp-style); text-transform: uppercase; font-size: 16px; letter-spacing: .02em; margin: 0 0 6px; }
+  .bal { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .bal th { font-family: var(--f-display); font-weight: 700; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 0 6px 6px; }
+  .bal td { padding: 5px 6px; border-top: 1px solid var(--line); }
+  .bal td:first-child, .bal th:first-child { width: 30px; text-align: center; font-family: var(--f-display); font-weight: 800; font-size: 16px; }
+  .bal .t { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .bal .t .tmk { --tmk-size: 15px; flex: none; min-width: 38px; color: var(--ink-2); }
+  .bal .t span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bal td.r, .bal th.r { text-align: right; white-space: nowrap; }
+  .bal .up { color: var(--win); font-weight: 700; } .bal .dn { color: var(--loss); font-weight: 700; } .bal .eq { color: var(--muted); }
+  .bal tr.big td { background: var(--accent-soft); }
+  .left-off { font-size: 13.5px; color: var(--ink-2); margin-top: 8px; }
+  .v-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .meth p { margin: 0 0 10px; color: var(--ink-2); font-size: 14px; }
+  .meth p:last-child { margin-bottom: 0; }
+  .formula { background: var(--card-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13.5px; color: var(--ink); margin: 0 0 10px; }
+  .bands { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 6px; }
+  .bands li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink-2); }
+  .bands .band { min-width: 82px; text-align: center; }
+</style>
+</head>
+<body>
+
+<header class="nav" data-active="voters"></header>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <div class="kicker" id="kick">AP Top 25 · every voter, every week</div>
+      <h1 class="disp">AP Voter Tracker</h1>
+      <p id="lede">The AP poll is 70 sportswriters and broadcasters, and every one of their ballots is public. We line each ballot up against the poll and measure how far apart they are, from Normal to Hot takes.</p>
+    </div>
+  </div>
+
+  <div class="stats3" id="stats"></div>
+
+  <div class="grid2">
+    <div class="stack">
+      <section class="card">
+        <div class="card-h"><h2 class="disp" id="listH">Every voter</h2><a href="#how">How it's measured</a></div>
+        <div class="card-b" style="padding-bottom:6px">
+          <div class="controls">
+            <div class="weekbar"><select id="week" aria-label="Which week"></select></div>
+            <div class="seg" role="group" aria-label="Sort">
+              <button type="button" data-sort="hot" aria-pressed="true">Hot takes first</button>
+              <button type="button" data-sort="normal" aria-pressed="false">Normal first</button>
+            </div>
+            <input class="search" id="q" type="search" placeholder="Find a voter or outlet" autocomplete="off">
+          </div>
+          <div class="scale-lbls" style="margin:0 0 2px"><span>Normal</span><span>Mild</span><span>Spicy</span><span>Hot takes</span></div>
+          <div class="scale" aria-hidden="true"></div>
+        </div>
+        <ul class="vlist" id="list"><li class="empty" style="padding:18px">Loading ballots…</li></ul>
+      </section>
+    </div>
+
+    <aside class="side">
+      <section class="card meth" id="how">
+        <div class="card-h"><h2 class="disp">How it's measured</h2></div>
+        <div class="card-b">
+          <p><b>The poll.</b> Each voter ranks 25 teams. A 1st-place vote is worth 25 points, 2nd is 24, down to 1 point for 25th. Adding up every ballot gives the AP Top 25. We rebuild the poll from the ballots and check it matches AP's published point totals to the point.</p>
+          <p><b>Distance from the poll.</b> For every team on a voter's ballot, we count how many spots it is from where the poll has it. A team the poll doesn't rank counts as 26th. A poll team the voter left off counts too. We add it all up and divide by 25.</p>
+          <div class="formula">Example: a voter has Utah 3rd and the poll has Utah 6th. That's 3 spots. Do that for every team, add it up, divide by 25 = <b>spots off per team</b>.</div>
+          <p><b>The scale.</b> Voters are placed by where their number falls among all voters that week (or on average across the season):</p>
+          <ul class="bands">
+            <li><span class="band b0">Normal</span>Closest 40% of voters to the poll</li>
+            <li><span class="band b1">Mild</span>Next 30%</li>
+            <li><span class="band b2">Spicy</span>Next 20%</li>
+            <li><span class="band b3">Hot takes</span>The 10% furthest from the poll</li>
+          </ul>
+          <p><b>Ballot movement</b> is the same count against that voter's own ballot the week before. <b>Conference lean</b> is how many spots higher or lower than the poll a voter ranks one conference's teams on average, across every week they voted (shown when it's 1.5 spots or more over at least 8 rankings).</p>
+          <p>A hot take is not a wrong take. Voters who break from the pack are sometimes the first ones right. This page describes how different each public ballot is; it doesn't judge anyone. Coming next: how well each ballot predicted the games.</p>
+          <p class="muted" id="srcNote" style="font-size:13px">Ballots: the AP's published Top 25 voter ballots. Last Four In is not affiliated with the AP.</p>
+        </div>
+      </section>
+    </aside>
+  </div>
+</main>
+<footer class="foot"></footer>
+
+<script src="/assets/lfi.js"></script>
+<script>
+(function () {
+  const { $, esc, toast, copyText, teamMark } = LFI;
+  const BANDS = [["Normal", 0.4], ["Mild", 0.7], ["Spicy", 0.9], ["Hot takes", 1.01]];
+  const CONF = { SEC: "SEC", B1G: "Big Ten", B12: "Big 12", ACC: "ACC", IND: "independent", AAC: "American", MWC: "Mountain West", PAC: "Pac-12", CUSA: "Conference USA", MAC: "MAC", SBC: "Sun Belt", FCS: "FCS" };
+  const params = new URLSearchParams(location.search);
+  let D, W = [], view, sort = "hot", openSlug = params.get("v") || "";
+
+  const ord = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
+  const f1 = (x) => (Math.round(x * 10) / 10).toFixed(1);
+  const fmtDate = (s) => new Date(s + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const cap = (r) => Math.min(r, 26);
+
+  // ---- The maths: rebuild the poll from the ballots, then measure every ballot against it ----
+  function crunch() {
+    let prevBy = {}, prevPoll = null;
+    W = D.weeks.map((w, wi) => {
+      const pts = {}, votes = {};
+      w.ballots.forEach(([, b]) => b.forEach((t, i) => { pts[t] = (pts[t] || 0) + 25 - i; votes[t] = (votes[t] || 0) + 1; }));
+      const order = Object.keys(pts).map(Number).sort((a, b) => pts[b] - pts[a]);
+      const pr = {}; order.forEach((t) => { pr[t] = 1 + order.filter((u) => pts[u] > pts[t]).length; });
+      const poll25 = order.filter((t) => pr[t] <= 25);
+      const P = (t) => cap(pr[t] || 26);
+      const firsts = {}; w.ballots.forEach(([, b]) => { firsts[b[0]] = (firsts[b[0]] || 0) + 1; });
+      const pollMove = prevPoll ? moveBetween(order.slice(0, 25), prevPoll) : null;
+      const by = {};
+      w.ballots.forEach(([vi, b]) => {
+        const rows = b.map((t, i) => ({ t, me: i + 1, poll: P(t), d: P(t) - (i + 1) }));
+        const left = poll25.filter((t) => !b.includes(t)).map((t) => ({ t, me: 26, poll: P(t), d: P(t) - 26 }));
+        const all = rows.concat(left);
+        const score = all.reduce((s, r) => s + Math.abs(r.d), 0) / 25;
+        const prev = prevBy[vi];
+        by[vi] = { vi, b, rows, left, all, score, move: prev ? moveBetween(b, prev.b) : null };
+      });
+      prevBy = by; prevPoll = order.slice(0, 25);
+      return { ...w, wi, pts, votes, pr, poll25, firsts, by, pollMove, n: w.ballots.length };
+    });
+  }
+  function moveBetween(now, before) {
+    let s = 0;
+    now.forEach((t, i) => { const j = before.indexOf(t); s += Math.abs((j < 0 ? 26 : j + 1) - (i + 1)); });
+    before.forEach((t, j) => { if (!now.includes(t)) s += Math.abs(26 - (j + 1)); });
+    return s / 25;
+  }
+  function confLean(vi) {
+    const acc = {};
+    W.forEach((w) => { const x = w.by[vi]; if (!x) return; x.all.forEach((r) => { const c = D.teams[r.t].conf; if (!c) return; (acc[c] = acc[c] || []).push(r.d); }); });
+    let best = null;
+    for (const [c, arr] of Object.entries(acc)) {
+      if (arr.length < 8) continue;
+      const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+      if (Math.abs(avg) >= 1.5 && (!best || Math.abs(avg) > Math.abs(best.avg))) best = { c, avg, n: arr.length };
+    }
+    return best;
+  }
+
+  // Score + band for every voter in the current view (one week, or the season average).
+  function rows() {
+    let out;
+    if (view === "season") {
+      out = D.voters.map((v, vi) => {
+        const ws = W.filter((w) => w.by[vi]);
+        if (!ws.length) return null;
+        const moves = ws.map((w) => w.by[vi].move).filter((m) => m != null);
+        return { vi, v, score: ws.reduce((s, w) => s + w.by[vi].score, 0) / ws.length, weeks: ws.length,
+                 move: moves.length ? moves.reduce((a, b) => a + b, 0) / moves.length : null };
+      }).filter(Boolean);
+    } else {
+      const w = W[view];
+      out = Object.values(w.by).map((x) => ({ vi: x.vi, v: D.voters[x.vi], score: x.score, x, w, move: x.move }));
+    }
+    const sorted = out.slice().sort((a, b) => a.score - b.score);
+    sorted.forEach((r, i) => { r.pct = sorted.length > 1 ? i / (sorted.length - 1) : 0; r.band = BANDS.findIndex(([, hi]) => r.pct < hi); if (r.band < 0) r.band = 3; });
+    return sorted;
+  }
+
+  const teamCell = (t) => { const x = D.teams[t]; return `<span class="t">${teamMark(x.abbr, "", "s")}<span>${esc(x.name)}</span></span>`; };
+  const tn = (t) => esc(D.teams[t].name);
+  const bandHTML = (r) => `<span class="band b${r.band}">${BANDS[r.band][0]}</span>`;
+
+  function facts(r) {
+    const out = [], vi = r.vi;
+    const latest = [...W].reverse().find((w) => w.by[vi]);
+    const w = view === "season" ? latest : r.w, x = w.by[vi];
+    const label = view === "season" ? ` (${w.label})` : "";
+    if (view === "season") out.push(`Averages <b>${f1(r.score)} spots off per team</b> over ${r.weeks} ballot${r.weeks === 1 ? "" : "s"} this season.`);
+    else out.push(`<b>${f1(r.score)} spots off per team</b> this week. The middle voter was ${f1(median(Object.values(w.by).map((y) => y.score)))}.`);
+    const big = x.all.slice().sort((a, b) => Math.abs(b.d) - Math.abs(a.d) || a.poll - b.poll)[0];
+    if (big && Math.abs(big.d) >= 3) {
+      out.push(big.me === 26 ? `Biggest difference${label}: left <b>${tn(big.t)}</b> off. The poll has them ${ord(big.poll)}.`
+        : big.poll === 26 ? `Biggest difference${label}: ranked <b>${tn(big.t)}</b> ${ord(big.me)}. The poll doesn't rank them.`
+        : `Biggest difference${label}: <b>${tn(big.t)}</b> at ${ord(big.me)}. The poll has them ${ord(big.poll)}.`);
+    }
+    if (x.b[0] !== w.poll25[0]) { const c = w.firsts[x.b[0]]; out.push(`First-place vote${label}: <b>${tn(x.b[0])}</b>, ${c === 1 ? "the only voter" : `one of ${c} voters`} with them No. 1.`); }
+    const rare = x.b.filter((t) => w.votes[t] <= 3);
+    rare.forEach((t) => out.push(w.votes[t] === 1 ? `The only voter to rank <b>${tn(t)}</b>${label}.` : `One of ${w.votes[t]} voters to rank <b>${tn(t)}</b>${label}.`));
+    if (r.move != null) {
+      const pm = view === "season" ? avg(W.map((y) => y.pollMove).filter((m) => m != null)) : w.pollMove;
+      out.push(`Moved their own ballot <b>${f1(r.move)} spots per team</b> ${view === "season" ? "per week on average" : "since last week"} (the poll moved ${f1(pm)}).`);
+    }
+    const lean = confLean(vi);
+    if (lean) out.push(`Ranks <b>${CONF[lean.c] || lean.c}</b> teams ${f1(Math.abs(lean.avg))} spots ${lean.avg > 0 ? "higher" : "lower"} than the poll on average this season.`);
+    return { out, w, x };
+  }
+  const avg = (a) => a.reduce((s, v) => s + v, 0) / (a.length || 1);
+  const median = (a) => { const s = a.slice().sort((p, q) => p - q), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+
+  function detail(r) {
+    const { out, w, x } = facts(r);
+    const vi = r.vi;
+    const maxS = Math.max(...W.flatMap((y) => Object.values(y.by).map((z) => z.score)));
+    const spark = W.map((y) => { const z = y.by[vi]; const h = z ? Math.max(4, Math.round(z.score / maxS * 40)) : 0;
+      return `<div class="${(view === "season" ? y === w : y.wi === view) ? "on" : ""}" title="${esc(y.label)}: ${z ? f1(z.score) + " spots off per team" : "no ballot"}"><span style="height:${h}px"></span><small>${y.label === "Preseason" ? "Pre" : y.label.replace("Week ", "W")}</small></div>`; }).join("");
+    const bigD = Math.max(...x.rows.map((q) => Math.abs(q.d)));
+    const ballot = x.rows.map((q) => `<tr class="${Math.abs(q.d) >= 5 && Math.abs(q.d) === bigD ? "big" : ""}"><td>${q.me}</td><td>${teamCell(q.t)}</td><td class="r">${q.poll === 26 ? "Not ranked" : "No. " + q.poll}</td>
+      <td class="r">${q.d === 0 ? `<span class="eq">Same</span>` : q.d > 0 ? `<span class="up">▲ ${q.poll === 26 ? "" : q.d}</span>` : `<span class="dn">▼ ${-q.d}</span>`}</td></tr>`).join("");
+    const left = x.left.length ? `<div class="left-off">Left off: ${x.left.map((q) => `${tn(q.t)} (poll No. ${q.poll})`).join(", ")}</div>` : "";
+    return `<div class="v-body">
+      <ul class="facts">${out.map((f) => `<li>${f}</li>`).join("")}</ul>
+      <div><h3 class="sub-h">Spots off per team, week by week</h3><div class="spark">${spark}</div></div>
+      <div><h3 class="sub-h">${esc(w.label)} ballot vs the poll</h3>
+        <table class="bal"><thead><tr><th>#</th><th>Team</th><th class="r">Poll</th><th class="r">vs poll</th></tr></thead><tbody>${ballot}</tbody></table>${left}</div>
+      <div class="v-acts"><button class="btn" type="button" data-share="${esc(r.v.slug)}">Share this voter</button></div>
+    </div>`;
+  }
+
+  function render() {
+    const all = rows();
+    const q = $("q").value.trim().toLowerCase();
+    const list = (sort === "hot" ? all.slice().reverse() : all).filter((r) => !q || (r.v.name + " " + r.v.org).toLowerCase().includes(q));
+    const isSeason = view === "season";
+    const w = isSeason ? W[W.length - 1] : W[view];
+    $("listH").textContent = isSeason ? "Season so far" : `${w.label} · ${fmtDate(w.date)}`;
+    $("list").innerHTML = list.length ? list.map((r) => {
+      const n = sort === "hot" ? all.length - all.indexOf(r) : all.indexOf(r) + 1;
+      const open = r.v.slug === openSlug;
+      return `<li class="v${open ? " open" : ""}" id="v-${esc(r.v.slug)}">
+        <button class="v-row" type="button" data-slug="${esc(r.v.slug)}" aria-expanded="${open}">
+          <span class="v-n">${n}</span>
+          <span class="v-who"><b>${esc(r.v.name)}</b><span>${esc(r.v.org)}</span></span>
+          <span class="v-score"><span class="top">${bandHTML(r)}<span class="num">${f1(r.score)}</span></span><span class="scale"><i style="left:calc(6px + ${r.pct.toFixed(3)} * (100% - 12px))"></i></span></span>
+          <svg class="v-car" width="14" height="14" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 4l4 4 4-4"/></svg>
+        </button>${open ? detail(r) : ""}</li>`;
+    }).join("") : `<li class="empty" style="padding:18px">No voter matches “${esc(q)}”.</li>`;
+
+    // Three headline facts for the view.
+    const hot = all[all.length - 1], cool = all[0];
+    let third;
+    if (isSeason) {
+      const agree = W.map((y) => y.firsts[y.poll25[0]] / y.n);
+      third = `<div class="stat"><small>Ballots counted</small><b>${W.reduce((s, y) => s + y.n, 0).toLocaleString()}</b><span>${W.length} polls this season, ${D.voters.length} voters. On average ${Math.round(avg(agree) * 100)}% agreed on No. 1.</span></div>`;
+    } else {
+      const top = w.poll25[0];
+      third = `<div class="stat"><small>Agreed on No. 1</small><b>${w.firsts[top]} of ${w.n}</b><span>had ${tn(top)} first.${Object.keys(w.firsts).length > 1 ? " Others: " + Object.entries(w.firsts).filter(([t]) => +t !== top).sort((a, b) => b[1] - a[1]).map(([t, c]) => `${tn(+t)} ${c}`).join(", ") + "." : ""}</span></div>`;
+    }
+    $("stats").innerHTML = `
+      <div class="stat hot"><small>${isSeason ? "Hottest takes this season" : "Hottest takes"}</small><b>${esc(hot.v.name)}</b><span>${esc(hot.v.org)} · ${f1(hot.score)} spots off per team</span></div>
+      <div class="stat cool"><small>${isSeason ? "Closest to the poll this season" : "Closest to the poll"}</small><b>${esc(cool.v.name)}</b><span>${esc(cool.v.org)} · ${f1(cool.score)} spots off per team</span></div>${third}`;
+  }
+
+  function setURL() {
+    const p = new URLSearchParams();
+    if (view !== W.length - 1) p.set("w", view === "season" ? "season" : W[view].key);
+    if (openSlug) p.set("v", openSlug);
+    history.replaceState(null, "", location.pathname + (p.toString() ? "?" + p : ""));
+  }
+
+  $("list").addEventListener("click", async (e) => {
+    const sh = e.target.closest("[data-share]");
+    if (sh) {
+      const v = D.voters.find((x) => x.slug === sh.dataset.share);
+      const r = rows().find((x) => x.v.slug === v.slug);
+      const url = `${location.origin}/ap-voters/?v=${encodeURIComponent(v.slug)}${view === W.length - 1 ? "" : "&w=" + (view === "season" ? "season" : W[view].key)}`;
+      const text = `${v.name}'s AP ballot: ${BANDS[r.band][0]} (${f1(r.score)} spots off per team). Where does your team's voter land?`;
+      if (navigator.share) { try { await navigator.share({ title: "AP Voter Tracker", text, url }); return; } catch (err) { if (err && err.name === "AbortError") return; } }
+      toast((await copyText(`${text} ${url}`)) ? "Link copied." : "Couldn't copy the link.");
+      return;
+    }
+    const b = e.target.closest(".v-row");
+    if (!b) return;
+    openSlug = openSlug === b.dataset.slug ? "" : b.dataset.slug;
+    render(); setURL();
+    if (openSlug) $("v-" + openSlug).scrollIntoView({ block: "nearest" });
+  });
+  document.querySelectorAll("[data-sort]").forEach((b) => b.addEventListener("click", () => {
+    sort = b.dataset.sort;
+    document.querySelectorAll("[data-sort]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    render();
+  }));
+  $("q").addEventListener("input", render);
+  $("week").addEventListener("change", (e) => { view = e.target.value === "season" ? "season" : +e.target.value; render(); setURL(); });
+
+  fetch("/ap-voters/data.json").then((r) => r.json()).then((data) => {
+    D = data; crunch();
+    const wq = params.get("w");
+    const wi = W.findIndex((w) => w.key === wq);
+    view = wq === "season" ? "season" : wi >= 0 ? wi : W.length - 1;
+    $("week").innerHTML = W.map((w, i) => `<option value="${i}">${w.label} · ${fmtDate(w.date)}${i === W.length - 1 ? " (latest)" : ""}</option>`).reverse().join("") + `<option value="season">Whole season so far</option>`;
+    $("week").value = String(view);
+    $("kick").textContent = `AP Top 25 · ${D.season} season · updated ${fmtDate(W[W.length - 1].date)}`;
+    $("lede").textContent = `The AP poll is ${W[W.length - 1].n} sportswriters and broadcasters, and every ballot is public. We line each one up against the poll and measure how far apart they are, from Normal to Hot takes.`;
+    render();
+    if (openSlug && $("v-" + openSlug)) $("v-" + openSlug).scrollIntoView({ block: "start" });
+  }).catch(() => { $("list").innerHTML = `<li class="empty" style="padding:18px">Couldn't load the ballots. Try again in a minute.</li>`; });
+})();
+</script>
+</body>
+</html>

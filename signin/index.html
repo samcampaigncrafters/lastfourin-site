@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sign in · Last Four In</title>
+<meta name="description" content="Sign in free to keep your picks on every device, post them to your profile and climb the leaderboards.">
+<meta property="og:title" content="Sign in · Last Four In">
+<meta property="og:description" content="Free to play. Keep your picks on every device.">
+<meta property="og:url" content="https://lastfourin.com/signin/">
+<meta property="og:site_name" content="Last Four In">
+<meta name="theme-color" content="#0d0820">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/assets/lfi.css">
+<script src="/assets/theme.js"></script>
+<link rel="stylesheet" href="/assets/social.css">
+</head>
+<body>
+
+<header class="nav" data-active="account"></header>
+
+<main class="page">
+  <div class="auth-card">
+    <div class="head"><div>
+      <div class="kicker" id="k">Free account</div>
+      <h1 class="disp" id="h">Sign in</h1>
+      <p id="p">Keep your picks on every device, post them to your profile and get on the leaderboards. Free, no purchase ever.</p>
+    </div></div>
+    <section class="card"><div class="card-b" id="box"><p class="empty">Loading…</p></div></section>
+  </div>
+</main>
+<footer class="foot"></footer>
+
+<script src="/assets/lfi.js"></script>
+<script src="/assets/cloud.js"></script>
+<script>
+(function () {
+  const { $, esc, toast, cloud } = LFI;
+  const G = '<svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+  const qs = new URLSearchParams(location.search);
+  const raw = qs.get("next") || "/account/";
+  const next = /^\/(?!\/)[^\s]*$/.test(raw) && !raw.startsWith("/signin") ? raw : "/account/";
+  const box = $("box");
+  const head = (k, h, p) => { $("k").textContent = k; $("h").textContent = h; $("p").textContent = p; };
+
+  function showSignIn(note) {
+    head("Free account", "Sign in", "Keep your picks on every device, post them to your profile and get on the leaderboards. Free, no purchase ever.");
+    box.innerHTML = `${note ? `<p class="err">${esc(note)}</p>` : ""}
+      <button class="btn google" type="button" id="g">${G}Continue with Google</button>
+      <div class="or">or get a sign-in link by email</div>
+      <form id="ef"><div class="field"><label for="em">Email</label><input id="em" type="email" autocomplete="email" inputmode="email" required placeholder="you@example.com"></div>
+        <p class="err" id="eerr"></p>
+        <button class="btn navy block" type="submit" style="min-height:48px">Email me a sign-in link</button></form>
+      <p class="empty" style="margin-top:14px">You must be 13 or older. By continuing you agree to the <a href="/terms/">Terms</a> and <a href="/privacy/">Privacy Policy</a>.</p>`;
+    $("g").onclick = async () => { try { await cloud.signInGoogle(next); } catch (e) { toast(e.message); } };
+    $("ef").onsubmit = async (ev) => {
+      ev.preventDefault();
+      const email = $("em").value.trim(), btn = ev.target.querySelector("button");
+      btn.disabled = true; $("eerr").textContent = "";
+      try {
+        await cloud.signInEmail(email, next);
+        head("Check your email", "Link sent", "");
+        box.innerHTML = `<p style="margin-top:0">We sent a sign-in link to <b>${esc(email)}</b>. Open it on this device and you're in.</p>
+          <p class="empty">Nothing after a couple of minutes? Check spam, or <button class="linkish" type="button" id="again" style="padding:0;color:var(--blue)">try again</button>.</p>`;
+        $("again").onclick = () => showSignIn();
+      } catch (e) { $("eerr").textContent = e.message; btn.disabled = false; }
+    };
+  }
+
+  // Finish sign-up: handle, name, a neutral age question (month + year, nothing pre-picked), terms.
+  function showFinish() {
+    const p = cloud.profile || {}, u = cloud.user || {};
+    const guess = ((p.display_name || (u.email || "").split("@")[0] || "").replace(/[^A-Za-z0-9_]/g, "")).slice(0, 20);
+    const y = new Date().getFullYear();
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    head("Almost done", "Set up your profile", "Pick the handle people will see on your picks and comments.");
+    box.innerHTML = `<form id="ff" novalidate>
+      <div class="field"><label for="hd">Handle</label><div class="handle-prefix"><span>@</span><input id="hd" maxlength="20" autocomplete="username" autocapitalize="off" spellcheck="false" value="${esc(guess.length >= 3 ? guess : "")}" required></div>
+        <div class="hint">3 to 20 letters, numbers or underscores. Your profile lives at lastfourin.com/u/<b id="hdp">${esc(guess || "you")}</b></div></div>
+      <div class="field"><label for="dn">Name <span class="muted">(optional)</span></label><input id="dn" maxlength="40" autocomplete="nickname" value="${esc(p.display_name || "")}"></div>
+      <div class="field"><label>Birthday</label><div class="field-2">
+        <select id="bm" aria-label="Birth month"><option value="">Month</option>${months.map((m, i) => `<option value="${i + 1}">${m}</option>`).join("")}</select>
+        <select id="by" aria-label="Birth year"><option value="">Year</option>${Array.from({ length: 101 }, (_, i) => y - i).map((v) => `<option>${v}</option>`).join("")}</select></div>
+        <div class="hint">Only used to check your age. We don't store it.</div></div>
+      <label class="check"><input type="checkbox" id="tos"> <span>I agree to the <a href="/terms/" target="_blank">Terms</a> and <a href="/privacy/" target="_blank">Privacy Policy</a>.</span></label>
+      <p class="err" id="ferr"></p>
+      <button class="btn gold big block" type="submit">Finish</button>
+      <p class="empty" style="margin-top:12px">Signed in as ${esc(u.email || "")}. <button class="linkish" type="button" id="so" style="padding:0">Not you?</button></p></form>`;
+    $("hd").oninput = () => { $("hdp").textContent = $("hd").value || "you"; };
+    $("so").onclick = async () => { await cloud.signOut(); showSignIn(); };
+    $("ff").onsubmit = async (ev) => {
+      ev.preventDefault();
+      const err = (m) => { $("ferr").textContent = m; };
+      const username = $("hd").value.trim();
+      if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) return err("Handles are 3 to 20 letters, numbers or underscores.");
+      if (!$("bm").value || !$("by").value) return err("Pick your birth month and year.");
+      if (!$("tos").checked) return err("Tick the box to agree to the Terms and Privacy Policy.");
+      const btn = ev.target.querySelector("button[type=submit]"); btn.disabled = true; err("");
+      try {
+        const r = await cloud.finishSignup({ username, display: $("dn").value.trim(), year: $("by").value, month: $("bm").value });
+        if (r === "under13") return showUnder13();
+        toast("You're in");
+        location.replace(next);
+      } catch (e) { err(e.message); btn.disabled = false; }
+    };
+  }
+
+  function showUnder13() {
+    head("Sorry", "You need to be 13", "");
+    box.innerHTML = `<p style="margin-top:0">Accounts on Last Four In are for people 13 and older, so we couldn't create one. Nothing you entered was saved.</p>
+      <p>You can still play every game without an account. Your picks stay on this device.</p><a class="btn gold" href="/">Back to the games</a>`;
+  }
+
+  function route() {
+    if (!cloud.on) {
+      head("Coming soon", "Sign-in is almost here", "");
+      box.innerHTML = `<p style="margin-top:0">Free accounts are switching on soon. Until then your picks are saved on this device.</p><a class="btn gold" href="/">Back to the games</a>`;
+      return;
+    }
+    if (cloud.ageBlocked()) return showUnder13();
+    const hashErr = new URLSearchParams(location.hash.slice(1)).get("error_description") || qs.get("error_description");
+    if (!cloud.user) return showSignIn(hashErr ? (/expired|invalid/i.test(hashErr) ? "That sign-in link has expired. Send yourself a new one." : hashErr) : "");
+    if (cloud.profile && cloud.profile.banned) {
+      head("Account paused", "Can't sign in", "");
+      box.innerHTML = `<p style="margin-top:0">This account has been paused for breaking the community rules.</p>`;
+      return;
+    }
+    if (!cloud.profile || !cloud.profile.onboarded) return showFinish();
+    location.replace(next);
+  }
+  // Runs once when the session is known, then again if it changes (e.g. the Google redirect finishing).
+  cloud.ready.then(() => cloud.onChange((c, what) => { if (what !== "entries" && !document.getElementById("ff")) route(); }));
+})();
+</script>
+</body>
+</html>

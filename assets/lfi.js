@@ -4,20 +4,44 @@
 (function () {
   // The menu, grouped by league. Each group is one dropdown on desktop and one section of the phone menu.
   const MENU = [
-    { label: "NFL", items: [["nfl", "/pickem/", "Weekly Pick'em", "Pick every game straight up"]] },
-    { label: "College Football", items: [
-      ["cfb", "/college/", "Weekly Picks", "Every game with a Top 25 team"],
+    { label: "NFL", items: [["nfl", "/pickem/", "NFL Pick'em", "Pick every game straight up"]] },
+    { label: "NCAAF", items: [
+      ["cfb", "/college/", "College Pick'em", "Every game with a Top 25 team"],
       ["ap", "/ap-poll/", "Predict the AP Poll", "Call Sunday's Top 25"],
-      ["bracket", "/bracket/", "CFP Bracket Builder", "Rank 25, the playoff builds itself"],
-      ["h2h", "/head-to-head/", "Head-to-Head", "How the committee breaks ties"],
+      ["bracket", "/bracket/", "CFP Bracket Builder", "Build and share your field"],
+      ["voters", "/ap-voters/", "AP Voter Tracker", "Every voter, Normal to Hot takes"],
     ] },
     { label: "Trivia", items: [
       ["trivia", "/trivia/", "Daily Five", "Five questions, same for everyone"],
-      ["names", "/trivia/names.html", "Name 'Em All", "How many can you name?"],
+      ["names", "/trivia/names.html", "Name Them All", "How many can you name?"],
     ] },
   ];
   const CARET = '<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 4l4 4 4-4"/></svg>';
-  const LOGO = '<svg width="26" height="26" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="7" fill="#0a1a33"/><path d="M8 8h5v5h4M8 22h5v-5M17 13v4h5" fill="none" stroke="#f2b33d" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const BURGER = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+  const SUN = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>';
+  const MOON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>';
+
+  // Light or dark: theme.js set it before paint; the switch flips it, remembers it, and crossfades where the browser can.
+  const theme = () => document.documentElement.dataset.theme === "light" ? "light" : "dark";
+  function paintThemeColor() {
+    let m = document.querySelector('meta[name="theme-color"]');
+    if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
+    m.content = theme() === "light" ? "#ffffff" : "#0d0820";
+  }
+  function setTheme(t) {
+    const go = () => {
+      const open = document.getElementById("mmenu") && !document.getElementById("mmenu").hidden; // the phone menu stays open across the swap
+      document.documentElement.dataset.theme = t; paintThemeColor(); header();
+      if (open) { $("mmenu").hidden = false; document.querySelector("header.nav .mbtn").setAttribute("aria-expanded", "true"); }
+    };
+    try { localStorage.setItem("lfi-theme", t); } catch (e) {}
+    if (!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) return go();
+    const root = document.documentElement;
+    root.classList.add("theme-flip"); // a plain crossfade, not the page-change slide
+    document.startViewTransition(go).finished.finally(() => root.classList.remove("theme-flip"));
+  }
+  const themeLabel = () => theme() === "light" ? "Dark mode" : "Light mode";
+  const LOGO = '<svg width="26" height="26" viewBox="0 0 30 30" aria-hidden="true"><rect x="2" y="2" width="11.5" height="11.5" rx="2" fill="currentColor"/><rect x="16.5" y="2" width="11.5" height="11.5" rx="2" fill="currentColor"/><rect x="2" y="16.5" width="11.5" height="11.5" rx="2" fill="currentColor"/><rect x="16.5" y="16.5" width="11.5" height="11.5" rx="2" fill="#ff3dbb"/></svg>';
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -58,37 +82,43 @@
     return () => clearInterval(t);
   }
 
+  // The signed-in profile, set by cloud.js once the session is known (null when signed out).
+  let me = null;
+  const myName = () => (me && (me.display_name || me.username)) || local.get("lfi-name", "");
+
   function header() {
     const h = document.querySelector("header.nav");
     if (!h) return;
     const active = h.dataset.active || "";
-    const name = local.get("lfi-name", "");
-    const sd = selectionDay();
+    const name = myName();
     const item = ([k, href, label, sub]) => `<a href="${href}"${k === active ? ' class="on" aria-current="page"' : ""}><b>${label}</b><span>${sub}</span></a>`;
     const groups = MENU.map((g, i) => {
       const on = g.items.some(([k]) => k === active);
       return `<div class="dd${on ? " on" : ""}"><button type="button" class="dd-btn" aria-expanded="false" aria-controls="dd${i}">${g.label}${CARET}</button>
         <div class="dd-panel" id="dd${i}" hidden>${g.items.map(item).join("")}</div></div>`;
     }).join("");
-    const cur = MENU.flatMap((g) => g.items.map((x) => [g.label, x])).find(([, x]) => x[0] === active);
     h.innerHTML = `<div class="nav-in">
         <a class="brand" href="/" aria-label="Last Four In home">${LOGO}<b>Last Four In</b></a>
         <nav class="nav-links" aria-label="Main"><a class="nav-home${active === "home" ? " on" : ""}" href="/">Home</a>${groups}</nav>
         <div class="nav-r">
-          <a class="nav-clock" href="${sd.url}" title="${esc(sd.label)}, ${esc(sd.when)}"><span>${esc(sd.short)}</span><b id="navClock"></b></a>
-          ${name ? `<a class="avatar" href="/account/" title="My predictions" aria-label="My predictions">${esc(name.trim()[0].toUpperCase())}</a>`
-                 : `<a class="btn gold" href="/account/"${active === "account" ? ' aria-current="page"' : ""}>My picks</a>`}
+          ${me && me.avatar_url ? `<a class="avatar" href="/account/" title="My account" aria-label="My account"><img src="${esc(me.avatar_url)}" alt="" referrerpolicy="no-referrer"></a>`
+            : name ? `<a class="avatar" href="/account/" title="My predictions" aria-label="My predictions">${esc(name.trim()[0].toUpperCase())}</a>`
+                 : window.LFI_CLOUD_ON ? `<a class="btn si" href="/signin/"${active === "signin" ? ' aria-current="page"' : ""}>Sign in</a>`
+                 : `<a class="btn si" href="/account/"${active === "account" ? ' aria-current="page"' : ""}>My picks</a>`}
+          <button type="button" class="tbtn" data-theme-flip aria-label="${themeLabel()}" title="${themeLabel()}">${theme() === "light" ? MOON : SUN}</button>
+          <button type="button" class="mbtn" aria-expanded="false" aria-controls="mmenu" aria-label="Menu">${BURGER}</button>
         </div>
       </div>
-      <div class="mbar"><button type="button" class="mbar-btn" aria-expanded="false" aria-controls="mmenu">
-          <span>${cur ? `<small>${cur[0]}</small> ${cur[1][2]}` : active === "home" ? "Home" : active === "account" ? "My picks" : "Browse contests"}</span>
-          <span class="mbar-r">Menu ${CARET}</span></button>
-        <div class="mmenu" id="mmenu" hidden>
+      <div class="mmenu" id="mmenu" hidden>
           <a class="mm-home${active === "home" ? " on" : ""}" href="/"><b>Home</b><span>What to play this week</span></a>
           ${MENU.map((g) => `<div class="mm-group"><div class="mm-lbl">${g.label}</div>${g.items.map(item).join("")}</div>`).join("")}
           <a class="mm-home${active === "account" ? " on" : ""}" href="/account/"><b>My picks</b><span>Everything you've submitted</span></a>
-        </div></div>`;
-    countdown($("navClock"), sd.at, { compact: true });
+          ${me && me.onboarded ? `<a class="mm-home${active === "profile" ? " on" : ""}" href="/u/?h=${encodeURIComponent(me.username)}"><b>My profile</b><span>@${esc(me.username)}</span></a>`
+            : window.LFI_CLOUD_ON ? `<a class="mm-home" href="/signin/"><b>Sign in</b><span>Keep your picks on every device</span></a>` : ""}
+          <button type="button" class="mm-home mm-theme" data-theme-flip>${theme() === "light" ? MOON : SUN}<b>${themeLabel()}</b></button>
+      </div>`;
+    if (h.dataset.bound) return;
+    h.dataset.bound = "1";
 
     // Dropdown behaviour: one open at a time, click outside or Escape closes.
     const closeAll = (except) => h.querySelectorAll("[aria-expanded]").forEach((b) => {
@@ -96,6 +126,7 @@
       b.setAttribute("aria-expanded", "false"); $(b.getAttribute("aria-controls")).hidden = true;
     });
     h.addEventListener("click", (e) => {
+      if (e.target.closest("[data-theme-flip]")) { setTheme(theme() === "light" ? "dark" : "light"); return; }
       const b = e.target.closest("[aria-expanded]"); if (!b) return;
       const open = b.getAttribute("aria-expanded") !== "true";
       closeAll(b);
@@ -107,7 +138,7 @@
 
   function footer() {
     const f = document.querySelector("footer.foot");
-    if (f && !f.textContent.trim()) f.innerHTML = `Last Four In is free to play. No purchase necessary. Not affiliated with the NFL, the NCAA, the College Football Playoff, the AP or any team. Team names and logos belong to their owners.`;
+    if (f && !f.textContent.trim()) f.innerHTML = `Last Four In is free to play. No purchase necessary. Not affiliated with the NFL, the NCAA, the College Football Playoff, the AP or any team. Team names belong to their owners. <a href="/terms/">Terms</a> · <a href="/privacy/">Privacy</a>`;
   }
 
   function toast(msg) {
@@ -141,28 +172,40 @@
   // ---- Entry preview (share pop-up, share page, account page all draw it the same way) ----
   const KIND = {
     nfl: { label: "NFL Pick'em", noun: "picks", share: "Share your picks for the week", url: "/pickem/", make: "Make your NFL picks" },
-    cfb: { label: "College Picks", noun: "picks", share: "Share your college picks", url: "/college/", make: "Make your college picks" },
+    cfb: { label: "College Pick'em", noun: "picks", share: "Share your college picks", url: "/college/", make: "Make your college picks" },
     ap: { label: "AP Poll Prediction", noun: "AP poll", share: "Share your AP poll", url: "/ap-poll/", make: "Predict the AP poll" },
     bracket: { label: "CFP Bracket", noun: "bracket", share: "Share your bracket", url: "/bracket/", make: "Build your bracket" },
     trivia: { label: "Trivia", noun: "score", share: "Share your score", url: "/trivia/", make: "Play today's trivia" },
   };
-  const cfbLogo = (id) => id ? `https://a.espncdn.com/i/teamlogos/ncaa/500/${id}.png` : "";
-  const img = (src) => src ? `<img src="${esc(src)}" alt="" loading="lazy">` : "";
+  // No team logos anywhere: the team's short code in big type sits where a logo would, nickname underneath.
+  // cls "r" right-aligns it (right-hand sides); "s" drops the nickname where the name already sits beside it.
+  const teamMark = (abbr, nick, cls = "") => abbr
+    ? `<span class="tmk${cls ? " " + cls : ""}"><b>${esc(abbr)}</b>${nick && !/\bs\b/.test(cls) ? `<small>${esc(nick)}</small>` : ""}</span>` : "";
+  // College team by ESPN id, from cfb-data.js when the page loads it.
+  const cfbTeam = (id) => (window.CFB && id && Object.values(window.CFB.teams).find((x) => x.id === String(id))) || null;
+  // Older saved picks kept a logo address instead of a code (…/nfl/500-dark/det.png or …/ncaa/500/333.png).
+  const codeOf = (x) => {
+    if (x.a) return x.a;
+    const m = /\/(nfl|ncaa)\/[^/]+\/(\w+)\.png/.exec(x.l || "");
+    return !m ? "" : m[1] === "nfl" ? m[2].toUpperCase() : (cfbTeam(m[2]) || {}).abbr || "";
+  };
 
+  const abOf = (d, i) => (d.ab || [])[i] || (cfbTeam((d.ids || [])[i]) || {}).abbr || "";
   function renderEntry(e, opts = {}) {
     const k = KIND[e.kind] || { label: "Entry" };
     const d = e.data || {};
     let body = "";
     if (e.kind === "bracket") {
-      body = `${d.champ ? `<div class="entry-champ">${img(cfbLogo(d.champId))}<div><small>National champion</small><b>${esc(d.champ)}</b></div></div>` : ""}
-        <div class="mini-grid">${(d.seeds || []).map((t, i) => `<div><i>${i + 1}</i>${img(cfbLogo((d.ids || [])[i]))}${esc(t)}</div>`).join("")}</div>`;
+      const ct = cfbTeam(d.champId) || {};
+      body = `${d.champ ? `<div class="entry-champ">${teamMark(d.champAb || ct.abbr, d.champNick || ct.nick)}<div><small>National champion</small><b>${esc(d.champ)}</b></div></div>` : ""}
+        <div class="mini-grid">${(d.seeds || []).map((t, i) => `<div><i>${i + 1}</i>${teamMark(abOf(d, i), "", "s")}${esc(t)}</div>`).join("")}</div>`;
     } else if (e.kind === "ap") {
       const top = d.top || [], n = opts.full ? top.length : 10;
-      body = `<div class="mini-grid">${top.slice(0, n).map((t, i) => `<div><i>${i + 1}</i>${img(cfbLogo((d.ids || [])[i]))}${esc(t)}</div>`).join("")}</div>
+      body = `<div class="mini-grid">${top.slice(0, n).map((t, i) => `<div><i>${i + 1}</i>${teamMark(abOf(d, i), "", "s")}${esc(t)}</div>`).join("")}</div>
         ${top.length > n ? `<div class="entry-more">+ ${top.length - n} more teams</div>` : ""}`;
     } else if (e.kind === "nfl" || e.kind === "cfb") {
       const p = d.picks || [], n = opts.full ? p.length : 8;
-      body = `<div class="mini-grid">${p.slice(0, n).map((x) => `<div>${img(x.l)}<b>${esc(x.p)}</b>&nbsp;<span class="muted">over ${esc(x.o)}</span></div>`).join("")}</div>
+      body = `<div class="mini-grid">${p.slice(0, n).map((x) => `<div>${teamMark(codeOf(x), "", "s")}<b>${esc(x.p)}</b>&nbsp;<span class="muted">over ${esc(x.o)}</span></div>`).join("")}</div>
         ${p.length > n ? `<div class="entry-more">+ ${p.length - n} more picks</div>` : ""}`;
     } else if (e.kind === "trivia") {
       body = `<div class="disp" style="font-size:34px">${esc(d.score || "")}</div>${d.grid ? `<div style="font-size:22px;letter-spacing:2px;margin-top:6px">${esc(d.grid)}</div>` : ""}`;
@@ -177,12 +220,12 @@
   function b64(s) { return btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
   function unb64(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); return new TextDecoder().decode(Uint8Array.from(atob(s), (c) => c.charCodeAt(0))); }
   function shareUrl(e) {
-    const payload = { k: e.kind, t: e.title, s: e.sub, r: e.result, d: e.data, n: local.get("lfi-name", "") || undefined };
+    const payload = { k: e.kind, t: e.title, s: e.sub, r: e.result, d: e.data, n: myName() || undefined, u: (me && me.onboarded && me.username) || undefined };
     return `${location.origin}/share/?e=${b64(JSON.stringify(payload))}`;
   }
   function readShare(s) {
     const p = JSON.parse(unb64(s));
-    return { kind: p.k, title: p.t, sub: p.s, result: p.r, data: p.d || {}, by: p.n || "" };
+    return { kind: p.k, title: p.t, sub: p.s, result: p.r, data: p.d || {}, by: p.n || "", handle: p.u || "" };
   }
 
   let dlg;
@@ -201,6 +244,7 @@
           <button class="btn" type="button" id="shCopy">Copy link</button>
           <a class="btn" href="/account/" id="shAcct">See all my predictions</a>
         </div>
+        <div id="shPost"></div>
       </div></div>`;
     document.body.appendChild(dlg);
     dlg.addEventListener("click", (ev) => { if (ev.target === dlg || ev.target.closest("[data-x]")) closeShare(); });
@@ -233,6 +277,9 @@
       toast((await copyText(`${text} ${url}`)) ? "Link copied. Paste it to your friends." : "Couldn't copy. Long-press the link to share.");
     };
     d.querySelector("#shCopy").onclick = async () => toast((await copyText(url)) ? "Link copied" : "Couldn't copy the link here");
+    const post = d.querySelector("#shPost");
+    post.innerHTML = "";
+    if (LFI.onShareOpen) LFI.onShareOpen(e, post);
     d.hidden = false; document.body.style.overflow = "hidden";
     setTimeout(() => go.focus(), 30);
   }
@@ -247,7 +294,7 @@
     const c = e.competitions[0];
     const side = (ha) => {
       const x = c.competitors.find((t) => t.homeAway === ha), t = x.team;
-      return { id: t.id, abbr: t.abbreviation, city: t.location, nick: t.name || t.shortDisplayName, logo: t.logo, color: "#" + (t.color || "334155"),
+      return { id: t.id, abbr: t.abbreviation, city: t.location, nick: t.name || t.shortDisplayName, color: "#" + (t.color || "334155"),
                rec: (x.records || [])[0]?.summary || "", score: x.score != null && x.score !== "" ? +x.score : null, rank: rankOf(x) };
     };
     const st = e.status.type;
@@ -287,11 +334,12 @@
     return { at: up.length ? up[0].kickoff : null, sb };
   }
   // Team colour for a filled "your pick" tile: pale brand colours (gold, white, light blue) fall back to navy so white text stays readable.
+  const brandDark = () => getComputedStyle(document.documentElement).getPropertyValue("--field").trim() || "#0a1a33";
   function fillColor(hex) {
-    const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return "#0a1a33";
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return brandDark();
     const n = parseInt(m[1], 16), lin = (c) => { c /= 255; return c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; };
     const L = .2126 * lin(n >> 16) + .7152 * lin((n >> 8) & 255) + .0722 * lin(n & 255);
-    return L > .28 ? "#0a1a33" : "#" + m[1];
+    return L > .28 ? brandDark() : "#" + m[1];
   }
   const fmtTime = (d) => d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   const fmtShort = (d) => d.toLocaleDateString(undefined, { weekday: "short" }) + " · " + fmtTime(d);
@@ -300,15 +348,21 @@
       const top = g.status === "in" ? `<span class="live">● ${esc(g.detail)}</span>` : g.status === "pre" ? esc(fmtShort(g.kickoff)) : esc(g.detail);
       const row = (ha) => {
         const t = g[ha], lose = g.winner && g.winner !== ha && g.winner !== "tie";
-        return `<div class="sg-row${lose ? " lose" : ""}"><img src="${esc(t.logo)}" alt=""><span>${t.rank ? `<small class="muted">${t.rank}</small> ` : ""}${esc(t.abbr)}${mine[g.id] === ha ? '<i class="mine" title="Your pick"></i>' : ""}</span><span class="sc">${g.status === "pre" ? esc(t.rec) : t.score ?? ""}</span></div>`;
+        return `<div class="sg-row${lose ? " lose" : ""}"><span>${t.rank ? `<small class="muted">${t.rank}</small> ` : ""}<b>${esc(t.abbr)}</b> <small class="nk">${esc(t.nick)}</small>${mine[g.id] === ha ? '<i class="mine" title="Your pick"></i>' : ""}</span><span class="sc">${g.status === "pre" ? esc(t.rec) : t.score ?? ""}</span></div>`;
       };
       return `<a class="sg" href="${g.href || "#g" + g.id}"><div class="sg-top">${top}<span>${esc(g.tv)}</span></div>${row("away")}${row("home")}</a>`;
     }).join("");
   }
 
   window.LFI = { $, esc, now, local, selectionDay, countdown, toast, entries, renderEntry, share, shareUrl, readShare, copyText,
-                 KIND, cfbLogo, scoreboard, thisWeek, fillColor, firstRankedKickoff, stripHTML, fmtTime, fmtShort, normalize };
+                 KIND, teamMark, cfbTeam, scoreboard, thisWeek, fillColor, firstRankedKickoff, stripHTML, fmtTime, fmtShort, normalize,
+                 setMe(p) { me = p; header(); }, me: () => me };
 
+  paintThemeColor();
   header();
   footer();
+  // Accounts (sign-in, cloud-saved picks, profiles). Pages that need it first can include it themselves.
+  if (!document.querySelector('script[src="/assets/cloud.js"]')) {
+    const s = document.createElement("script"); s.src = "/assets/cloud.js"; document.head.appendChild(s);
+  }
 })();

@@ -9,12 +9,14 @@
 <meta property="og:description" content="Every prediction you've made on Last Four In.">
 <meta property="og:url" content="https://lastfourin.com/account/">
 <meta property="og:site_name" content="Last Four In">
-<meta name="theme-color" content="#0a1a33">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='8' fill='%23f2b33d'/%3E%3Cpath d='M8 8h5v5h4M8 22h5v-5M17 13v4h5' fill='none' stroke='%231b1204' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#0d0820">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/assets/lfi.css">
+<script src="/assets/theme.js"></script>
+<link rel="stylesheet" href="/assets/social.css">
 <meta name="robots" content="noindex">
 </head>
 <body>
@@ -24,9 +26,9 @@
 <main class="page">
   <div class="head">
     <div>
-      <div class="kicker">Your account</div>
+      <div class="kicker" id="kick">Your account</div>
       <h1 class="disp">My picks</h1>
-      <p>Everything you've submitted, with results as games finish.</p>
+      <p id="lede">Everything you've submitted, with results as games finish.</p>
     </div>
   </div>
 
@@ -35,54 +37,124 @@
       <div class="acct-stats" id="stats"></div>
       <div class="acct-list" id="list"></div>
     </div>
-    <aside class="side">
+    <aside class="side" id="side"></aside>
+  </div>
+</main>
+<footer class="foot"></footer>
+
+<script src="/assets/cfb-data.js"></script>
+<script src="/assets/lfi.js"></script>
+<script src="/assets/cloud.js"></script>
+<script>
+(function () {
+  const { $, esc, local, entries, renderEntry, share, KIND, toast, cloud } = LFI;
+  let me = null, st = null;
+
+  function render() {
+    const all = entries.all();
+    let w = 0, l = 0;
+    if (st) { w = +st.correct || 0; l = +st.wrong || 0; }
+    else for (const e of all) { const m = /^(\d+)-(\d+)/.exec(e.result || ""); if (m) { w += +m[1]; l += +m[2]; } }
+    $("stats").innerHTML = `<div><b>${all.length}</b><span>Entries</span></div><div><b>${w}-${l}</b><span>Pick'em record</span></div><div><b>${w + l ? Math.round((w / (w + l)) * 100) + "%" : "–"}</b><span>Hit rate</span></div>`;
+    $("list").innerHTML = all.length ? all.map((e) => `<div class="acct-item card" data-id="${esc(e.id)}">
+        ${renderEntry(e).replace('class="entry"', 'class="entry" style="border:0"')}
+        ${me && e.posted && e.caption ? `<p class="empty" style="margin:0;padding:0 14px 8px">“${esc(e.caption)}”</p>` : ""}
+        <div class="entry-acts">
+          <span class="chip ${e.result ? "ok" : ""}">${esc((KIND[e.kind] || {}).label || "")}</span>
+          ${me && e.posted ? `<span class="chip ok">On profile</span>` : ""}
+          <span class="empty" style="padding:4px 0;margin-right:auto">Saved ${new Date(e.saved).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+          <a class="btn" href="${esc(e.url || "/")}">Open</a>
+          ${me ? `<button class="btn" type="button" data-post>${e.posted ? "Take down" : "Post"}</button>` : ""}
+          <button class="btn gold" type="button" data-share>Share</button>
+        </div></div>`).join("")
+      : `<section class="card"><div class="card-b"><p style="margin:0 0 12px;font-weight:600">Nothing here yet.</p><p class="empty" style="margin-top:0">Submit picks, a bracket or an AP poll and it lands here.</p><a class="btn gold" href="/">Find something to play</a></div></section>`;
+  }
+
+  // Right column: signed in (profile + account), signed out (sign-in pitch + local name), or sign-in not live yet.
+  function side() {
+    if (me) {
+      const av = me.avatar_url ? `<img src="${esc(me.avatar_url)}" alt="" referrerpolicy="no-referrer">` : esc((me.display_name || me.username)[0].toUpperCase());
+      $("side").innerHTML = `<section class="card" id="profile">
+          <div class="card-h"><h2 class="disp">Your profile</h2><a href="/u/?h=${encodeURIComponent(me.username)}">View →</a></div>
+          <div class="card-b">
+            <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px"><span class="avatar" style="width:52px;height:52px;font-size:22px">${av}</span>
+              <div style="min-width:0"><b>${esc(me.display_name || me.username)}</b><div class="empty" style="padding:0">@${esc(me.username)}</div></div></div>
+            <form id="pf">
+              <div class="field"><label for="ph">Handle</label><div class="handle-prefix"><span>@</span><input id="ph" maxlength="20" autocapitalize="off" spellcheck="false" value="${esc(me.username)}"></div></div>
+              <div class="field"><label for="pn">Name</label><input id="pn" maxlength="40" value="${esc(me.display_name || "")}"></div>
+              <div class="field"><label for="pb">Bio</label><textarea id="pb" maxlength="160" rows="3" placeholder="Your team, your hottest take">${esc(me.bio || "")}</textarea></div>
+              <p class="err" id="perr"></p>
+              <button class="btn navy" type="submit">Save profile</button>
+            </form>
+          </div></section>
+        <section class="card"><div class="card-h"><h2 class="disp">Account</h2></div><div class="card-b">
+          <p class="empty" style="margin-top:0">Signed in as ${esc((cloud.user && cloud.user.email) || "")}. Your picks save to your account and show up on every device.</p>
+          <div class="post-acts"><button class="btn" type="button" id="so">Sign out</button><button class="btn" type="button" id="del" style="color:var(--loss)">Delete account</button></div>
+          <p class="empty" style="margin-bottom:0"><a href="/terms/">Terms</a> · <a href="/privacy/">Privacy</a></p>
+        </div></section>`;
+      $("pf").onsubmit = async (ev) => {
+        ev.preventDefault();
+        const username = $("ph").value.trim(), btn = ev.target.querySelector("button");
+        if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) { $("perr").textContent = "Handles are 3 to 20 letters, numbers or underscores."; return; }
+        btn.disabled = true; $("perr").textContent = "";
+        try { await cloud.updateProfile({ username, display_name: $("pn").value.trim() || null, bio: $("pb").value.trim() || null }); toast("Profile saved"); }
+        catch (e) { $("perr").textContent = e.message; }
+        btn.disabled = false;
+      };
+      $("so").onclick = async () => { await cloud.signOut(); toast("Signed out"); };
+      $("del").onclick = async () => {
+        if (prompt("This deletes your account, every pick, post and comment. It can't be undone.\n\nType DELETE to confirm.") !== "DELETE") return;
+        try { await cloud.deleteAccount(); toast("Account deleted"); } catch (e) { toast(e.message); }
+      };
+      if (location.hash === "#profile") setTimeout(() => $("profile").scrollIntoView({ block: "start" }), 50);
+      return;
+    }
+    $("side").innerHTML = `${cloud.on ? `<section class="card">
+          <div class="card-h"><h2 class="disp">Sign in</h2><span class="chip ok">Free</span></div>
+          <div class="card-b">
+            <p class="empty" style="margin-top:0;color:var(--ink-2)">Right now your picks are saved on this phone or computer only. Sign in to keep them on every device, post them to your profile and get on the leaderboards.</p>
+            <a class="btn gold block" href="/signin/?next=/account/" style="min-height:48px">Sign in or create account</a>
+          </div></section>` : `<section class="card">
+          <div class="card-h"><h2 class="disp">Sign in</h2><span class="chip">Coming soon</span></div>
+          <div class="card-b"><p class="empty" style="margin-top:0;color:var(--ink-2)">Right now your picks are saved on this phone or computer only. Free sign-in is coming next: it keeps your picks on every device and puts you on the weekly and season leaderboards.</p></div></section>`}
       <section class="card">
         <div class="card-h"><h2 class="disp">Your name</h2></div>
         <div class="card-b">
           <p class="empty" style="margin-top:0">Shown on links you share, so friends know who challenged them.</p>
           <form class="field-row" id="nameForm"><input id="name" maxlength="24" placeholder="e.g. Sam" autocomplete="nickname" aria-label="Your name"><button class="btn navy" type="submit">Save</button></form>
         </div>
-      </section>
-      <section class="card">
-        <div class="card-h"><h2 class="disp">Sign in</h2><span class="chip">Coming soon</span></div>
-        <div class="card-b">
-          <p class="empty" style="margin-top:0;color:var(--ink-2)">Right now your picks are saved on this phone or computer only. Free sign-in is coming next: it keeps your picks on every device and puts you on the weekly and season leaderboards.</p>
-        </div>
-      </section>
-    </aside>
-  </div>
-</main>
-<footer class="foot"></footer>
-
-<script src="/assets/lfi.js"></script>
-<script>
-(function () {
-  const { $, esc, local, entries, renderEntry, share, KIND, toast } = LFI;
-
-  function render() {
-    const all = entries.all();
-    let w = 0, l = 0;
-    for (const e of all) { const m = /^(\d+)-(\d+)/.exec(e.result || ""); if (m) { w += +m[1]; l += +m[2]; } }
-    $("stats").innerHTML = `<div><b>${all.length}</b><span>Entries</span></div><div><b>${w}-${l}</b><span>Pick'em record</span></div><div><b>${w + l ? Math.round((w / (w + l)) * 100) + "%" : "–"}</b><span>Hit rate</span></div>`;
-    $("list").innerHTML = all.length ? all.map((e) => `<div class="acct-item card" data-id="${esc(e.id)}">
-        ${renderEntry(e).replace('class="entry"', 'class="entry" style="border:0"')}
-        <div class="entry-acts">
-          <span class="chip ${e.result ? "ok" : ""}">${esc((KIND[e.kind] || {}).label || "")}</span>
-          <span class="empty" style="padding:4px 0;margin-right:auto">Saved ${new Date(e.saved).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
-          <a class="btn" href="${esc(e.url || "/")}">Open</a>
-          <button class="btn gold" type="button" data-share>Share</button>
-        </div></div>`).join("")
-      : `<section class="card"><div class="card-b"><p style="margin:0 0 12px;font-weight:600">Nothing here yet.</p><p class="empty" style="margin-top:0">Submit picks, a bracket or an AP poll and it lands here.</p><a class="btn gold" href="/">Find something to play</a></div></section>`;
+      </section>`;
+    $("name").value = local.get("lfi-name", "");
+    $("nameForm").addEventListener("submit", (e) => { e.preventDefault(); local.set("lfi-name", $("name").value.trim()); toast("Saved"); LFI.setMe(LFI.me()); });
   }
 
-  $("list").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-share]"); if (!b) return;
-    const en = entries.get(b.closest("[data-id]").dataset.id);
-    share(en, { kicker: "Challenge your friends", note: "Send this to your friends and see who calls it better." });
+  $("list").addEventListener("click", async (e) => {
+    const item = e.target.closest("[data-id]"); if (!item) return;
+    const en = entries.get(item.dataset.id);
+    if (e.target.closest("[data-share]")) return share(en, { kicker: "Challenge your friends", note: "Send this to your friends and see who calls it better." });
+    const pb = e.target.closest("[data-post]");
+    if (pb) {
+      pb.disabled = true;
+      try {
+        if (en.posted) { await cloud.setPosted(en.id, false); toast("Taken down"); }
+        else { const cap = prompt("Add a take to go with it (optional):", en.caption || ""); if (cap === null) { pb.disabled = false; return; } await cloud.setPosted(en.id, true, cap); toast("Posted to your profile"); }
+      } catch (err) { toast(err.message); }
+      render();
+    }
   });
-  $("name").value = local.get("lfi-name", "");
-  $("nameForm").addEventListener("submit", (e) => { e.preventDefault(); local.set("lfi-name", $("name").value.trim()); toast("Saved"); });
+
+  async function refresh() {
+    if (cloud.user && cloud.profile && !cloud.profile.onboarded) { location.replace("/signin/?next=/account/"); return; }
+    me = cloud.profile && cloud.profile.onboarded ? cloud.profile : null;
+    $("kick").textContent = me ? `@${me.username}` : "Your account";
+    $("lede").textContent = me ? "Everything you've submitted, saved to your account. Post any of it to your profile." : "Everything you've submitted, with results as games finish.";
+    st = me ? await cloud.stats(me.id) : null;
+    // Server-graded record only counts once the score feed has graded something; until then use the entries.
+    if (st && !(+st.correct + +st.wrong)) st = null;
+    render(); side();
+  }
   render();
+  cloud.ready.then(() => cloud.onChange((c, what) => { if (what === "entries") render(); else refresh(); }));
 })();
 </script>
 </body>
