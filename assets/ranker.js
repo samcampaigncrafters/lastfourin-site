@@ -8,7 +8,7 @@
   const MORE = '<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.6"/><circle cx="8" cy="8" r="1.6"/><circle cx="13" cy="8" r="1.6"/></svg>';
   const HANDLE = '<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="5.5" cy="3.5" r="1.4"/><circle cx="10.5" cy="3.5" r="1.4"/><circle cx="5.5" cy="8" r="1.4"/><circle cx="10.5" cy="8" r="1.4"/><circle cx="5.5" cy="12.5" r="1.4"/><circle cx="10.5" cy="12.5" r="1.4"/></svg>';
 
-  // opts: { order(): [ids], setOrder(ids), team(id): {name, abbr, nick, color, sub}, pool(): [ids not ranked],
+  // opts: { order(): [ids], setOrder(ids), team(id): {name, abbr, nick, color, sub, line (html)}, pool(): [ids not ranked],
   //         max, cut: { after, label }, right(id, i): html, poolTag(id): text, onAct(act, i, btn): bool, locked(): bool }
   function Ranker(root, opts) {
     const max = opts.max || 25;
@@ -35,7 +35,7 @@
           <button class="rk-handle" type="button" data-drag aria-label="Drag ${esc(t.name)} to reorder">${HANDLE}</button>
           <span class="rk-n">${i + 1}</span>
           ${LFI.teamMark(t.abbr, t.nick) || "<span></span>"}
-          <span class="rk-name"><b>${esc(t.name)}</b><small>${esc(t.sub || "")}</small></span>
+          <span class="rk-name"><b>${esc(t.name)}</b><small>${esc(t.sub || "")}</small>${t.line ? `<small class="rk-line">${t.line}</small>` : ""}</span>
           <span class="rk-right">${opts.right ? opts.right(id, i) : ""}</span>
           <button class="rk-more" type="button" data-more aria-expanded="${i === open}" aria-label="More moves for ${esc(t.name)}">${MORE}</button>
         </div>

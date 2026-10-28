@@ -24,6 +24,18 @@
 .fun .contest-only, .fun-only { display: none; }
 .fun .fun-only { display: block; }
 .fun .submitbar .fun-only { display: inline-flex; }
+/* Each team's game this week, under its record. */
+.rk-name small.rk-line { color: var(--ink-2); font-weight: 600; display: flex; }
+/* A long opponent name gives way before the kickoff time does. */
+.rk-line .nx-op { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.rk-line .nx-tm, .rk-line .nx-live { flex: none; white-space: pre; }
+.rk-line .nx-w { color: var(--win); font-weight: 800; }
+.rk-line .nx-l { color: var(--loss); font-weight: 800; }
+.rk-line .nx-live { color: var(--accent); font-weight: 800; }
+.rk-line .nx-bye { color: var(--muted); font-weight: 500; }
+/* Long school names ("North Carolina") switch to the abbreviation ("UNC") on a phone instead of being cut off. */
+.rk-line .nx-ab { display: none; }
+@media (max-width: 600px) { .rk-line .nx-full, .rk-line .nx-sat { display: none; } .rk-line .nx-ab { display: inline; } }
 </style>
 </head>
 <body>
@@ -90,9 +102,11 @@
 <script src="/assets/ranker.js"></script>
 <script>
 (function () {
-  const { $, esc, now, local, entries, toast, countdown, scoreboard } = LFI;
+  const { $, esc, now, local, entries, toast, countdown, scoreboard, normalize, fmtTime } = LFI;
   const RANKINGS = "https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings";
   const T = {};           // id -> team info
+  const NEXT = {};        // id -> { g, ha } this week's game, once the scoreboard loads
+  let gamesLoaded = false;
   let poll = [], others = [], season, week, pollDate, lockAt = null, order = [], ranker, key;
 
   const fmtDay = (d) => d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
@@ -133,6 +147,56 @@
     if (!lockAt) { // fallback: the Saturday after the poll, noon Eastern
       const d = new Date(pollDate); d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7 || 7)); d.setHours(12, 0, 0, 0); lockAt = d;
     }
+  }
+
+  // Every FBS game this week (the week the next poll covers), so each ballot row can show its matchup.
+  async function loadGames() {
+    try {
+      let sb = await scoreboard("cfb");
+      const after = (sb2) => sb2.raw.events.filter((e) => new Date(e.date) > pollDate);
+      let evs = after(sb);
+      if (!evs.length && sb.calendar.some((c) => +c.value === sb.week + 1)) {
+        sb = await scoreboard("cfb", `&week=${sb.week + 1}&seasontype=${sb.stype}&dates=${sb.season}`);
+        evs = after(sb);
+      }
+      for (const e of evs) {
+        const g = normalize(e), c = e.competitions[0];
+        g.neutral = !!c.neutralSite; g.timeValid = c.timeValid !== false;
+        for (const ha of ["home", "away"]) if (!NEXT[g[ha].id]) NEXT[g[ha].id] = { g, ha };
+      }
+      gamesLoaded = true;
+    } catch (e) {}
+  }
+  // While any game is on, refresh scores every minute.
+  function watchGames() {
+    if (!Object.values(NEXT).some((n) => n.g.status === "in")) return;
+    setTimeout(async () => { for (const k in NEXT) delete NEXT[k]; await loadGames(); render(); watchGames(); }, 60000);
+  }
+
+  // "at #9 Texas · Sat 3:30 PM", then the live score, then "W 31-24 at #9 Texas".
+  function matchup(id) {
+    if (!gamesLoaded) return "";
+    const n = NEXT[id];
+    if (!n) return `<span class="nx-bye">Bye this week</span>`;
+    const { g, ha } = n, me = g[ha], op = g[ha === "home" ? "away" : "home"];
+    const opRank = T[op.id] ? T[op.id].ap : op.rank;
+    const name = (op.city || op.abbr).length > 10 ? `<span class="nx-full">${esc(op.city)}</span><span class="nx-ab">${esc(op.abbr)}</span>` : esc(op.city || op.abbr);
+    const vs = (short) => `${g.neutral || ha === "home" ? "vs" : "at"} ${opRank ? "#" + opRank + " " : ""}${short ? esc(op.abbr) : name}`;
+    const sc = `${me.score ?? 0}-${op.score ?? 0}`;
+    if (g.status === "post") {
+      const res = g.winner === ha ? `<span class="nx-w">W</span>&nbsp;` : g.winner === "tie" ? `<span>T</span>&nbsp;` : `<span class="nx-l">L</span>&nbsp;`;
+      return `${res}<span class="nx-op">${sc} ${vs()}</span>`;
+    }
+    if (g.status === "in") { // live rows are tight on a phone: abbreviation, and "Q3" for ESPN's "5:12 - 3rd"
+      const q = /- (\d)(st|nd|rd|th)$/.exec(g.detail || "");
+      return `<span class="nx-live">● ${sc}&nbsp;</span><span class="nx-op">${vs(true)}</span><span class="nx-tm"> · ${esc(q ? "Q" + q[1] : g.detail)}</span>`;
+    }
+    if (g.status === "off") return `<span class="nx-op">${vs()}</span><span class="nx-tm"> · ${esc(g.detail)}</span>`;
+    const k = g.kickoff;
+    // Saturday is the default, so a phone drops "Sat" (other days stay named); "11:00 AM" shortens to "11 AM".
+    const day = esc(k.toLocaleDateString(undefined, { weekday: "short" })) + " ";
+    const when = (k.getDay() === 6 ? `<span class="nx-sat">${day}</span>` : day) + (g.timeValid ? esc(fmtTime(k).replace(":00", "")) : "TBA");
+    return `<span class="nx-op">${vs()}</span><span class="nx-tm"> · ${when}</span>`;
   }
 
   const target = () => { const d = new Date(pollDate); d.setDate(d.getDate() + 7); return d; };
@@ -193,7 +257,7 @@
       order: () => order,
       setOrder: (ids) => { order = ids; local.set(key, order); render(); },
       locked: () => locked() || submitted(),
-      team: (id) => { const t = T[id]; return { name: t.name, abbr: t.abbr, nick: t.nick, color: t.color, sub: [t.rec, t.ap ? `AP #${t.ap}` : t.votes ? `${t.votes} vote${t.votes === 1 ? "" : "s"}` : "Unranked"].filter(Boolean).join(" · ") }; },
+      team: (id) => { const t = T[id]; return { name: t.name, abbr: t.abbr, nick: t.nick, color: t.color, sub: [t.rec, t.ap ? `AP #${t.ap}` : t.votes ? `${t.votes} vote${t.votes === 1 ? "" : "s"}` : "Unranked"].filter(Boolean).join(" · "), line: matchup(id) }; },
       pool: () => Object.keys(T).filter((id) => !order.includes(id)).sort((a, b) => (T[a].ap || 99) - (T[b].ap || 99) || T[b].votes - T[a].votes || T[a].name.localeCompare(T[b].name)),
       poolTag: (id) => T[id].ap ? `AP #${T[id].ap}` : "",
       right: (id, i) => {
@@ -234,7 +298,8 @@
     LFI.share(e);
   });
 
-  Promise.all([loadPoll()]).then(loadLock).then(boot);
+  // The ballot shows straight away; matchups fill in when the scoreboard arrives.
+  loadPoll().then(() => { const games = loadGames(); return loadLock().then(boot).then(() => games); }).then(() => { if (ranker) { render(); watchGames(); } });
 })();
 </script>
 </body>
