@@ -36,6 +36,37 @@
 .pips i.t0 { background: var(--win); } .pips i.t1 { background: var(--win); opacity: .8; } .pips i.t2 { background: var(--accent); }
 .pips i.t3 { background: var(--accent); opacity: .55; } .pips i.t4 { background: var(--loss); }
 .recap .m.pt { width: auto; min-width: 46px; padding: 0 6px; font-size: 13px; }
+/* the globe: a dark sky panel in both themes, so the satellite picture always reads */
+.mapwrap.sky { background: radial-gradient(120% 95% at 50% 42%, #2a1d66 0%, #0d0820 52%, #05030d 100%); border-color: var(--line-2); }
+.mapwrap.hero { margin: 0 auto 18px; max-width: 520px; }
+.globe { position: relative; overflow: hidden; width: 100%; aspect-ratio: 4 / 3; max-height: 66vh; cursor: crosshair; user-select: none; -webkit-user-select: none; }
+.hero .globe { aspect-ratio: 16 / 10; cursor: grab; }
+.mapwrap.locked .globe { cursor: grab; }
+.globe canvas { display: block; touch-action: none; outline: none; }
+@media (max-width: 560px) { .globe { aspect-ratio: 1 / 1; max-height: 62vh; } .hero .globe { aspect-ratio: 16 / 11; } }
+.gload { aspect-ratio: 4 / 3; max-height: 66vh; display: grid; place-items: center; color: var(--on-brand-2); font-weight: 600; font-size: 14px; }
+.hero .gload { aspect-ratio: 16 / 10; }
+.sky .zoom button { background: rgba(13, 8, 32, .72); border-color: rgba(255, 255, 255, .22); color: #fff; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.skycredit { position: absolute; left: 10px; bottom: 9px; font-size: 10.5px; color: rgba(255, 255, 255, .55); pointer-events: none; }
+/* map pins: the tip sits exactly on the spot */
+.gpin { position: relative; width: 0; height: 0; pointer-events: none; }
+.gpin i { position: absolute; left: -12px; bottom: 0; width: 24px; height: 32px; transform-origin: 50% 100%; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .6)); background: no-repeat center / contain; }
+.gpin b { position: absolute; left: -5px; top: -2px; width: 10px; height: 4px; border-radius: 50%; background: rgba(0, 0, 0, .55); }
+.gpin.guess i { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 32'%3E%3Cpath d='M12 31C10.6 26.5 1.5 19.5 1.5 12a10.5 10.5 0 0 1 21 0c0 7.5-9.1 14.5-10.5 19z' fill='%23ff3dbb' stroke='%2314001f' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='12' r='4' fill='%2314001f'/%3E%3C/svg%3E"); }
+.gpin.truth i { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 32'%3E%3Cpath d='M12 31C10.6 26.5 1.5 19.5 1.5 12a10.5 10.5 0 0 1 21 0c0 7.5-9.1 14.5-10.5 19z' fill='%23ffffff' stroke='%230d0820' stroke-width='1.5'/%3E%3Cpath d='M12 6.5l1.7 3.6 3.9.5-2.9 2.7.8 3.9-3.5-2-3.5 2 .8-3.9-2.9-2.7 3.9-.5z' fill='%23ff3dbb'/%3E%3C/svg%3E"); }
+.gpin.tap i { animation: pinTap .28s cubic-bezier(.3, 1.5, .5, 1) both; }
+.gpin.drop i { animation: pinDrop .6s cubic-bezier(.25, 1.45, .5, 1) both; }
+.gpin.drop b { animation: pinShadow .6s ease-out both; }
+@keyframes pinTap { from { transform: translateY(-14px) scale(.85); opacity: .4; } to { transform: none; opacity: 1; } }
+@keyframes pinDrop { 0% { transform: translateY(-80px) scale(.9); opacity: 0; } 45% { opacity: 1; } 100% { transform: none; opacity: 1; } }
+@keyframes pinShadow { from { transform: scale(.2); opacity: 0; } to { transform: none; opacity: 1; } }
+/* the reveal: miles count up, then the emoji and points land */
+.reveal .rv-emo, .reveal .rv-pts, .reveal .rv-late { display: inline-block; transition: opacity .35s; }
+.reveal.counting .rv-emo, .reveal.counting .rv-pts, .reveal.counting .rv-late { opacity: 0; }
+.reveal.settled .rv-emo, .reveal.settled .rv-pts { animation: rvPop .5s cubic-bezier(.3, 1.6, .5, 1) both; }
+.reveal.counting { cursor: pointer; }
+@keyframes rvPop { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .gpin i, .gpin b, .reveal.settled .rv-emo, .reveal.settled .rv-pts { animation: none !important; } }
 </style>
 </head>
 <body>
@@ -68,7 +99,7 @@
         <div class="card-b">
           <ol class="steps">
             <li>A new set of five drops every night at midnight Eastern, the same for everyone.</li>
-            <li>Tap the map to drop your pin. Tap again to move it, zoom in for the close calls, then lock it in.</li>
+            <li>Spin the globe and tap to drop your pin. Tap again to move it, zoom in for the close calls, then lock it in.</li>
             <li>Up to 1,000 points a round: a pin within 10 miles is worth almost all of it, 300 miles off is about a third.</li>
             <li>Stadiums go by today's names, even for old Super Bowls. College rounds count the team's home stadium.</li>
             <li>Share your score as a row of pins, no answers given away.</li>
@@ -165,12 +196,13 @@
     return { cur, best: Math.max(best, cur), played: played.size, top: scores.length ? Math.max(...scores) : 0 };
   }
 
-  // ---- the map ----
+  // ---- the flat map (used only where WebGL is missing) ----
   const proj = d3.geoAlbersUsa().scale(1300).translate([W / 2, H / 2]);
   const path = d3.geoPath(proj);
-  let statesPath = "";
+  let statesPath = "", borders = [];
   const ready = fetch("/assets/vendor/us-states-10m.json").then((r) => r.json()).then((us) => {
     statesPath = path(topojson.feature(us, us.objects.states));
+    borders = topojson.mesh(us, us.objects.states, (a, b) => a !== b).coordinates; // state lines for the globe
   });
   let pin = null, zoom = 1, center = [W / 2, H / 2];
 
@@ -191,6 +223,232 @@
     $("map").innerHTML = `<path class="land" d="${statesPath}"></path>${line}${marker(truthXY, "truth", 9)}${marker(guessXY, "guess", 7)}`;
     $("zin").disabled = zoom >= 4;
     $("zout").disabled = zoom <= 1;
+  }
+
+  // ---- the globe: NASA satellite imagery on a slowly spinning globe (globe.gl + three.js, vendored) ----
+  const still = matchMedia("(prefers-reduced-motion: reduce)");
+  const RAD = Math.PI / 180;
+  const US = { lat: 39, lng: -98 };
+  const MIN_ALT = 0.035, MAX_ALT = 3.2;
+  function hasWebGL() {
+    try { const c = document.createElement("canvas"); return !!(window.WebGLRenderingContext && (c.getContext("webgl2") || c.getContext("webgl"))); } catch (e) { return false; }
+  }
+  let useGlobe = hasWebGL() && !/[?&]flat=1/.test(location.search);
+  let globe = null, stage = null, revealing = false, finishReveal = null, raf = 0, timers = [];
+  const globeReady = !useGlobe ? Promise.resolve() : new Promise((ok, no) => {
+    const s = document.createElement("script");
+    s.src = "/assets/vendor/globe.gl-2.46.2.min.js";
+    s.onload = ok; s.onerror = no;
+    document.head.appendChild(s);
+  }).then(makeGlobe).catch(() => { useGlobe = false; globe = null; render(); }); // no globe after all: back to the flat map
+
+  const aspect = () => (stage && stage.clientHeight ? stage.clientWidth / stage.clientHeight : 4 / 3);
+  // camera height (in globe radii) that fits an arc of `ang` radians across the narrower side of the panel
+  const altFor = (ang) => Math.min(MAX_ALT, Math.max(MIN_ALT, (1.6 * ang) / Math.min(1, aspect()) + 0.03));
+  const usView = () => Object.assign({ altitude: altFor(0.62) }, US);
+
+  function makeGlobe() {
+    stage = document.createElement("div");
+    stage.className = "globe";
+    stage.setAttribute("role", "img");
+    stage.setAttribute("aria-label", "Satellite globe. Drag to spin, pinch or scroll to zoom, tap to drop your pin.");
+    globe = new Globe(stage, { animateIn: false, rendererConfig: { antialias: true, alpha: true } })
+      .width(640).height(480)
+      .backgroundColor("rgba(0,0,0,0)")
+      .globeImageUrl("img/earth-4k.jpg")
+      .showAtmosphere(true).atmosphereColor("#9dbcff").atmosphereAltitude(0.16)
+      .enablePointerInteraction(false) // no hover picking every frame; taps are read below
+      .htmlElementsData([]).htmlLat("lat").htmlLng("lng").htmlAltitude(0).htmlElement("el").htmlTransitionDuration(0)
+      .pathsData([]).pathPoints("pts").pathPointLat((p) => p[1]).pathPointLng((p) => p[0]).pathPointAlt(0.0012)
+      .pathColor(() => "rgba(255,255,255,.42)").pathTransitionDuration(0)
+      .arcsData([]).arcColor(() => ["#ff3dbb", "#ffffff"]).arcStroke("w").arcAltitudeAutoScale(0.45)
+      .arcDashLength(0).arcDashGap(4).arcDashInitialGap(0).arcDashAnimateTime(0).arcsTransitionDuration(0)
+      .ringsData([]).ringColor(() => (t) => `rgba(255,255,255,${(0.9 * (1 - t)).toFixed(3)})`).ringMaxRadius("r")
+      .ringPropagationSpeed("v").ringRepeatPeriod(800).ringAltitude(0.0015);
+    globe.renderer().setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    const c = globe.controls(), r = globe.getGlobeRadius();
+    c.minDistance = r * (1 + MIN_ALT);
+    c.maxDistance = r * (1 + MAX_ALT);
+    c.autoRotateSpeed = 0.35;
+    // light the side you're looking at (the built-in sun sits over the North Pole, leaving the south and the Pacific dim)
+    const sun = globe.lights().find((l) => l.isDirectionalLight), cam = globe.camera();
+    const follow = () => { if (sun) { sun.position.copy(cam.position).normalize(); sun.position.y += 0.35; } };
+    c.addEventListener("change", follow);
+    follow();
+    // a tap is one finger that goes down and up without moving; drags spin and pinches zoom
+    let down = null;
+    const fingers = new Set();
+    stage.addEventListener("pointerdown", (e) => {
+      fingers.add(e.pointerId);
+      down = fingers.size === 1 && e.button === 0 ? { x: e.clientX, y: e.clientY, t: e.timeStamp } : null;
+      c.autoRotate = false;
+      if (revealing) finishReveal(true);
+    });
+    stage.addEventListener("pointerup", (e) => {
+      fingers.delete(e.pointerId);
+      const d = down;
+      down = null;
+      if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 8 || e.timeStamp - d.t > 700) return;
+      const r = stage.getBoundingClientRect(), ll = globe.toGlobeCoords(e.clientX - r.left, e.clientY - r.top);
+      if (ll) tap(ll.lat, ll.lng);
+    });
+    stage.addEventListener("pointercancel", (e) => { fingers.delete(e.pointerId); down = null; });
+    // A plain mouse wheel keeps scrolling the page; a trackpad pinch (sent as ctrl + wheel) or ctrl/cmd + wheel zooms.
+    let told = false;
+    stage.addEventListener("wheel", (e) => {
+      if (e.ctrlKey || e.metaKey) return;
+      e.stopImmediatePropagation();
+      if (!told && view === "q") { told = true; toast("Pinch, use the + and − buttons, or hold Ctrl and scroll to zoom."); }
+    }, { capture: true });
+    new ResizeObserver(() => { const w = stage.clientWidth, h = stage.clientHeight; if (w && h) globe.width(w).height(h); }).observe(stage);
+    globe.pointOfView(usView(), 0);
+    globe.onGlobeReady(addUSDetail);
+    ready.then(() => globe.pathsData(borders.map((pts) => ({ pts }))));
+    if (/[?&]debug=1/.test(location.search)) window.pindropGlobe = globe;
+  }
+
+  // A sharper satellite patch over the lower 48 (lon -128..-64, lat 21..53), laid just above the world picture.
+  // globe.gl doesn't export three.js, so the patch borrows its classes from the globe's own mesh.
+  function addUSDetail() {
+    const m0 = globe.globeMaterial();
+    let base = null;
+    globe.scene().traverse((o) => { if (!base && o.isMesh && o.material === m0) base = o; });
+    if (!base || !m0.map || base.geometry.type !== "SphereGeometry") return;
+    const img = new Image();
+    img.onload = () => {
+      const tex = new m0.map.constructor(img);
+      tex.colorSpace = m0.map.colorSpace;
+      tex.anisotropy = globe.renderer().capabilities.getMaxAnisotropy();
+      tex.needsUpdate = true;
+      const mat = new m0.constructor({ map: tex }); // same kind of material, so the patch takes the light like the globe
+      ["color", "specular", "emissive"].forEach((k) => { if (mat[k] && m0[k]) mat[k].copy(m0[k]); });
+      if (typeof m0.shininess === "number") mat.shininess = m0.shininess;
+      const geo = new base.geometry.constructor(base.geometry.parameters.radius * 1.0004, 128, 64, (-128 + 180) * RAD, 64 * RAD, (90 - 53) * RAD, 32 * RAD);
+      const patch = new base.constructor(geo, mat);
+      patch.raycast = () => {}; // taps land on the globe underneath
+      base.add(patch);
+    };
+    img.src = "img/earth-us.jpg";
+  }
+
+  function pinEl(kind, anim) {
+    const el = document.createElement("div");
+    el.className = `gpin ${kind}${anim ? " " + anim : ""}`;
+    el.innerHTML = "<b></b><i></i>";
+    return el;
+  }
+  function clearAnim() {
+    revealing = false;
+    cancelAnimationFrame(raf);
+    timers.forEach(clearTimeout);
+    timers = [];
+  }
+  function clearMarks() { globe.htmlElementsData([]).arcsData([]).ringsData([]); }
+
+  // put the globe into the slot the screen just drew, then set it up for that screen
+  function showGlobe(setup) {
+    globeReady.then(() => {
+      const slot = $("gslot");
+      if (!globe || !slot) return;
+      slot.replaceChildren(stage);
+      globe.resumeAnimation();
+      setup();
+    });
+  }
+  function hideGlobe() { if (globe) { clearAnim(); globe.pauseAnimation(); } }
+
+  function globeIntro() {
+    clearAnim();
+    clearMarks();
+    globe.controls().autoRotate = !still.matches;
+    globe.pointOfView(Object.assign({}, US, { lat: 30, altitude: 1.9 }), 0); // the whole globe, North America in front
+  }
+  function globeRound() {
+    clearAnim();
+    clearMarks();
+    const c = globe.controls();
+    c.autoRotate = false;
+    globe.pointOfView(usView(), still.matches ? 0 : 900);
+    if (!still.matches) timers.push(setTimeout(() => { if (view === "q" && !pin) c.autoRotate = true; }, 950));
+  }
+  function tap(lat, lng) {
+    if (view !== "q" || !$("lock")) return;
+    globe.controls().autoRotate = false;
+    pin = [lat, lng];
+    globe.htmlElementsData([{ lat, lng, el: pinEl("guess", "tap") }]);
+    $("lock").disabled = false;
+    $("hint").textContent = "👆 Tap again to move it, or zoom in to fine-tune.";
+  }
+  function zoomBy(f) {
+    globe.controls().autoRotate = false;
+    const a = globe.pointOfView().altitude;
+    globe.pointOfView({ altitude: Math.min(MAX_ALT, Math.max(MIN_ALT, a * f)) }, still.matches ? 0 : 450);
+  }
+
+  // midpoint of the great circle between a and b
+  function middle(a, b) {
+    const p1 = a.lat * RAD, l1 = a.lng * RAD, p2 = b.lat * RAD, l2 = b.lng * RAD;
+    const bx = Math.cos(p2) * Math.cos(l2 - l1), by = Math.cos(p2) * Math.sin(l2 - l1);
+    const lat = Math.atan2(Math.sin(p1) + Math.sin(p2), Math.hypot(Math.cos(p1) + bx, by)) / RAD;
+    const lng = (((l1 + Math.atan2(by, Math.cos(p1) + bx)) / RAD) + 540) % 360 - 180;
+    return { lat, lng };
+  }
+  const ease = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : 1 - Math.pow(1 - t, 3));
+
+  // The reveal: the camera glides to frame both pins, an arc draws from your pin to the answer,
+  // the answer drops in with a ring pulse, and the miles count up. Any tap skips to the end.
+  function globeReveal(q, g) {
+    clearAnim();
+    const c = globe.controls();
+    c.autoRotate = false;
+    const a = { lat: g.lat, lng: g.lon }, b = { lat: q.lat, lng: q.lon };
+    const ang = miles([g.lat, g.lon], [q.lat, q.lon]) / R, deg = ang / RAD;
+    const pov = Object.assign({ altitude: altFor(ang) }, middle(a, b));
+    const guess = Object.assign({ el: pinEl("guess") }, a);
+    const truth = Object.assign({ el: pinEl("truth", "drop") }, b);
+    const ringR = Math.max(0.35, deg * 0.3);
+    const ring = Object.assign({ r: ringR, v: ringR * 1.6 }, b);
+    const arcs = deg > 0.02 ? [{ startLat: a.lat, startLng: a.lng, endLat: b.lat, endLng: b.lng, w: Math.max(0.025, deg * 0.028) }] : [];
+    const box = $("rv"), mi = $("rvMi");
+    let dropped = false;
+    const drop = () => {
+      if (dropped) return;
+      dropped = true;
+      globe.htmlElementsData([guess, truth]);
+      if (!still.matches) {
+        globe.ringsData([ring]);
+        timers.push(setTimeout(() => globe.ringsData([]), 2600));
+      }
+    };
+    globe.htmlElementsData([guess]).ringsData([]).arcsData(arcs).arcDashLength(0);
+    globe.pointOfView(pov, still.matches ? 0 : 1100);
+
+    finishReveal = (skipped) => {
+      cancelAnimationFrame(raf);
+      revealing = false;
+      if (skipped) globe.pointOfView(pov, still.matches ? 0 : 250);
+      globe.arcDashLength(1);
+      drop();
+      mi.textContent = fmt(g.m);
+      box.classList.remove("counting");
+      box.classList.add("settled");
+    };
+    if (still.matches) return finishReveal(false);
+
+    revealing = true;
+    box.classList.add("counting");
+    mi.textContent = "0";
+    const t0 = performance.now(), ARC0 = 350, ARC1 = 1250, END = 1900;
+    const step = (now) => {
+      const t = now - t0;
+      globe.arcDashLength(ease((t - ARC0) / (ARC1 - ARC0)));
+      mi.textContent = fmt(g.m * ease((t - 250) / (END - 250)));
+      if (t >= ARC1) drop();
+      if (t >= END) return finishReveal(false);
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    timers.push(setTimeout(() => { if (revealing) finishReveal(false); }, END + 400)); // finish even if frames stall (hidden tab)
   }
 
   // ---- game ----
@@ -218,12 +476,14 @@
       <div class="intro">
         <div class="kicker">${esc(pretty(date, { weekday: "long", month: "long", day: "numeric" }))} · Set #${setNo}</div>
         <h2 class="disp big">${started ? "Pick up where you left off" : "Today's five places"} <span class="em" aria-hidden="true">🗺️</span></h2>
+        ${useGlobe ? `<div class="mapwrap sky hero" id="gslot"><div class="gload">Loading the globe…</div></div>` : ""}
         <p>${started ? `You're ${d.g.length} of 5 in. Pins you've locked stay locked.` : "An NFL stadium, a college stadium, a Super Bowl, where a star played college ball and where a star was born. Up to 1,000 points each."}</p>
         <div class="rules"><span class="chip easy">1 Easy</span><span class="chip medium">2 Medium</span><span class="chip hard">2 Hard</span></div>
         <button class="btn gold" id="start" style="font-size:17px;padding:13px 30px">${started ? "Keep going" : "Start"} <span class="em" aria-hidden="true">🚀</span></button>
       </div>`;
     $("start").onclick = () => { view = "q"; render(); };
     $("start").focus({ preventScroll: true });
+    if (useGlobe) showGlobe(globeIntro);
   }
 
   function renderRound() {
@@ -231,26 +491,36 @@
     const i = view === "reveal" ? d.g.length - 1 : d.g.length;
     const q = qs[i], g = view === "reveal" ? d.g[i] : null;
     const last = i === qs.length - 1;
+    const sky = useGlobe;
     $("game").innerHTML = `
       <div class="card-b">
         <div class="qmeta"><span class="qn">Round ${i + 1} of 5</span><span class="chip">${esc(q.tag)}</span><span class="chip ${q.diff.toLowerCase()}">${esc(q.diff)}</span></div>
         <h2 class="qtext">${esc(q.q)}</h2>
-        <div class="mapwrap${g ? " locked" : ""}">
-          <svg id="map" viewBox="0 0 ${W} ${H}" role="img" aria-label="Map of the United States. Tap to drop your pin."></svg>
-          <div class="zoom"><button id="zin" type="button">Zoom in</button><button id="zout" type="button">Zoom out</button></div>
+        <div class="mapwrap${sky ? " sky" : ""}${g ? " locked" : ""}">
+          ${sky ? `<div id="gslot"><div class="gload">Loading the globe…</div></div><span class="skycredit">Imagery: NASA</span>`
+            : `<svg id="map" viewBox="0 0 ${W} ${H}" role="img" aria-label="Map of the United States. Tap to drop your pin."></svg>`}
+          <div class="zoom"><button id="zin" type="button" aria-label="Zoom in">${sky ? "+" : "Zoom in"}</button><button id="zout" type="button" aria-label="Zoom out">${sky ? "−" : "Zoom out"}</button></div>
         </div>
         ${g ? `
-        <div class="reveal ${g.m <= 100 ? "ok" : g.m > 700 ? "no" : ""}">
-          <div><b>${EMOJI[tier(g.m)]} ${fmt(g.m)} miles off · +${fmt(g.p)}</b><p>${esc(q.a)}</p></div>
+        <div class="reveal ${g.m <= 100 ? "ok" : g.m > 700 ? "no" : ""}" id="rv">
+          <div><b><span class="rv-emo">${EMOJI[tier(g.m)]}</span> <span id="rvMi">${fmt(g.m)}</span> miles off <span class="rv-pts">· +${fmt(g.p)}</span></b><p class="rv-late">${esc(q.a)}</p></div>
           <button class="btn navy" id="next">${last ? "See your score" : "Next place"} <span class="em" aria-hidden="true">${last ? "🏆" : "👉"}</span></button>
         </div>` : `
-        <div class="lockrow"><button class="btn gold" id="lock" disabled>Lock it in <span class="em" aria-hidden="true">🔒</span></button><span class="maphint" id="hint" style="margin:0">📍 Tap the map to drop your pin.</span></div>`}
+        <div class="lockrow"><button class="btn gold" id="lock" disabled>Lock it in <span class="em" aria-hidden="true">🔒</span></button><span class="maphint" id="hint" style="margin:0">${sky ? "🌎 Spin the globe and tap to drop your pin." : "📍 Tap the map to drop your pin."}</span></div>`}
       </div>`;
-    ready.then(() => drawMap(i, !!g));
-    $("zin").onclick = () => { zoom = Math.min(4, zoom * 2); if (pin) center = proj([pin[1], pin[0]]); drawMap(i, !!g); };
-    $("zout").onclick = () => { zoom = Math.max(1, zoom / 2); drawMap(i, !!g); };
+    if (sky) {
+      $("zin").onclick = () => globe && zoomBy(0.5);
+      $("zout").onclick = () => globe && zoomBy(2);
+      showGlobe(() => (g ? globeReveal(q, g) : globeRound()));
+      if (g) $("rv").addEventListener("pointerdown", () => { if (revealing) finishReveal(true); });
+    } else {
+      ready.then(() => drawMap(i, !!g));
+      $("zin").onclick = () => { zoom = Math.min(4, zoom * 2); if (pin) center = proj([pin[1], pin[0]]); drawMap(i, !!g); };
+      $("zout").onclick = () => { zoom = Math.max(1, zoom / 2); drawMap(i, !!g); };
+    }
     if (g) { $("next").onclick = next; $("next").focus({ preventScroll: true }); return; }
     $("lock").onclick = lock;
+    if (sky) return;
     $("map").addEventListener("click", (e) => {
       const svg = $("map"), pt = svg.createSVGPoint();
       pt.x = e.clientX; pt.y = e.clientY;
@@ -308,6 +578,7 @@
   }
 
   function renderDone() {
+    hideGlobe();
     const d = mine(), sc = total(d);
     const words = sc >= 4500 ? "Human GPS." : sc >= 3500 ? "Great day." : sc >= 2500 ? "Solid day." : sc >= 1500 ? "On the board." : "Road trip time.";
     const wordEm = sc >= 4500 ? "🧭" : sc >= 3500 ? "🎉" : sc >= 2500 ? "👍" : sc >= 1500 ? "💪" : "🚗";
@@ -366,7 +637,7 @@
   });
 
   $("kicker").textContent = date === today ? "🎮 Free daily game" : `📅 Past set · ${pretty(date)}`;
-  $("credit").textContent = P.credit + " Map: US Census via us-atlas.";
+  $("credit").textContent = P.credit + (useGlobe ? " Imagery: NASA Visible Earth (Blue Marble)." : "") + " State lines: US Census via us-atlas.";
   if (mine().g.length && !isDone(mine())) view = "intro";
   render();
   renderSide();
