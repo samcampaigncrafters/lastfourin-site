@@ -218,10 +218,43 @@
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAll(); });
   }
 
+  // One inbox for privacy requests, accessibility problems and copyright notices (the legal pages read it from here).
+  const CONTACT = "hello@playbubble.app";
+
+  // Terms, Privacy, Accessibility and Contact links on every page. A page with its own footer text keeps it and gets the links added.
   function footer() {
     const f = document.querySelector("footer.foot");
-    if (f && !f.textContent.trim()) f.innerHTML = `bubble is free to play. No purchase necessary. Not affiliated with the NFL, the NCAA, the College Football Playoff, the AP or any team. Team names belong to their owners. <a href="/terms/">Terms</a> · <a href="/privacy/">Privacy</a>`;
+    if (!f) return;
+    const links = `<span class="foot-links"><a href="/terms/">Terms</a> · <a href="/privacy/">Privacy</a> · <a href="/accessibility/">Accessibility</a> · <a href="mailto:${CONTACT}">Contact</a></span>`;
+    if (!f.textContent.trim()) f.innerHTML = `bubble is free to play for fun. No purchase necessary, no real-money betting, no prizes, and nothing here is betting advice. Not affiliated with or endorsed by the NFL, NBA, NHL, MLB, NCAA, the College Football Playoff, the AP or any team. Team names belong to their owners. ${links}`;
+    else if (!f.querySelector('a[href="/accessibility/"]')) f.insertAdjacentHTML("beforeend", links);
+    document.querySelectorAll("[data-contact]").forEach((a) => { a.href = `mailto:${CONTACT}`; a.textContent = CONTACT; });
   }
+
+  // Keyboard: a "Skip to content" link first in the page, and Tab stays inside whichever pop-up is open.
+  function skipLink() {
+    const main = document.querySelector("main");
+    if (!main || document.querySelector(".skip")) return;
+    if (!main.id) main.id = "lfi-main"; // not "main": the money page already uses that id for its board
+    document.body.insertAdjacentHTML("afterbegin", `<a class="skip" href="#${main.id}">Skip to content</a>`);
+    // main only takes focus for the jump: a lasting tabindex would make cloud.js treat every click inside it as "play".
+    document.querySelector(".skip").addEventListener("click", (e) => {
+      e.preventDefault();
+      if (!main.hasAttribute("tabindex")) { main.setAttribute("tabindex", "-1"); main.addEventListener("blur", () => main.removeAttribute("tabindex"), { once: true }); }
+      main.focus(); main.scrollIntoView();
+    });
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Tab") return;
+    const dlgs = [...document.querySelectorAll('[role="dialog"][aria-modal="true"]')].filter((d) => d.getClientRects().length && !d.closest("[hidden]"));
+    const dlg = dlgs[dlgs.length - 1]; if (!dlg) return;
+    const f = [...dlg.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter((x) => x.getClientRects().length);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (!dlg.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+    else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
 
   function toast(msg) {
     let t = document.querySelector(".toast");
@@ -490,11 +523,12 @@
 
   window.LFI = { $, esc, now, local, selectionDay, countdown, toast, entries, renderEntry, share, shareUrl, readShare, copyText,
                  KIND, teamMark, cfbTeam, scoreboard, thisWeek, fillColor, firstRankedKickoff, stripHTML, fmtTime, fmtShort, normalize,
-                 setMe(p) { me = p; header(); countChallenges(); }, me: () => me, countChallenges };
+                 setMe(p) { me = p; header(); countChallenges(); }, me: () => me, countChallenges, CONTACT };
 
   paintThemeColor();
   header();
   footer();
+  skipLink();
   // Accounts (sign-in, cloud-saved picks, profiles). Pages that need it first can include it themselves.
   if (!document.querySelector('script[src="/assets/cloud.js"]')) {
     const s = document.createElement("script"); s.src = "/assets/cloud.js"; document.head.appendChild(s);

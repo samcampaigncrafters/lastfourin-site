@@ -32,7 +32,7 @@
       const cut = opts.cut && i === opts.cut.after ? `<li class="rk-cut" aria-hidden="true">${esc(opts.cut.label)}</li>` : "";
       return `${cut}<li class="rk-row${i === open ? " open" : ""}" data-i="${i}" data-k="${esc(id)}" style="--tc:${esc(t.color)}">
         <div class="rk-main">
-          <button class="rk-handle" type="button" data-drag aria-label="Drag ${esc(t.name)} to reorder">${HANDLE}</button>
+          <button class="rk-handle" type="button" data-drag aria-label="Move ${esc(t.name)}, now number ${i + 1}. Drag, or use the up and down arrow keys" aria-keyshortcuts="ArrowUp ArrowDown">${HANDLE}</button>
           <span class="rk-n">${i + 1}</span>
           ${LFI.teamMark(t.abbr, t.nick) || "<span></span>"}
           <span class="rk-name"><b>${esc(t.name)}</b><small>${esc(t.sub || "")}</small>${t.line ? `<small class="rk-line">${t.line}</small>` : ""}</span>
@@ -95,6 +95,17 @@
       }
       if (e.target.closest("[data-more]")) return toggle(i);
       if (e.target.closest(".rk-right button")) { const b = e.target.closest(".rk-right button"); if (opts.onAct) opts.onAct(b.dataset.act, i, b); return; }
+    });
+    // Keyboard: arrow keys on a row's dots move it, and focus follows the team to its new spot.
+    list.addEventListener("keydown", (e) => {
+      const h = e.target.closest("[data-drag]"); if (!h || isLocked()) return;
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+      e.preventDefault();
+      if (LFI.needAccount && !LFI.needAccount("contest")) return; // same account wall as tapping Up or Down
+      const i = +h.closest(".rk-row").dataset.i, to = e.key === "ArrowUp" ? i - 1 : i + 1;
+      if (to < 0 || to >= opts.order().length) return;
+      move(i, to, false); toast(`${opts.team(opts.order()[to]).name} moved to #${to + 1}`);
+      const nb = list.querySelector(`.rk-row[data-i="${to}"] [data-drag]`); if (nb) nb.focus(); // the page re-renders the list synchronously
     });
     list.addEventListener("dblclick", (e) => {
       const li = e.target.closest(".rk-row");

@@ -87,7 +87,7 @@
     return false;
   };
   // Pages anyone can use signed out; everything else is a game.
-  const OPEN = /^\/(signin|account|terms|privacy|mod|404)(\/|\.html|$)/;
+  const OPEN = /^\/(signin|account|terms|privacy|accessibility|mod|404)(\/|\.html|$)/;
   const PAGE_WHY = [[/^\/(pickem|college|nba|nhl|mlb|ncaab|pools)\//, "picks"], [/^\/money\//, "money"], [/^\/(bracket|ap-poll)\//, "contest"],
                     [/^\/(friends|challenges)\//, "friends"]];
   const CHROME = "header, footer, .nav, .nav-leagues, .mmenu, .dd-panel, .ov, .toast, [data-free]";
@@ -111,9 +111,12 @@
   const why = () => (PAGE_WHY.find(([re]) => re.test(location.pathname)) || [])[1] || "play";
   function stop(ev, el) {
     ev.preventDefault(); ev.stopImmediatePropagation();
-    if (document.activeElement && document.activeElement !== document.body && !document.activeElement.closest(CHROME)) document.activeElement.blur();
-    if (ev.type !== "click") { if (!pop || pop.hidden) accountPop(el.dataset.account || why(), el.dataset.next); return; }
-    LFI.needAccount(el.dataset.account || why(), el.dataset.next);
+    // A keyboard user keeps their place (the pop-up hands focus back here); pointer focus is dropped so phones don't open the keyboard.
+    const keys = ev.type === "keydown" || (ev.type === "click" && ev.detail === 0), back = document.activeElement;
+    if (!keys && document.activeElement && document.activeElement !== document.body && !document.activeElement.closest(CHROME)) document.activeElement.blur();
+    if (ev.type !== "click") { if (!pop || pop.hidden) accountPop(el.dataset.account || why(), el.dataset.next); }
+    else LFI.needAccount(el.dataset.account || why(), el.dataset.next);
+    if (keys && pop && back && back !== document.body) pop.lastFocus = back;
   }
   document.addEventListener("click", (ev) => {
     if (!signedOut()) return;
@@ -121,11 +124,21 @@
     if (el) stop(ev, el);
   }, true);
   // Fields and drop-downs react before a click (focus, opening the list, dragging), so catch those too.
+  let lastPointer = 0;
   document.addEventListener("pointerdown", (ev) => {
+    lastPointer = Date.now();
     const el = signedOut() && walled(ev.target);
     if (el && (el.matches("input, select, textarea, [contenteditable], [draggable=true]") || el.closest("[draggable=true]"))) stop(ev, el);
   }, true);
+  // Keyboard users can Tab through a game page signed out (focusing a field used to pop this up and lose their place, a
+  // keyboard trap); the pop-up comes when they start typing or changing a field instead.
   document.addEventListener("focusin", (ev) => {
+    if (Date.now() - lastPointer > 800) return;
+    const el = signedOut() && walled(ev.target);
+    if (el && el.matches("input, select, textarea, [contenteditable]")) stop(ev, el);
+  }, true);
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Tab" || ev.key === "Escape" || ev.key === "Shift" || ev.metaKey || ev.ctrlKey || ev.altKey) return;
     const el = signedOut() && walled(ev.target);
     if (el && el.matches("input, select, textarea, [contenteditable]")) stop(ev, el);
   }, true);

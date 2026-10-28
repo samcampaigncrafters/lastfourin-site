@@ -56,7 +56,7 @@
       <button class="btn google" type="button" id="g">${G}Continue with Google</button>
       <div class="or">or get a sign-in link by email</div>
       <form id="ef"><div class="field"><label for="em">Email</label><input id="em" type="email" autocomplete="email" inputmode="email" required placeholder="you@example.com"></div>
-        <p class="err" id="eerr"></p>
+        <p class="err" id="eerr" role="alert"></p>
         <button class="btn navy block" type="submit" style="min-height:48px">Email me a sign-in link</button></form>
       <p class="empty" style="margin-top:14px">You must be 13 or older. By continuing you agree to the <a href="/terms/">Terms</a> and <a href="/privacy/">Privacy Policy</a>.</p>`;
     $("g").onclick = async () => { try { await cloud.signInGoogle(next); } catch (e) { toast(e.message); } };
@@ -85,12 +85,12 @@
       <div class="field"><label for="hd">Handle</label><div class="handle-prefix"><span>@</span><input id="hd" maxlength="20" autocomplete="username" autocapitalize="off" spellcheck="false" value="${esc(guess.length >= 3 ? guess : "")}" required></div>
         <div class="hint">3 to 20 letters, numbers or underscores. Your profile lives at playbubble.app/u/<b id="hdp">${esc(guess || "you")}</b></div></div>
       <div class="field"><label for="dn">Name <span class="muted">(optional)</span></label><input id="dn" maxlength="40" autocomplete="nickname" value="${esc(p.display_name || "")}"></div>
-      <div class="field"><label>Birthday</label><div class="field-2">
+      <div class="field" role="group" aria-labelledby="bdl" aria-describedby="bdh"><label id="bdl">Birthday</label><div class="field-2">
         <select id="bm" aria-label="Birth month"><option value="">Month</option>${months.map((m, i) => `<option value="${i + 1}">${m}</option>`).join("")}</select>
         <select id="by" aria-label="Birth year"><option value="">Year</option>${Array.from({ length: 101 }, (_, i) => y - i).map((v) => `<option>${v}</option>`).join("")}</select></div>
-        <div class="hint">Only used to check your age. We don't store it.</div></div>
-      <label class="check"><input type="checkbox" id="tos"> <span>I agree to the <a href="/terms/" target="_blank">Terms</a> and <a href="/privacy/" target="_blank">Privacy Policy</a>.</span></label>
-      <p class="err" id="ferr"></p>
+        <div class="hint" id="bdh">Only used to check your age. We don't store it.</div></div>
+      <label class="check"><input type="checkbox" id="tos"> <span>I agree to the <a href="/terms/" target="_blank">Terms<span class="sr"> (opens in a new tab)</span></a> and <a href="/privacy/" target="_blank">Privacy Policy<span class="sr"> (opens in a new tab)</span></a>.</span></label>
+      <p class="err" id="ferr" role="alert"></p>
       <button class="btn gold big block" type="submit">Finish</button>
       <p class="empty" style="margin-top:12px">Signed in as ${esc(u.email || "")}. <button class="linkish" type="button" id="so" style="padding:0">Not you?</button></p></form>`;
     $("hd").oninput = () => { $("hdp").textContent = $("hd").value || "you"; };

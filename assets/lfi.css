@@ -794,3 +794,19 @@ h1 .em, h2 .em, .disp .em { font-size: .8em; top: -.06em; }
 [data-theme="light"] .dd-panel, [data-theme="light"] .mmenu { box-shadow: 8px 8px 0 #000; }
 /* Light mode accent is the field purple, so accent text sitting ON a purple field goes white instead of vanishing. */
 [data-theme="light"] :is(.fh .kp b, .hero .kicker, .banner .kicker, .entry-h .kicker, .count b) { color: #fff; }
+
+/* ---------- Accessibility (2026-10-28 compliance pass
+, WCAG 2.1 AA; findings in work/compliance-REPORT.md) ----------
+   Skip link, focus you can always see, form-field edges at 3:1, and a loss red dark enough for small text in light mode. */
+.skip { position: absolute; left: 12px; top: -60px; z-index: 100; background: var(--accent); color: var(--accent-ink); font-weight: 800;
+  padding: 10px 14px; border-radius: var(--r); text-decoration: none; }
+.skip:focus { top: 10px; outline: 2px solid #fff; outline-offset: 2px; }
+main:focus { outline: none; } /* the skip link moves focus here; the page itself isn't a control */
+:root { --field-line: #7a6bb8; }                 /* input edges: 3.9:1 on cards (the old --line-2 was 1.8:1) */
+:root[data-theme="light"] { --field-line: #8d7fd0; --loss: #c0123f; }  /* loss red 6.2:1 on white (was 4.4:1 on grey) */
+[data-theme="light"] .nav { --field-line: #7a6bb8; }
+.weekbar select, .search, .field input, .field select, .field textarea, .field-row input, .post-box textarea, .cmt-form textarea, .rk-act select { border-color: var(--field-line); }
+:is(input, select, textarea, button, a, [tabindex]):focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.foot .foot-links { display: block; margin-top: 6px; }
+.foot .foot-links a { display: inline-block; padding: 5px 0; } /* bigger tap targets on phones */
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; } /* screen readers only */
