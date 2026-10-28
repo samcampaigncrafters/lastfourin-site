@@ -30,6 +30,17 @@
   const markReady = () => { if (!cloud.ready.done) { cloud.ready.done = true; readyResolve(cloud); } };
   if (!on) { markReady(); return; }
 
+  // Visitor counter (supabase/60_visits.sql): one anonymous ping per page view on the live site. No cookies,
+  // nothing kept in the browser; the database counts people with a daily-salted hash and never stores an IP.
+  if (location.hostname === "lastfourin.com" && !navigator.webdriver) {
+    let ref = "";
+    try { ref = document.referrer ? new URL(document.referrer).hostname : ""; } catch (e) { /* bad referrer */ }
+    fetch(SUPABASE_URL + "/rest/v1/rpc/log_visit", {
+      method: "POST", keepalive: true, headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
+      body: JSON.stringify({ p_path: location.pathname, p_ref: ref || null }),
+    }).catch(() => {});
+  }
+
   // Surface a Supabase error as one plain sentence. Our own database messages are already written for people.
   function fail(error, fallback) {
     if (!error) return;
@@ -264,6 +275,12 @@
 
   // ---- Moderators ----
   cloud.isAdmin = async () => { if (!cloud.user) return false; const { data } = await cloud.sb.rpc("is_admin"); return !!data; };
+  // Visitor numbers for /mod/stats/ (admins only; the database refuses everyone else).
+  cloud.siteStats = async (days) => {
+    const [d, p, r] = await Promise.all(["site_stats", "site_top_pages", "site_top_refs"].map((f) => cloud.sb.rpc(f, { p_days: days })));
+    [d, p, r].forEach((x) => fail(x.error, "Couldn't load the visitor numbers."));
+    return { days: d.data || [], pages: p.data || [], refs: r.data || [] };
+  };
   cloud.modQueue = async () => { const { data, error } = await cloud.sb.rpc("mod_queue"); fail(error); return data || []; };
   cloud.modBan = async (uid, banned) => { const { error } = await cloud.sb.rpc("mod_ban", { p_user: uid, p_banned: banned }); fail(error); };
   cloud.modHideEntry = async (id, hidden) => { const { error } = await cloud.sb.rpc("mod_hide_entry", { p_id: id, p_hidden: hidden }); fail(error); };

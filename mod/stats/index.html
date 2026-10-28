@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Visitors · Last Four In</title>
+<meta name="description" content="Site visitor numbers.">
+<meta property="og:title" content="Visitors · Last Four In">
+<meta property="og:description" content="Site visitor numbers.">
+<meta property="og:url" content="https://lastfourin.com/mod/stats/">
+<meta property="og:site_name" content="Last Four In">
+<meta name="theme-color" content="#0d0820">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/assets/lfi.css">
+<script src="/assets/theme.js"></script>
+<style>
+.vs-range { display: flex; gap: 8px; margin: 0 0 16px; }
+.vs-range .btn[aria-pressed="true"] { background: var(--navy); color: #fff; border-color: var(--navy); }
+.vs-tot { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 0 16px; }
+.vs-tot div { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }
+.vs-tot b { display: block; font-family: var(--f-display); font-size: 30px; line-height: 1.1; }
+.vs-tot span { color: var(--muted); font-size: 13px; font-weight: 600; }
+.vs-row { display: grid; grid-template-columns: 1fr 64px 64px; gap: 8px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.vs-row:first-child { border-top: 0; color: var(--muted); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+.vs-row > :not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+.vs-row > :first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vs-bar { height: 6px; border-radius: 3px; background: var(--accent); margin-top: 4px; }
+.vs-sec { margin: 0 0 16px; }
+</style>
+</head>
+<body>
+
+<header class="nav"></header>
+
+<main class="page" style="max-width:760px">
+  <div class="head"><div><div class="kicker">Moderators</div><h1 class="disp">Visitors</h1>
+    <p>Our own counter: no cookies, no IPs kept. A visitor is one person on one day, so the total adds up days. Bots are left out.</p></div></div>
+  <div class="vs-range" id="range">
+    <button class="btn" type="button" data-d="1">Today</button>
+    <button class="btn" type="button" data-d="7">7 days</button>
+    <button class="btn" type="button" data-d="30" aria-pressed="true">30 days</button>
+    <button class="btn" type="button" data-d="90">90 days</button>
+  </div>
+  <div id="out"><p class="empty">Loading…</p></div>
+</main>
+<footer class="foot"></footer>
+
+<script src="/assets/lfi.js"></script>
+<script src="/assets/cloud.js"></script>
+<script>
+(function () {
+  const { $, esc, cloud } = LFI;
+  let days = 30;
+  const n = (x) => Number(x).toLocaleString();
+  const rows = (head, list, name) => `<div class="vs-row"><span>${head}</span><span>Views</span><span>People</span></div>` +
+    (list.length ? list.map((r) => `<div class="vs-row"><span>${esc(name(r))}</span><span>${n(r.views)}</span><span>${n(r.visitors)}</span></div>`).join("")
+      : `<div class="vs-row"><span class="empty" style="padding:0">Nothing yet</span><span></span><span></span></div>`);
+  const sec = (title, inner) => `<section class="card vs-sec"><div class="card-h"><h2>${title}</h2></div><div class="card-b">${inner}</div></section>`;
+  async function load() {
+    if (!cloud.on || !cloud.user) { $("out").innerHTML = `<p class="empty">Sign in with a moderator account to see visitor numbers. <a href="/signin/?next=/mod/stats/">Sign in</a></p>`; return; }
+    if (!(await cloud.isAdmin())) { $("out").innerHTML = `<p class="empty">This account isn't a moderator.</p>`; return; }
+    let s;
+    try { s = await cloud.siteStats(days); } catch (e) { $("out").innerHTML = `<p class="empty">${esc(e.message)}</p>`; return; }
+    const views = s.days.reduce((a, r) => a + Number(r.views), 0), ppl = s.days.reduce((a, r) => a + Number(r.visitors), 0);
+    const top = Math.max(1, ...s.days.map((r) => Number(r.visitors)));
+    const fmtDay = (d) => new Date(d + "T12:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    $("out").innerHTML = `<div class="vs-tot">
+        <div><b>${n(ppl)}</b><span>People (by day)</span></div>
+        <div><b>${n(views)}</b><span>Page views</span></div>
+        <div><b>${ppl ? (views / ppl).toFixed(1) : "0"}</b><span>Pages per person</span></div></div>` +
+      sec("By day", `<div class="vs-row"><span>Day</span><span>Views</span><span>People</span></div>` + (s.days.length ? s.days.map((r) =>
+        `<div class="vs-row"><span>${fmtDay(r.day)}<div class="vs-bar" style="width:${Math.round(Number(r.visitors) / top * 100)}%"></div></span><span>${n(r.views)}</span><span>${n(r.visitors)}</span></div>`).join("")
+        : `<div class="vs-row"><span class="empty" style="padding:0">Nothing yet</span><span></span><span></span></div>`)) +
+      sec("Top pages", rows("Page", s.pages, (r) => r.path)) +
+      sec("Where they came from", rows("Site", s.refs, (r) => r.ref_host));
+  }
+  $("range").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-d]"); if (!b) return;
+    days = +b.dataset.d;
+    $("range").querySelectorAll("[data-d]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    load();
+  });
+  cloud.ready.then(() => cloud.onChange((c, what) => { if (what !== "entries") load(); }));
+})();
+</script>
+</body>
+</html>
