@@ -72,6 +72,7 @@
   .slot b { display: block; font-size: 16px; }
   .slot span { color: var(--muted); font-size: 13px; }
   .slot .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: end; }
+  @media (max-width: 560px) { .slot { grid-template-columns: minmax(0, 1fr); } .slot .acts { justify-content: start; } }
   .game { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 10px 12px; border-top: 1px solid var(--line); cursor: pointer; background: none; border-left: 0; border-right: 0; border-bottom: 0; width: 100%; text-align: left; color: var(--ink); }
   .game:first-child { border-top: 0; }
   .game:hover { background: var(--card-2); }
@@ -236,7 +237,7 @@
     <div>
       <div class="kicker" id="kick">NFL · Single player</div>
       <h1 class="disp" id="title">Franchise Simulator</h1>
-      <p id="lede">Redraft every current NFL player into a new franchise, or take over a real roster from any season since 2002. Play the season and the playoffs, then run the offseason. Saved in this browser.</p>
+      <p id="lede">Redraft every current NFL player into a new franchise, or take over a real roster from any season since 2002. Play the season and the playoffs, then run the offseason. Saved to your account, so it opens in any browser you sign in on.</p>
       <p id="allF" hidden style="margin-top:6px"><a class="lnk" href="/franchise/?new">All my franchises</a></p>
     </div>
   </div>
@@ -288,11 +289,74 @@
   let lg = null, slot = -1, tab = "week", posF = "ALL", q = "", showN = 60, boardSort = "board", sel = null, live = null;
   let ML = null, sticky = null; // ML: the friends league open in this tab (see "Friends leagues" below)
 
-  // ---- Saves: three slots in this browser. A save is the seed + your moves; loading replays them. ----
+  // ---- Saves: three slots per account. A save is the seed + your moves; loading replays them. ----
+  // The account's copy lives on the server (supabase/68_franchise_league.sql, franchise_saves); this browser keeps a
+  // copy as a cache. On load the two merge (syncAccount); every save and delete writes through (queueSync).
   const store = {
     read() { try { return JSON.parse(localStorage.getItem(KEY)) || { slots: [null, null, null] }; } catch { return { slots: [null, null, null] }; } },
     write(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); return true; } catch { return false; } },
   };
+  const savedAt = (sv) => (sv && sv.meta && sv.meta.updated) || 0;
+  const signedIn = () => { const c = LFI.cloud; return !!(c && c.on && c.user); };
+  // Write-through: franchises waiting to go up (seed -> true for the latest save, or the time it was deleted), sent a
+  // moment after the last change so a run of moves is one write. A failed write stays queued; the next merge catches up.
+  const sync = { q: {}, t: null, busy: null };
+  function queueSync(seed, del) {
+    if (!seed || !signedIn()) return;
+    sync.q[seed] = del || true; clearTimeout(sync.t); sync.t = setTimeout(flushSync, 1200);
+  }
+  async function flushSync() {
+    clearTimeout(sync.t); if (sync.busy) await sync.busy;
+    const q = sync.q; sync.q = {};
+    if (!Object.keys(q).length || !signedIn()) return;
+    sync.busy = (async () => {
+      for (const [seed, v] of Object.entries(q)) {
+        try {
+          if (v !== true) { await rpc("franchise_save_delete", { p_seed: seed, p_at: v }); continue; }
+          const sv = store.read().slots.find((x) => x && x.seed === seed);
+          if (sv && await rpc("franchise_save_put", { p_save: sv }) === "full") toast("Your account already holds six franchises, so this one is saved in this browser only. Delete one to make room.");
+        } catch (err) { console.error(err); if (!(seed in sync.q)) sync.q[seed] = v; }
+      }
+    })();
+    await sync.busy; sync.busy = null;
+    if (Object.keys(sync.q).length) sync.t = setTimeout(flushSync, 15000);
+  }
+  document.addEventListener("visibilitychange", () => { if (document.hidden) flushSync(); });
+  // Merge this browser's franchises with the account's. A franchise is known by its seed: the same one on both sides
+  // keeps the newer copy (a deleted one counts by when it was deleted); one only this browser has goes up, so nothing
+  // is lost the first time a browser signs in. Each keeps its slot here where it can; new arrivals take empty slots.
+  // Returns true when this browser's slots changed.
+  async function syncAccount() {
+    const c = LFI.cloud; if (!c || !c.on) return false;
+    await c.ready; if (!signedIn()) return false;
+    await flushSync();
+    let rows; try { rows = await rpc("franchise_saves_get", {}); } catch (err) { console.error(err); return false; }
+    if (!Array.isArray(rows)) return false;
+    const s = store.read(), acct = new Map(rows.map((r) => [r.seed, r])), gone = s.gone || {};
+    const lastSeed = s.last != null && s.slots[s.last] ? s.slots[s.last].seed : null;
+    const out = s.slots.map((sv) => {
+      if (!sv) return null;
+      const r = acct.get(sv.seed);
+      if (!r || savedAt(sv) > r.updated) { sync.q[sv.seed] = true; return sv; } // only here, or newer here: it goes up
+      return r.save || null; // the account's copy is newer, or it was deleted since
+    });
+    for (const [seed, at] of Object.entries(gone)) { // deleted here while the write didn't get through
+      const r = acct.get(seed);
+      if (!r || at > r.updated) { sync.q[seed] = at; const k = out.findIndex((x) => x && x.seed === seed); if (k >= 0) out[k] = null; }
+    }
+    for (const r of rows) {
+      if (!r.save || out.some((x) => x && x.seed === r.seed) || (gone[r.seed] && gone[r.seed] > r.updated)) continue;
+      const k = out.findIndex((x) => !x); if (k >= 0) out[k] = r.save; else out.push(r.save);
+    }
+    while (out.length > 3 && !out[out.length - 1]) out.pop();
+    while (out.length < 3) out.push(null);
+    const changed = JSON.stringify(out) !== JSON.stringify(s.slots);
+    const li = lastSeed ? out.findIndex((x) => x && x.seed === lastSeed) : -1;
+    s.slots = out; s.last = li >= 0 ? li : null; delete s.gone;
+    store.write(s);
+    await flushSync();
+    return changed;
+  }
   function summary() {
     const t = lg.teams[lg.user], h = lg.history[lg.history.length - 1];
     const where = lg.phase === "redraft" ? "Redraft in progress" : lg.phase === "season" ? `Week ${lg.week} of ${weeks()} · ${E.record(lg, lg.user)}`
@@ -301,10 +365,13 @@
   }
   function persist() {
     if (slot < 0) return;
-    const s = store.read();
-    s.slots[slot] = { ...E.saveOf(lg), meta: { ...summary(), updated: Date.now() } };
+    const s = store.read(), old = s.slots[slot], sv = E.saveOf(lg);
+    // Opening a save rewrites it but changes nothing, so it keeps its time (an old copy mustn't look new to the merge).
+    const same = old && old.seed === sv.seed && old.v === sv.v && old.moves && old.moves.length === sv.moves.length;
+    s.slots[slot] = { ...sv, meta: { ...summary(), updated: same ? savedAt(old) || Date.now() : Date.now() } };
     s.last = slot;
     if (!store.write(s)) toast("Couldn't save in this browser. Download your save to keep it.");
+    if (!same) queueSync(sv.seed);
   }
   function move(m) {
     if (ML) { const p = mlSend(m); render(); p.then(() => { if (ML && lg && !live) render(); }); return true; }
@@ -335,10 +402,10 @@
   function head(kick, title, lede) { $("kick").textContent = kick; $("title").textContent = title; $("lede").textContent = lede || ""; $("lede").hidden = !lede; $("allF").hidden = !lg && !ML; }
 
   // ---- Start screen: save slots ----
-  function home() {
+  function home(noSync) {
     stopMl(); lg = null; slot = -1;
     if (location.search.includes("league=")) history.replaceState(null, "", "/franchise/?new");
-    head("NFL · Single player", "Franchise Simulator", "Redraft every current NFL player into a new franchise, or take over a real roster from any season since 2002. Play the season and the playoffs, then run the offseason. Saved in this browser.");
+    head("NFL · Single player", "Franchise Simulator", "Redraft every current NFL player into a new franchise, or take over a real roster from any season since 2002. Play the season and the playoffs, then run the offseason. Saved to your account, so it opens in any browser you sign in on.");
     const s = store.read();
     $("body").innerHTML = `<div class="grid2"><div class="stack">
       <section class="card"><div class="card-h"><h2 class="disp">Friends leagues</h2><button class="btn gold" data-mlnew>New friends league</button></div><div class="card-b"><div class="slots" id="mlList"><p class="empty" style="margin:0">Loading your leagues…</p></div></div></section>
@@ -366,7 +433,11 @@
       // Delete asks on the page (tap twice) rather than with confirm(), which some browsers and in-app views block.
       if (b.dataset.del) {
         if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Tap again to delete"; b.classList.add("gold"); setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = "Delete"; b.classList.remove("gold"); } }, 4000); return; }
-        const s = store.read(); s.slots[+b.dataset.del] = null; if (s.last === +b.dataset.del) s.last = null; store.write(s); home();
+        const s = store.read(), i = +b.dataset.del, at = Date.now(), seed = s.slots[i] && s.slots[i].seed;
+        if (seed) (s.gone = s.gone || {})[seed] = at;
+        const squeeze = s.slots.length > 3; // more than three (two browsers each started one): close the gap
+        if (squeeze) s.slots.splice(i, 1); else s.slots[i] = null;
+        s.last = s.last === i ? null : squeeze && s.last > i ? s.last - 1 : s.last; store.write(s); queueSync(seed, at); home(true);
       }
     };
     $("loadF").onchange = async (e) => {
@@ -375,10 +446,13 @@
         const sv = JSON.parse(await f.text());
         if (!sv.seed || !sv.settings || !Array.isArray(sv.moves)) throw new Error();
         const s = store.read(); let i = s.slots.findIndex((x) => !x); if (i < 0) { if (!confirm("All three slots are full. Replace slot 1?")) return; i = 0; }
-        s.slots[i] = sv; store.write(s); open(i);
+        const old = s.slots[i]; if (old && old.seed !== sv.seed) { (s.gone = s.gone || {})[old.seed] = Date.now(); queueSync(old.seed, s.gone[old.seed]); }
+        sv.meta = { ...(sv.meta || {}), updated: Date.now() }; s.slots[i] = sv; store.write(s); queueSync(sv.seed); open(i);
       } catch { toast("That file isn't a Franchise Simulator save."); }
     };
     mlList();
+    // Another browser may have saved since: merge and redraw the slots if anything changed.
+    if (!noSync) syncAccount().then((changed) => { if (changed && !lg && !ML && $("mlList")) home(true); });
   }
   function download(i) {
     const sv = store.read().slots[i]; if (!sv) return;
@@ -1679,12 +1753,13 @@
     try { await loadScript("/franchise/data/players.js"); } catch (e) { gate("error"); return; }
     DATA = window.FRANCHISE_DATA; fill(DATA.players, "players");
     // Open the last franchise straight away if there is one; otherwise the start screen.
+    await syncAccount();
     const s0 = store.read();
     const pc = new URLSearchParams(location.search).get("party");
     if (pc) return joinParty(pc);
     const lc = new URLSearchParams(location.search).get("league");
     if (lc) return mlOpen(lc);
-    if (new URLSearchParams(location.search).has("new") || s0.last == null || !s0.slots[s0.last]) home(); else open(s0.last);
+    if (new URLSearchParams(location.search).has("new") || s0.last == null || !s0.slots[s0.last]) home(true); else open(s0.last);
   })();
 })();
 </script>
