@@ -4,7 +4,11 @@
 (function () {
   // The menu, grouped by league. Each group is one dropdown on desktop and one section of the phone menu.
   const MENU = [
-    { label: "NFL", items: [["nfl", "/pickem/", "NFL Pick'em", "Pick every game straight up"]] },
+    { label: "NFL", items: [
+      ["nfl", "/pickem/", "NFL Pick'em", "Pick every game straight up"],
+      ["drafts", "/drafts/", "Drafts", "Draft any slice of NFL history"],
+      ["redraft", "/drafts/classes.html", "Draft Classes", "Mock or redraft any class since 1999"],
+    ] },
     { label: "NCAAF", items: [
       ["cfb", "/college/", "College Pick'em", "Every game with a Top 25 team"],
       ["ap", "/ap-poll/", "Predict the AP Poll", "Call Sunday's Top 25"],
@@ -14,6 +18,7 @@
     { label: "Trivia", items: [
       ["trivia", "/trivia/", "Daily Five", "Five questions, same for everyone"],
       ["names", "/trivia/names.html", "Name Them All", "How many can you name?"],
+      ["grid", "/grid/", "Grid Race", "Race a friend for 25 squares"],
     ] },
   ];
   const CARET = '<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 4l4 4 4-4"/></svg>';
@@ -42,6 +47,7 @@
   }
   const themeLabel = () => theme() === "light" ? "Dark mode" : "Light mode";
   const FRIENDS = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.4"/><path d="M2.8 20c.6-3.6 3.1-5.6 6.2-5.6s5.6 2 6.2 5.6"/><path d="M15.5 4.9a3.3 3.3 0 0 1 0 6.3M18 14.7c1.9.7 3 2.5 3.3 5.3"/></svg>';
+  const SWORDS = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M14.5 6.5 18 3h3v3l-3.5 3.5M5 14l4 4M7 17l-3 3M3 19l2 2"/></svg>';
   const LOGO = '<svg width="26" height="26" viewBox="0 0 30 30" aria-hidden="true"><rect x="2" y="2" width="11.5" height="11.5" rx="2" fill="currentColor"/><rect x="16.5" y="2" width="11.5" height="11.5" rx="2" fill="currentColor"/><rect x="2" y="16.5" width="11.5" height="11.5" rx="2" fill="currentColor"/><rect x="16.5" y="16.5" width="11.5" height="11.5" rx="2" fill="#ff3dbb"/></svg>';
 
   const $ = (id) => document.getElementById(id);
@@ -87,6 +93,14 @@
   let me = null;
   // Friend requests waiting on me, counted by cloud.js; shows as a badge on the Friends button.
   const inbox = () => (window.LFI && LFI.cloud && LFI.cloud.inbox) || 0;
+  // Challenges from friends waiting on me (games.js / 50_games.sql); shows as a badge on the Challenges button.
+  let challengesWaiting = 0;
+  async function countChallenges() {
+    const sb = window.LFI && LFI.cloud && LFI.cloud.sb;
+    if (!sb || !me || !me.onboarded) { challengesWaiting = 0; return; }
+    try { const { data, error } = await sb.rpc("challenge_count"); if (!error) challengesWaiting = data || 0; } catch (e) {}
+    header();
+  }
   const myName = () => (me && (me.display_name || me.username)) || local.get("lfi-name", "");
 
   function header() {
@@ -109,6 +123,7 @@
                  : window.LFI_CLOUD_ON ? `<a class="btn si" href="/signin/"${active === "signin" ? ' aria-current="page"' : ""}>Sign in</a>`
                  : `<a class="btn si" href="/account/"${active === "account" ? ' aria-current="page"' : ""}>My picks</a>`}
           ${me && me.onboarded ? `<a class="fbtn${active === "friends" ? " on" : ""}" href="/friends/" title="Friends" aria-label="Friends${inbox() ? `, ${inbox()} new request${inbox() > 1 ? "s" : ""}` : ""}">${FRIENDS}${inbox() ? `<i>${inbox() > 9 ? "9+" : inbox()}</i>` : ""}</a>` : ""}
+          ${me && me.onboarded ? `<a class="fbtn${active === "challenges" ? " on" : ""}" href="/challenges/" title="Challenges" aria-label="Challenges${challengesWaiting ? `, ${challengesWaiting} waiting` : ""}">${SWORDS}${challengesWaiting ? `<i>${challengesWaiting > 9 ? "9+" : challengesWaiting}</i>` : ""}</a>` : ""}
           <button type="button" class="tbtn" data-theme-flip aria-label="${themeLabel()}" title="${themeLabel()}">${theme() === "light" ? MOON : SUN}</button>
           <button type="button" class="mbtn" aria-expanded="false" aria-controls="mmenu" aria-label="Menu">${BURGER}</button>
         </div>
@@ -120,6 +135,7 @@
           ${me && me.onboarded ? `<a class="mm-home${active === "profile" ? " on" : ""}" href="/u/?h=${encodeURIComponent(me.username)}"><b>My profile</b><span>@${esc(me.username)}</span></a>`
             : window.LFI_CLOUD_ON ? `<a class="mm-home" href="/signin/"><b>Sign in</b><span>Keep your picks on every device</span></a>` : ""}
           ${me && me.onboarded ? `<a class="mm-home${active === "friends" ? " on" : ""}" href="/friends/"><b>Friends${inbox() ? ` <i class="mm-badge">${inbox()}</i>` : ""}</b><span>${inbox() ? `${inbox()} new friend request${inbox() > 1 ? "s" : ""}` : "Add friends and compare stats"}</span></a>` : ""}
+          ${me && me.onboarded ? `<a class="mm-home${active === "challenges" ? " on" : ""}" href="/challenges/"><b>Challenges${challengesWaiting ? ` <i class="mm-badge">${challengesWaiting}</i>` : ""}</b><span>${challengesWaiting ? `${challengesWaiting} waiting on you` : "Take on your friends"}</span></a>` : ""}
           <button type="button" class="mm-home mm-theme" data-theme-flip>${theme() === "light" ? MOON : SUN}<b>${themeLabel()}</b></button>
       </div>`;
     if (h.dataset.bound) return;
@@ -181,6 +197,7 @@
     ap: { label: "AP Poll Prediction", noun: "AP poll", share: "Share your AP poll", url: "/ap-poll/", make: "Predict the AP poll" },
     bracket: { label: "CFP Bracket", noun: "bracket", share: "Share your bracket", url: "/bracket/", make: "Build your bracket" },
     trivia: { label: "Trivia", noun: "score", share: "Share your score", url: "/trivia/", make: "Play today's trivia" },
+    draft: { label: "Draft", noun: "draft", share: "Share your draft", url: "/drafts/", make: "Run your own draft" },
   };
   // No team logos anywhere: the team's short code in big type sits where a logo would, nickname underneath.
   // cls "r" right-aligns it (right-hand sides); "s" drops the nickname where the name already sits beside it.
@@ -212,8 +229,14 @@
       const p = d.picks || [], n = opts.full ? p.length : 8;
       body = `<div class="mini-grid">${p.slice(0, n).map((x) => `<div>${teamMark(codeOf(x), "", "s")}<b>${esc(x.p)}</b>&nbsp;<span class="muted">over ${esc(x.o)}</span></div>`).join("")}</div>
         ${p.length > n ? `<div class="entry-more">+ ${p.length - n} more picks</div>` : ""}`;
+    } else if (e.kind === "draft") {
+      const dp = d.u === "wins" ? 0 : 1; // coaches' drafts count whole wins
+      const side = (name, rows, tot) => `<div><div class="entry-champ" style="margin-bottom:6px"><div><small>${esc(name || "")}</small><b>${tot == null ? "" : esc((+tot).toFixed(dp)) + " " + (d.u || "pts")}</b></div></div>
+        <div class="mini-grid" style="grid-template-columns:1fr">${(rows || []).filter((r) => r[1]).map((r) => `<div><i>${esc(r[0])}</i>${esc(r[1])}${r[2] == null ? "" : `&nbsp;<span class="muted">${esc(r[2].toFixed(dp))}</span>`}</div>`).join("")}</div></div>`;
+      const mine = d.mn === "You" && opts.by !== undefined ? (opts.by || "Their team") : d.mn; // a friend's link shows their name, not "You"
+      body = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${side(mine, d.me, d.mt)}${side(d.on, d.op, d.ot)}</div>`;
     } else if (e.kind === "trivia") {
-      body = `<div class="disp" style="font-size:34px">${esc(d.score || "")}</div>${d.grid ? `<div style="font-size:22px;letter-spacing:2px;margin-top:6px">${esc(d.grid)}</div>` : ""}`;
+      body = `<div class="disp" style="font-size:34px">${esc(d.score || "")}</div>${d.grid ? `<div style="font-size:22px;letter-spacing:2px;line-height:1.15;margin-top:6px;white-space:pre-line">${esc(d.grid)}</div>` : ""}`;
     }
     const by = opts.by ? `${esc(opts.by)}'s ` : "";
     return `<div class="entry">
@@ -249,6 +272,7 @@
           <button class="btn" type="button" id="shCopy">Copy link</button>
           <a class="btn" href="/account/" id="shAcct">See all my predictions</a>
         </div>
+        <div id="shCh"></div>
         <div id="shPost"></div>
       </div></div>`;
     document.body.appendChild(dlg);
@@ -285,8 +309,38 @@
     const post = d.querySelector("#shPost");
     post.innerHTML = "";
     if (LFI.onShareOpen) LFI.onShareOpen(e, post);
+    challengeBox(e, d.querySelector("#shCh"), opts.challenge);
     d.hidden = false; document.body.style.overflow = "hidden";
     setTimeout(() => go.focus(), 30);
+  }
+
+  // "Challenge a friend" inside the share pop-up: one tap sends the friend a challenge to play the same thing
+  // (same contest, same list, same draft pool). Signed-in players with friends only; games.js does the sending.
+  // ch = { kind, title, url } overrides what is worked out from the entry.
+  function challengeBox(e, slot, ch = {}) {
+    slot.innerHTML = "";
+    if (!me || !me.onboarded) return;
+    const kind = ch.kind || (/^trivia-names/.test(e.id) ? "names" : /^grid/.test(e.id) ? "grid" : e.kind);
+    const q = e.kind === "draft" && /^\?[\w=&%.+-]*$/.test((e.data || {}).q || "") ? e.data.q : "";
+    const url = ch.url || (e.url && e.url[0] === "/" ? e.url : ((KIND[e.kind] || {}).url || "/") + q);
+    const title = ch.title || e.title || (KIND[e.kind] || {}).label || "Last Four In";
+    const note = e.result || (e.data && e.data.score && `Score to beat: ${e.data.score}`) || null;
+    const go = async () => {
+      if (!window.LFI.games) await new Promise((ok) => { const s = document.createElement("script"); s.src = "/assets/games.js"; s.onload = s.onerror = ok; document.head.appendChild(s); });
+      if (!LFI.games) return;
+      const friends = await LFI.games.friends();
+      if (!slot.isConnected) return;
+      slot.innerHTML = `<div class="post-box"><p><b>Challenge a friend</b> ${friends.length ? "to play this too. They'll see it on their Challenges page." : "once you've added some."}</p>
+        <div class="post-acts">${friends.length ? friends.map((f) => `<button class="btn" type="button" data-h="${esc(f.username)}">${esc(f.display_name || f.username)}</button>`).join("")
+          : `<a class="btn" href="/friends/">Add friends</a>`}</div></div>`;
+      slot.onclick = async (ev) => {
+        const b = ev.target.closest("button[data-h]"); if (!b) return;
+        b.disabled = true;
+        try { await LFI.games.challenge(b.dataset.h, kind, title, url, note); b.textContent = "✓ " + b.textContent; toast("Challenge sent"); }
+        catch (err) { toast(err.message); b.disabled = false; }
+      };
+    };
+    go();
   }
 
   // ---- Score strip (shared by home + pick'em pages) ----
@@ -361,7 +415,7 @@
 
   window.LFI = { $, esc, now, local, selectionDay, countdown, toast, entries, renderEntry, share, shareUrl, readShare, copyText,
                  KIND, teamMark, cfbTeam, scoreboard, thisWeek, fillColor, firstRankedKickoff, stripHTML, fmtTime, fmtShort, normalize,
-                 setMe(p) { me = p; header(); }, me: () => me };
+                 setMe(p) { me = p; header(); countChallenges(); }, me: () => me, countChallenges };
 
   paintThemeColor();
   header();

@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Drafts · Last Four In</title>
+<meta name="description" content="Draft the best team from any slice of NFL history: every player named Chris, the all-time Broncos, a division, a conference or the whole league. Higher fantasy total wins.">
+<meta property="og:title" content="Drafts · Last Four In">
+<meta property="og:description" content="Draft every player named Chris, the best Broncos ever, or the whole league. Higher fantasy total wins.">
+<meta property="og:url" content="https://lastfourin.com/drafts/">
+<meta property="og:site_name" content="Last Four In">
+<meta name="theme-color" content="#0d0820">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/assets/lfi.css">
+<script src="/assets/theme.js"></script>
+<style>
+.modes { display: inline-flex; flex-wrap: wrap; margin-top: 16px; background: var(--card); border: 1px solid var(--line-2); border-radius: 8px; padding: 3px; gap: 3px; }
+.modes button { border: 0; background: none; cursor: pointer; padding: 8px 14px; border-radius: 6px; font-family: var(--f-display); text-transform: uppercase; font-size: 16px; letter-spacing: .03em; color: var(--ink-2); white-space: nowrap; }
+.modes button[aria-pressed="true"] { background: var(--field); color: #fff; }
+
+.set { display: grid; gap: 18px; }
+.set-row { display: grid; gap: 8px; }
+.set-lbl { font-family: var(--f-display); font-size: 14px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { border: 1px solid var(--line-2); background: var(--card-2); border-radius: 6px; padding: 9px 13px; font: 700 14px var(--f-body); color: var(--ink-2); min-height: 42px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--field); border-color: var(--field); color: #fff; }
+.seg button:disabled { opacity: .45; cursor: default; }
+.seg button small { display: block; font-weight: 600; font-size: 11.5px; opacity: .8; }
+.pool-in { display: flex; gap: 8px; flex-wrap: wrap; }
+.pool-in input, .pool-in select { flex: 1 1 220px; padding: 11px 13px; border: 1px solid var(--line-2); border-radius: 8px; font: 600 16px var(--f-body); background: var(--card-2); color: var(--ink); }
+.pool-count { font-size: 14px; color: var(--ink-2); }
+.pool-count b { color: var(--ink); }
+.pool-count.bad { color: var(--loss); }
+.go-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+/* Draft room */
+.dr-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.dr-bar .disp { font-size: 30px; margin: 0; }
+.dr-turn { font-family: var(--f-display); font-size: 16px; letter-spacing: .06em; text-transform: uppercase; padding: 6px 12px; border-radius: 6px; background: var(--card-2); color: var(--ink-2); }
+.dr-turn.me { background: var(--accent); color: var(--accent-ink); }
+.dr-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
+@media (max-width: 980px) { .dr-grid { grid-template-columns: minmax(0, 1fr); } .dr-teams { order: -1; } }
+.dr-teams { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (max-width: 980px) { .dr-teams { grid-template-columns: 1fr 1fr; gap: 10px; } }
+.lu { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.lu.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.lu-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.lu-h b { font-family: var(--f-display); font-size: 19px; text-transform: uppercase; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lu-h span { font-family: var(--f-display); font-size: 19px; }
+.lu ol { list-style: none; margin: 0; padding: 0; }
+.lu li { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 12px; border-bottom: 1px solid var(--line); min-height: 44px; font-size: 14px; }
+.lu li:last-child { border-bottom: 0; }
+.lu .slot { font-family: var(--f-display); font-size: 13px; letter-spacing: .06em; color: var(--muted); }
+.lu .nm { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lu .nm small { display: block; font-weight: 500; color: var(--muted); font-size: 12px; }
+.lu .open { color: var(--muted); font-style: italic; font-weight: 500; }
+.lu .pts { font-family: var(--f-display); font-size: 16px; }
+.lu li.new { animation: lu-new .7s var(--ease) both; }
+@keyframes lu-new { from { background: var(--accent-soft); } }
+@media (max-width: 560px) {
+  .lu li { grid-template-columns: 28px minmax(0, 1fr) auto; padding: 5px 8px; gap: 5px; font-size: 12.5px; min-height: 32px; }
+  .lu li .pts { font-size: 12.5px; }
+  .lu .slot { font-size: 11px; }
+  .lu .nm small { display: none; }
+  .lu-h { padding: 7px 8px; } .lu-h b, .lu-h span { font-size: 15px; }
+  #result .lu li { min-height: 40px; font-size: 14px; } #result .lu .nm small { display: block; }
+}
+body.drafting .head { display: none; }
+
+.bd-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.bd-tools .search { margin: 0; flex: 1 1 200px; }
+.bd-tools select { padding: 11px 10px; border: 1px solid var(--line-2); border-radius: 8px; font: 600 14px var(--f-body); background: var(--card-2); color: var(--ink); }
+.pos-f { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.pos-f button { border: 1px solid var(--line-2); background: var(--card-2); border-radius: 999px; padding: 6px 12px; font: 800 13px var(--f-body); color: var(--ink-2); cursor: pointer; }
+.pos-f button[aria-pressed="true"] { background: var(--field); border-color: var(--field); color: #fff; }
+.board { list-style: none; margin: 0; padding: 0; }
+.board li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.board li.cant { opacity: .42; }
+.board .pos { font-family: var(--f-display); font-size: 14px; letter-spacing: .05em; text-align: center; padding: 3px 0; border-radius: 4px; background: var(--card-2); color: var(--ink-2); }
+.board .who b { display: block; font-weight: 800; }
+.board .who small { color: var(--muted); font-size: 12.5px; }
+.board .pts { font-family: var(--f-display); font-size: 17px; text-align: right; min-width: 52px; }
+.board .btn { padding: 8px 14px; }
+.board-more { padding: 12px 0 2px; color: var(--muted); font-size: 13.5px; }
+
+/* Result */
+.res-banner { padding: 22px 20px; border-radius: var(--r); background: var(--field); color: #fff; margin-bottom: 16px; }
+.res-banner .disp { font-size: clamp(34px, 6vw, 52px); margin: 4px 0 0; }
+.res-banner p { margin: 8px 0 0; opacity: .9; }
+.res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 640px) { .res-grid { grid-template-columns: 1fr; } }
+.res-acts { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.credit { margin-top: 26px; font-size: 12.5px; color: var(--muted); }
+.credit a { color: inherit; }
+.lobby-link { width: 100%; padding: 12px 13px; border: 1px dashed var(--line-2); border-radius: 8px; font: 700 15px var(--f-body); background: var(--card-2); color: var(--ink); }
+.friend-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.friend-pick button { border: 1px solid var(--line-2); background: var(--card-2); border-radius: 999px; padding: 7px 13px; font: 700 14px var(--f-body); color: var(--ink); cursor: pointer; }
+.friend-pick button:disabled { opacity: .5; cursor: default; }
+</style>
+</head>
+<body>
+
+<header class="nav" data-active="drafts"></header>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <div class="kicker" id="kick">NFL history draft</div>
+      <h1 class="disp" id="h1">Drafts</h1>
+      <p id="lede">Pick a pool, then take turns drafting a lineup. Every player named Chris, the all-time Broncos, a whole division. Higher fantasy total wins.</p>
+      <nav class="modes" aria-label="Mode">
+        <button type="button" data-mode="scored" aria-pressed="true">Scored · 1999 on</button>
+        <button type="button" data-mode="fun" aria-pressed="false">For fun · everyone since 1920</button>
+      </nav>
+      <p style="margin:10px 0 0;font-size:14.5px"><a href="classes.html">Mock or redraft a real draft class →</a></p>
+    </div>
+  </div>
+
+  <!-- 1. Setup -->
+  <section class="card" id="setup">
+    <div class="card-h"><h2 class="disp">Set up your draft</h2><span class="chip" id="dataChip">Loading players…</span></div>
+    <div class="card-b set">
+      <div class="set-row" hidden><!-- jersey and coach drafts: not live yet -->
+        <div class="set-lbl">Draft</div>
+        <div class="seg" id="kind">
+          <button type="button" data-v="players" aria-pressed="true">Players<small>Build a lineup</small></button>
+          <button type="button" data-v="jerseys" aria-pressed="false">Jersey numbers<small>Best player in each number</small></button>
+          <button type="button" data-v="coaches" aria-pressed="false">Head coaches<small>Most wins</small></button>
+        </div>
+      </div>
+
+      <div class="set-row">
+        <div class="set-lbl">Pool</div>
+        <div class="seg" id="poolKind">
+          <button type="button" data-v="first" aria-pressed="true" class="not-coach">First name</button>
+          <button type="button" data-v="last" aria-pressed="false" class="not-coach">Last name</button>
+          <button type="button" data-v="team" aria-pressed="false">One team</button>
+          <button type="button" data-v="div" aria-pressed="false">Division</button>
+          <button type="button" data-v="conf" aria-pressed="false">Conference</button>
+          <button type="button" data-v="all" aria-pressed="false">Whole league</button>
+        </div>
+        <div class="pool-in">
+          <input id="poolName" type="text" autocomplete="off" autocapitalize="words" placeholder="Type a first name, like Chris" value="Chris" aria-label="Name">
+          <select id="poolTeam" aria-label="Team" hidden></select>
+          <select id="poolDiv" aria-label="Division" hidden></select>
+          <select id="poolConf" aria-label="Conference" hidden><option value="AFC">AFC</option><option value="NFC">NFC</option></select>
+        </div>
+        <div class="pool-count" id="poolCount"></div>
+      </div>
+
+      <div class="set-row jersey-only">
+        <div class="set-lbl">Numbers</div>
+        <div class="pool-in">
+          <input id="nums" type="text" inputmode="numeric" autocomplete="off" placeholder="Numbers, like 12, 80, 21" aria-label="Jersey numbers">
+          <button class="btn" type="button" id="shuffle">Shuffle</button>
+        </div>
+        <div class="pool-count">One round per number: each of you drafts a player who wore it. Up to 10 numbers.</div>
+      </div>
+
+      <div class="set-row coach-only">
+        <div class="set-lbl">How many coaches</div>
+        <div class="seg" id="nc">
+          <button type="button" data-v="3" aria-pressed="false">3 each</button>
+          <button type="button" data-v="5" aria-pressed="true">5 each</button>
+          <button type="button" data-v="7" aria-pressed="false">7 each</button>
+        </div>
+      </div>
+
+      <div class="set-row scored-only">
+        <div class="set-lbl">What counts</div>
+        <div class="seg" id="val">
+          <button type="button" data-v="career" aria-pressed="true"><span id="valC">Career points</span><small id="valCs">Whole career in the pool</small></button>
+          <button type="button" data-v="best" aria-pressed="false"><span id="valB">Best season</span><small id="valBs">His single best year</small></button>
+        </div>
+        <div class="seg not-coach" id="sc">
+          <button type="button" data-v="ppr" aria-pressed="true">PPR</button>
+          <button type="button" data-v="half" aria-pressed="false">Half PPR</button>
+          <button type="button" data-v="std" aria-pressed="false">Standard</button>
+        </div>
+      </div>
+
+      <div class="set-row player-only">
+        <div class="set-lbl">Lineup</div>
+        <div class="seg" id="lu">
+          <button type="button" data-v="fantasy" aria-pressed="true">Fantasy lineup<small>QB, 2 RB, 2 WR, TE, FLEX</small></button>
+          <button type="button" data-v="any5" aria-pressed="false">Any 5 players<small>Positions don't matter</small></button>
+          <button type="button" data-v="full" aria-pressed="false" class="fun-only">Full team<small>Offense, defense, kicker</small></button>
+        </div>
+      </div>
+
+      <div class="set-row">
+        <div class="set-lbl">Opponent</div>
+        <div class="seg" id="opp">
+          <button type="button" data-v="cpu" aria-pressed="true">The computer</button>
+          <button type="button" data-v="friend" aria-pressed="false" id="oppFriend">A friend<small>Live draft by link</small></button>
+        </div>
+        <div class="pool-count" id="friendNote" hidden></div>
+        <div class="seg" id="cpu">
+          <button type="button" data-v="easy" aria-pressed="false">Easy</button>
+          <button type="button" data-v="medium" aria-pressed="true">Medium</button>
+          <button type="button" data-v="hard" aria-pressed="false">Hard</button>
+        </div>
+      </div>
+
+      <div class="set-row scored-only">
+        <div class="set-lbl">Points during the draft</div>
+        <div class="seg" id="show">
+          <button type="button" data-v="0" aria-pressed="true">Hidden<small>Test what you know</small></button>
+          <button type="button" data-v="1" aria-pressed="false">Shown<small>Just for fun</small></button>
+        </div>
+      </div>
+
+      <div class="set-row">
+        <div class="set-lbl">Who picks first</div>
+        <div class="seg" id="first">
+          <button type="button" data-v="me" aria-pressed="true">Me</button>
+          <button type="button" data-v="them" aria-pressed="false">My opponent</button>
+          <button type="button" data-v="coin" aria-pressed="false">Flip a coin</button>
+        </div>
+      </div>
+
+      <div class="go-row">
+        <button class="btn gold big" type="button" id="startBtn" disabled>Start the draft</button>
+        <span class="pool-count" id="startNote"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 1b. Friend draft lobby: the link to send, waiting for the friend to join -->
+  <section class="card" id="lobby" hidden>
+    <div class="card-h"><h2 class="disp" id="lobbyH">Draft room</h2><span class="chip" id="lobbyChip"></span></div>
+    <div class="card-b set" id="lobbyB"></div>
+  </section>
+
+  <!-- 2. Draft room -->
+  <section id="room" hidden>
+    <div class="dr-bar">
+      <div><div class="kicker" id="roomKick"></div><h2 class="disp" id="roomTitle"></h2></div>
+      <span class="dr-turn" id="turn"></span>
+    </div>
+    <div class="dr-grid">
+      <section class="card">
+        <div class="card-b">
+          <div class="bd-tools">
+            <input class="search" id="q" type="search" autocomplete="off" placeholder="Search players" aria-label="Search players">
+            <select id="sort" aria-label="Sort"></select>
+          </div>
+          <div class="pos-f" id="posF"></div>
+          <ul class="board" id="board"></ul>
+          <div class="board-more" id="boardMore"></div>
+        </div>
+        <div class="submitbar"><span id="roomNote"></span><button class="btn" type="button" id="quitBtn">Start over</button></div>
+      </section>
+      <div class="dr-teams" id="teams"></div>
+    </div>
+  </section>
+
+  <!-- 3. Result -->
+  <section id="result" hidden>
+    <div class="res-banner"><div class="kicker" style="color:#fff;opacity:.85" id="resKick"></div><div class="disp" id="resH"></div><p id="resP"></p></div>
+    <div class="res-grid" id="resTeams"></div>
+    <div class="res-acts">
+      <button class="btn gold big" type="button" id="shareBtn">Share it</button>
+      <button class="btn" type="button" id="againBtn">Run it back, same pool</button>
+      <button class="btn" type="button" id="newBtn">New pool</button>
+    </div>
+  </section>
+
+  <p class="credit">Player stats and rosters from <a href="https://github.com/nflverse" rel="noopener">nflverse</a> (CC BY 4.0). Fantasy points are regular season only, 1999 to <span id="thru">now</span>. Teams count their full history, so the Oilers count as the Titans and the St. Louis Rams count as the Rams. Divisions are today's. Jersey numbers come from season rosters, which list them from 1996 on. Coaching records are regular season, every game since 1999.</p>
+</main>
+<footer class="foot"></footer>
+
+<script>{ const k = new URLSearchParams(location.search).get("kind"); if (k === "jerseys" || k === "coaches") document.querySelector("header.nav").dataset.active = k; }</script>
+<script src="/assets/lfi.js"></script>
+<script src="/assets/games.js"></script>
+<script>
+(function () {
+  const { $, esc, local, entries, toast } = LFI;
+  const qs = new URLSearchParams(location.search);
+  if (qs.get("class")) return location.replace("classes.html" + location.search); // a shared mock of a draft class
+  const POSN = ["QB", "RB", "WR", "TE"];
+  const LINEUPS = {
+    fantasy: ["QB", "RB", "RB", "WR", "WR", "TE", "FLEX"],
+    any5: ["ANY", "ANY", "ANY", "ANY", "ANY"],
+    full: ["QB", "RB", "WR", "WR", "TE", "OL", "OL", "DL", "DL", "LB", "DB", "DB", "K"],
+  };
+  const fits = (slot, pos) => slot === pos || slot === "ANY" || (slot === "FLEX" && (pos === "RB" || pos === "WR" || pos === "TE"));
+  const nkey = (s) => String(s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z]/g, "");
+  const fmt = (n) => n == null ? "" : (Math.round(n * 10) / 10).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const yy = (y) => "’" + String(y).slice(2);
+  const fmtv = (n) => n == null ? "" : S.kind === "coaches" ? String(Math.round(n)) : fmt(n); // coaches score whole wins
+
+  // ---------- data ----------
+  const DATA = {};   // file -> { teams, thru, p: [...] } (coaches.json has c instead of p)
+  function load() {
+    const f = S.kind === "coaches" ? "coaches" : S.kind === "jerseys" ? (S.mode === "fun" ? "jerseys-fun" : "jerseys") : S.mode === "fun" ? "everyone" : "scored";
+    if (!DATA[f]) DATA[f] = fetch(`data/${f}.json`).then((r) => r.json());
+    return DATA[f];
+  }
+  // Scored rows: [espn, name, pos, firsts, last, y1, y2, carP, carS, bestY, bestT, bestP, bestS, {team: [p, s, bestY, bestP, bestS, y1, y2]}]
+  // Fun rows:    [name, pos, y1, y2, "CHI13|NYG2" (franchise + seasons there), firsts, last, fantasy bonus]
+  // Jersey rows: [espn, name, pos, firsts, last, number, {team: [p, s, bestY, bestP, bestS, y1, y2]}] (points wearing that number)
+  // Jersey fun:  [name, pos, number, "NE20|TB3" (franchise + seasons in that number), firsts, last, fame]
+  // Coach rows:  [name, {team: [w, l, t, y1, y2, bestY, bestW, bestL]}, playoff w, playoff l] (regular season since 1999)
+  const S = {
+    kind: ["jerseys", "coaches"].includes(qs.get("kind")) ? qs.get("kind") : "players", nums: qs.get("nums") || "", nc: qs.get("nc") || "5",
+    mode: qs.get("fun") && qs.get("kind") !== "coaches" ? "fun" : "scored", pool: qs.get("pool") || (["jerseys", "coaches"].includes(qs.get("kind")) ? "all" : "first"), name: qs.get("q") || "Chris",
+    team: qs.get("t") || "DEN", div: qs.get("d") || "AFC West", conf: qs.get("c") || "AFC",
+    val: qs.get("val") || "career", sc: qs.get("sc") || "ppr", lu: qs.get("lu") || "fantasy",
+    opp: "cpu", cpu: qs.get("cpu") || "medium", show: qs.get("show") || "0", first: "me",
+  };
+  let meta = null;        // teams + thru of the loaded data
+
+  const groupTeams = () => {
+    if (S.pool === "team") return [S.team];
+    if (S.pool === "div") return Object.keys(meta.teams).filter((t) => meta.teams[t][2] === S.div);
+    if (S.pool === "conf") return Object.keys(meta.teams).filter((t) => meta.teams[t][1] === S.conf);
+    return null;
+  };
+  const mix = (p, s) => S.sc === "ppr" ? p : S.sc === "std" ? s : (p + s) / 2;
+  const numsList = () => [...new Set(S.nums.split(/[^0-9]+/).filter(Boolean).map(Number).filter((n) => n >= 0 && n <= 99))].slice(0, 10);
+  const slotsNow = () => S.kind === "jerseys" ? numsList().map((n) => "#" + n) : S.kind === "coaches" ? Array(+S.nc || 5).fill("HC") : LINEUPS[S.lu];
+  const span = (a, b) => a === b ? `${a}` : `${a}–${yy(b)}`;
+
+  // One drafted-or-draftable player, normalised across both data sets.
+  function rowsFor(d) {
+    const G = groupTeams(), key = nkey(S.name), out = [];
+    if (S.kind === "coaches") {
+      for (const c of d.c) {
+        const ts = Object.entries(c[1]).filter(([t]) => !G || G.includes(t)).sort((a, b) => a[1][3] - b[1][3]);
+        if (!ts.length) continue;
+        const sum = (i) => ts.reduce((a, [, v]) => a + v[i], 0), w = sum(0), l = sum(1), t = sum(2);
+        const y1 = Math.min(...ts.map(([, v]) => v[3])), y2 = Math.max(...ts.map(([, v]) => v[4])), tl = ts.map(([x]) => x);
+        let pts, note;
+        if (S.val === "career") { pts = w; note = `${w}-${l}${t ? "-" + t : ""}` + (!G && c[2] + c[3] ? ` · ${c[2]}-${c[3]} playoffs` : ""); }
+        else { const [bt, v] = ts.reduce((a, b) => b[1][6] > a[1][6] ? b : a); pts = v[6]; note = `${v[5]} ${bt} · ${v[6]}-${v[7]}`; }
+        if (pts <= 0) continue;
+        out.push({ id: out.length, key: `${c[0]}|HC`, name: c[0], pos: "HC", y1, y2, pts, note, sub: `${span(y1, y2)} · ${tl.slice(0, 3).join(", ")}${tl.length > 3 ? "…" : ""}` });
+      }
+      return out;
+    }
+    if (S.kind === "jerseys" && S.mode === "fun") {
+      for (const r of d.p) {
+        const teams = r[3].split("|").map((x) => [x.replace(/\d+$/, ""), +x.match(/\d+$/)[0]]);
+        const shown = G ? teams.filter(([t]) => G.includes(t)) : teams;
+        if (!shown.length) continue;
+        if (S.pool === "first" && !r[4].split("|").includes(key)) continue;
+        if (S.pool === "last" && r[5] !== key) continue;
+        const yrs = shown.reduce((a, [, n]) => a + n, 0);
+        out.push({ id: out.length, key: `${r[0]}|${r[1]}|${r[2]}`, pid: `${r[0]}|${r[1]}`, name: r[0], pos: "#" + r[2], real: r[1], y1: 0, y2: yrs, fame: r[6] + yrs * 3, pts: null,
+                   sub: `${r[1]} · ${shown.slice(0, 3).map(([t, n]) => `${t} ${n} yr${n > 1 ? "s" : ""}`).join(", ")}${shown.length > 3 ? "…" : ""}` });
+      }
+      return out;
+    }
+    if (S.kind === "jerseys") {
+      for (const r of d.p) {
+        if (S.pool === "first" && !r[3].split("|").includes(key)) continue;
+        if (S.pool === "last" && r[4] !== key) continue;
+        const ts = Object.entries(r[6]).filter(([t]) => !G || G.includes(t)).sort((a, b) => a[1][5] - b[1][5]);
+        if (!ts.length) continue;
+        const y1 = Math.min(...ts.map(([, v]) => v[5])), y2 = Math.max(...ts.map(([, v]) => v[6])), tl = ts.map(([t]) => t);
+        let pts, note;
+        if (S.val === "career") { pts = ts.reduce((a, [, v]) => a + mix(v[0], v[1]), 0); note = `${tl.join(", ")} · ${span(y1, y2)} in #${r[5]}`; }
+        else { const [t, v] = ts.reduce((a, b) => mix(b[1][3], b[1][4]) > mix(a[1][3], a[1][4]) ? b : a); pts = mix(v[3], v[4]); note = `${v[2]} ${t} in #${r[5]}`; }
+        if (pts <= 0) continue;
+        out.push({ id: out.length, key: `${r[1]}|${r[2]}|${r[5]}`, pid: `${r[1]}|${r[2]}|${r[0]}`, espn: r[0], name: r[1], pos: "#" + r[5], real: r[2], y1, y2, pts, note,
+                   sub: `${r[2]} · ${span(y1, y2)} · ${tl.slice(0, 3).join(", ")}${tl.length > 3 ? "…" : ""}` });
+      }
+      return out;
+    }
+    for (const r of d.p) {
+      if (S.mode === "fun") {
+        const teams = r[4] ? r[4].split("|").map((x) => [x.replace(/\d+$/, ""), +x.match(/\d+$/)[0]]) : [];
+        const shown = G ? teams.filter(([t]) => G.includes(t)) : teams;
+        if (G && !shown.length) continue;
+        if (S.pool === "first" && !r[5].split("|").includes(key)) continue;
+        if (S.pool === "last" && r[6] !== key) continue;
+        const yrs = G ? shown.reduce((a, [, n]) => a + n, 0) : r[3] - r[2] + 1;
+        out.push({ id: out.length, key: `${r[0]}|${r[1]}|${r[2]}`, name: r[0], pos: r[1], y1: r[2], y2: r[3], fame: yrs * 2 + r[7], pts: null,
+                   sub: `${r[2] === r[3] ? r[2] : r[2] + "–" + yy(r[3])}${shown.length ? " · " + shown.slice(0, 3).map(([t, n]) => `${t} ${n} yr${n > 1 ? "s" : ""}`).join(", ") + (shown.length > 3 ? "…" : "") : ""}` });
+        continue;
+      }
+      if (S.pool === "first" && !r[3].split("|").includes(key)) continue;
+      if (S.pool === "last" && r[4] !== key) continue;
+      let pts, note, y1 = r[5], y2 = r[6], tl;
+      if (!G) {
+        if (S.val === "career") { pts = mix(r[7], r[8]); note = "career"; }
+        else { pts = mix(r[11], r[12]); note = `${r[9]} ${r[10]}`; }
+        tl = Object.entries(r[13]).sort((a, b) => a[1][5] - b[1][5]).map(([t]) => t);
+      } else {
+        const ts = Object.entries(r[13]).filter(([t]) => G.includes(t));
+        if (!ts.length) continue;
+        y1 = Math.min(...ts.map(([, v]) => v[5])); y2 = Math.max(...ts.map(([, v]) => v[6]));
+        tl = ts.sort((a, b) => a[1][5] - b[1][5]).map(([t]) => t);
+        if (S.val === "career") { pts = ts.reduce((a, [, v]) => a + mix(v[0], v[1]), 0); note = (tl.length > 1 ? tl.join(", ") + " · " : "") + (y1 === y2 ? `${y1}` : `${y1}–${yy(y2)}`) + " career"; }
+        else { const [t, v] = ts.reduce((a, b) => mix(b[1][3], b[1][4]) > mix(a[1][3], a[1][4]) ? b : a); pts = mix(v[3], v[4]); note = `${v[2]} ${t}`; }
+      }
+      if (pts <= 0) continue;
+      out.push({ id: out.length, key: `${r[1]}|${r[2]}|${r[5]}`, espn: r[0], name: r[1], pos: r[2], y1, y2, pts, note,
+                 sub: `${y1 === y2 ? y1 : y1 + "–" + yy(y2)} · ${tl.slice(0, 3).join(", ")}${tl.length > 3 ? "…" : ""}` });
+    }
+    return out;
+  }
+
+  // Can both sides fill the chosen lineup from this pool?
+  function feasible(rows, slots) {
+    const n = (pos) => rows.filter((r) => r.pos === pos).length;
+    const need = {};
+    slots.forEach((s) => { if (s !== "FLEX" && s !== "ANY") need[s] = (need[s] || 0) + 2; });
+    for (const [pos, k] of Object.entries(need)) if (n(pos) < k) return pos[0] === "#" ? `Only ${n(pos)} player${n(pos) === 1 ? "" : "s"} wore ${pos} in this pool. Each number needs two.`
+      : pos === "HC" ? `Only ${n(pos)} coach${n(pos) === 1 ? "" : "es"} in this pool. You need ${k} for two teams.` : `Not enough ${pos}s in this pool (${n(pos)}) for two lineups.`;
+    if (slots.includes("FLEX") && n("RB") + n("WR") + n("TE") < (need.RB || 0) + (need.WR || 0) + (need.TE || 0) + 2) return "Not enough RBs, WRs and TEs for both FLEX spots.";
+    if (slots.some((s) => s[0] === "#" || s === "HC")) return "";
+    if (rows.length < slots.length * 2) return `Only ${rows.length} player${rows.length === 1 ? "" : "s"} in this pool. Two lineups need ${slots.length * 2}.`;
+    return "";
+  }
+
+  // ---------- setup screen ----------
+  function seg(id, key, onChange) {
+    const el = $(id);
+    const paint = () => el.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === S[key])));
+    el.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b || b.disabled) return; S[key] = b.dataset.v; paint(); onChange && onChange(); refresh(); });
+    paint();
+    return paint;
+  }
+  const paints = [];
+  function fillSelects() {
+    const T = meta.teams, byName = Object.keys(T).sort((a, b) => (T[a][0] < T[b][0] ? -1 : 1));
+    $("poolTeam").innerHTML = byName.map((t) => `<option value="${t}"${t === S.team ? " selected" : ""}>${esc(T[t][0])}</option>`).join("");
+    const divs = [...new Set(Object.values(T).map((v) => v[2]))].sort();
+    $("poolDiv").innerHTML = divs.map((d) => `<option${d === S.div ? " selected" : ""}>${esc(d)}</option>`).join("");
+    $("poolConf").value = S.conf;
+  }
+  function poolLabel() {
+    const nm = S.name.trim().replace(/\b\w/g, (c) => c.toUpperCase());
+    if (S.kind === "coaches") return S.pool === "team" ? `${meta.teams[S.team][0]} coaches` : S.pool === "div" ? `${S.div} coaches` : S.pool === "conf" ? `${S.conf} coaches` : "Every head coach";
+    return S.pool === "first" ? `Every player named ${nm}` : S.pool === "last" ? `Every ${nm}` : S.pool === "team" ? `All-time ${meta.teams[S.team][0]}`
+      : S.pool === "div" ? `All-time ${S.div}` : S.pool === "conf" ? `All-time ${S.conf}` : "The whole league";
+  }
+  function countLabel() {
+    const nm = S.name.trim().replace(/\b\w/g, (c) => c.toUpperCase());
+    if (S.kind === "coaches") return S.pool === "team" ? `${meta.teams[S.team][0]} head coaches` : S.pool === "div" ? `head coaches from the ${S.div}` : S.pool === "conf" ? `${S.conf} head coaches` : "head coaches";
+    if (S.kind === "jerseys") return countPlayers() + " in these numbers";
+    return countPlayers();
+  }
+  function countPlayers() {
+    const nm = S.name.trim().replace(/\b\w/g, (c) => c.toUpperCase());
+    return S.pool === "first" ? `players named ${nm}` : S.pool === "last" ? `players with the last name ${nm}` : S.pool === "team" ? `${meta.teams[S.team][0]} players`
+      : S.pool === "div" ? `players from the ${S.div}` : S.pool === "conf" ? `${S.conf} players` : "players";
+  }
+  const valLabel = () => S.kind === "coaches" ? `${S.val === "career" ? "Career wins" : "Best season"} · since 1999` : S.mode === "fun" ? "For fun · no points"
+    : `${S.val === "career" ? (S.kind === "jerseys" ? "Career in the number" : "Career") : "Best season"} · ${S.sc === "ppr" ? "PPR" : S.sc === "half" ? "Half PPR" : "Standard"}`;
+  const kindName = () => S.kind === "jerseys" ? "Jersey draft" : S.kind === "coaches" ? "Coaches' draft" : "Draft";
+  const LEDE = {
+    players: "Pick a pool, then take turns drafting a lineup. Every player named Chris, the all-time Broncos, a whole division. Higher fantasy total wins.",
+    jerseys: "Each round is a jersey number. You and your opponent take turns drafting the best player who wore it. Points only count while he wore that number.",
+    coaches: "Take turns drafting head coaches. Most regular-season wins since 1999 takes it. Pick the whole league or one franchise's coaches.",
+  };
+  // Five random numbers both sides can fill, from the ones worn most in this pool.
+  function pickNums(rows) {
+    const c = {};
+    rows.forEach((r) => c[r.pos] = (c[r.pos] || 0) + 1);
+    let ok = Object.keys(c).filter((n) => c[n] >= 6).sort((a, b) => c[b] - c[a]).slice(0, 24); // the numbers worn most
+    if (ok.length < 5) ok = Object.keys(c).filter((n) => c[n] >= 2);
+    for (let i = ok.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ok[i], ok[j]] = [ok[j], ok[i]]; }
+    return ok.slice(0, 5).map((n) => +n.slice(1)).sort((a, b) => a - b).join(", ");
+  }
+
+  let pool = [];
+  let refreshing = 0;
+  async function refresh() {
+    const n = ++refreshing;
+    if (S.kind === "coaches") { S.mode = "scored"; if (S.pool === "first" || S.pool === "last") { S.pool = "all"; paints.forEach((p) => p()); } }
+    document.querySelectorAll(".scored-only").forEach((x) => x.hidden = S.mode === "fun");
+    document.querySelectorAll(".fun-only").forEach((x) => x.hidden = S.mode !== "fun");
+    document.querySelectorAll(".player-only").forEach((x) => x.hidden = S.kind !== "players");
+    document.querySelectorAll(".jersey-only").forEach((x) => x.hidden = S.kind !== "jerseys");
+    document.querySelectorAll(".coach-only").forEach((x) => x.hidden = S.kind !== "coaches");
+    document.querySelectorAll(".not-coach").forEach((x) => x.hidden = S.kind === "coaches");
+    document.querySelector(".modes").hidden = S.kind === "coaches";
+    document.querySelectorAll(".modes button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.mode === S.mode)));
+    document.querySelector('.modes [data-mode="fun"]').textContent = S.kind === "jerseys" ? "For fun · everyone since 1996" : "For fun · everyone since 1920";
+    const V = S.kind === "coaches" ? ["Career wins", "Every win in the pool", "Best season", "His most wins in one year"]
+      : S.kind === "jerseys" ? ["Career in the number", "Every point in that jersey", "Best season", "His best year in it"] : ["Career points", "Whole career in the pool", "Best season", "His single best year"];
+    ["valC", "valCs", "valB", "valBs"].forEach((id, i) => $(id).textContent = V[i]);
+    $("h1").textContent = S.kind === "jerseys" ? "Jersey Draft" : S.kind === "coaches" ? "Coaches' Draft" : "Drafts";
+    document.title = `${$("h1").textContent} · Last Four In`;
+    if (S.mode !== "fun" && S.lu === "full") { S.lu = "fantasy"; paints.forEach((p) => p()); }
+    $("cpu").hidden = S.opp !== "cpu";
+    $("poolName").hidden = !(S.pool === "first" || S.pool === "last");
+    $("poolName").placeholder = S.pool === "last" ? "Type a last name, like Smith" : "Type a first name, like Chris";
+    $("poolTeam").hidden = S.pool !== "team"; $("poolDiv").hidden = S.pool !== "div"; $("poolConf").hidden = S.pool !== "conf";
+    $("lede").textContent = S.mode === "fun" && S.kind === "jerseys"
+      ? "Each round is a jersey number. Draft anyone who wore it since 1996, any position. Nothing is scored: share it and let your friends judge."
+      : S.mode === "fun" ? "Draft from every player on an NFL roster since 1920, all positions. No stats go back that far, so nothing is scored: share it and let your friends judge."
+      : LEDE[S.kind];
+    $("dataChip").textContent = "Loading players…";
+    const d = await load();
+    if (n !== refreshing) return;
+    meta = d;
+    if (!$("poolTeam").options.length) fillSelects();
+    $("thru").textContent = d.thru.replace(" Week ", ", Week ");
+    $("dataChip").textContent = S.kind === "coaches" ? `${d.c.length} head coaches since 1999` : S.kind === "jerseys" ? `Numbers since ${S.mode === "fun" ? d.first : 1999}`
+      : S.mode === "fun" ? `${d.p.length.toLocaleString()} players since ${d.first}` : `${d.p.length.toLocaleString()} players since 1999`;
+    pool = (S.pool === "first" || S.pool === "last") && !nkey(S.name) ? [] : rowsFor(d);
+    if (S.kind === "jerseys") {
+      if (!numsList().length && pool.length) { S.nums = pickNums(pool); }
+      if (document.activeElement !== $("nums")) $("nums").value = S.nums;
+      const want = new Set(slotsNow());
+      pool = pool.filter((r) => want.has(r.pos));
+    }
+    const why = pool.length ? feasible(pool, slotsNow()) : S.kind === "jerseys" && !numsList().length ? "Type at least one number." : "";
+    const pc = $("poolCount");
+    pc.className = "pool-count" + (why || !pool.length ? " bad" : "");
+    const tip = S.kind === "jerseys" ? " Shuffle or change the numbers." : S.kind === "coaches" ? " Try fewer coaches or a bigger pool." : S.lu === "fantasy" ? " Try Any 5 players." : "";
+    pc.innerHTML = !pool.length ? ((S.pool === "first" || S.pool === "last") && !nkey(S.name) ? "Type a name to see the pool." : why ? esc(why)
+        : S.kind === "coaches" ? "No coaches found." : `No players found${S.kind === "jerseys" ? " in these numbers" : ""}${S.mode === "scored" ? " since 1999. Try the for-fun mode" + (S.kind === "jerseys" ? "." : " for older players.") : "."}`)
+      : `<b>${pool.length.toLocaleString()}</b> ${esc(countLabel().replace(/^players/, pool.length === 1 ? "player" : "players").replace(/^head coaches/, pool.length === 1 ? "head coach" : "head coaches"))} since ${S.mode === "fun" ? meta.first : 1999}${why ? ". " + esc(why) + tip : "."}`;
+    const friend = S.opp === "friend";
+    $("startBtn").disabled = !pool.length || !!why || (friend && !ME);
+    $("startBtn").textContent = friend ? "Create the draft room" : "Start the draft";
+    $("startBtn").textContent = friend ? "Create the draft room" : "Start the draft";
+    $("friendNote").hidden = !friend;
+    $("friendNote").innerHTML = !friend ? "" : ME ? "You get a link to send. Your friend opens it signed in, and you take turns live."
+      : `Friend drafts need an account so the site can referee. <a href="${LFI.games.signInUrl()}">Sign in free</a>, then come back.`;
+    $("startNote").textContent = "";
+    if (!GAME) history.replaceState(null, "", setupQuery());
+  }
+  function setupQuery() {
+    const p = new URLSearchParams();
+    if (S.kind !== "players") p.set("kind", S.kind);
+    if (S.mode === "fun") p.set("fun", "1");
+    p.set("pool", S.pool);
+    if (S.pool === "first" || S.pool === "last") p.set("q", S.name.trim());
+    if (S.pool === "team") p.set("t", S.team); if (S.pool === "div") p.set("d", S.div); if (S.pool === "conf") p.set("c", S.conf);
+    if (S.mode === "scored") { p.set("val", S.val); if (S.kind !== "coaches") p.set("sc", S.sc); p.set("show", S.show); }
+    if (S.kind === "players") p.set("lu", S.lu);
+    if (S.kind === "jerseys") p.set("nums", numsList().join(","));
+    if (S.kind === "coaches") p.set("nc", S.nc);
+    p.set("cpu", S.cpu);
+    return "?" + p.toString();
+  }
+
+  document.querySelector(".modes").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    S.mode = b.dataset.mode;
+    document.querySelectorAll(".modes button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    refresh();
+  });
+  document.querySelectorAll(".modes button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.mode === S.mode)));
+  paints.push(seg("poolKind", "pool", () => { if (S.pool === "last" && S.name === "Chris") { S.name = "Smith"; $("poolName").value = "Smith"; } if (S.pool === "first" && S.name === "Smith") { S.name = "Chris"; $("poolName").value = "Chris"; } }));
+  paints.push(seg("kind", "kind", () => { if (S.kind !== "players" && (S.pool === "first" || S.pool === "last")) S.pool = "all"; }));
+  paints.push(seg("nc", "nc"));
+  $("nums").addEventListener("input", () => { S.nums = $("nums").value; clearTimeout(typing); typing = setTimeout(refresh, 300); });
+  $("nums").addEventListener("change", () => { $("nums").value = numsList().join(", "); });
+  $("shuffle").addEventListener("click", () => { S.nums = ""; refresh(); });
+  paints.push(seg("val", "val")); paints.push(seg("sc", "sc")); paints.push(seg("lu", "lu")); paints.push(seg("opp", "opp"));
+  paints.push(seg("cpu", "cpu")); paints.push(seg("show", "show")); paints.push(seg("first", "first"));
+  $("poolName").value = S.name;
+  let typing;
+  $("poolName").addEventListener("input", () => { S.name = $("poolName").value; clearTimeout(typing); typing = setTimeout(refresh, 180); });
+  $("poolName").addEventListener("keydown", (e) => { if (e.key === "Enter" && !$("startBtn").disabled) start(); });
+  $("poolTeam").addEventListener("change", () => { S.team = $("poolTeam").value; refresh(); });
+  $("poolDiv").addEventListener("change", () => { S.div = $("poolDiv").value; refresh(); });
+  $("poolConf").addEventListener("change", () => { S.conf = $("poolConf").value; refresh(); });
+
+  // ---------- draft room ----------
+  let D = null; // { rows, slots, side: [{name, picks: [{row, slot}]}], order, n, me, done }
+  const PICK_MS = 750;
+
+  // g = a friend game from the server (null against the computer)
+  function start(g) {
+    const slots = slotsNow();
+    const meFirst = g ? (g.me === "host") === g.host_first : S.first === "me" || (S.first === "coin" && Math.random() < .5);
+    const them = g && g[g.me === "host" ? "guest" : "host"];
+    const oppName = g ? (them ? them.name : "Your friend") : `Computer (${S.cpu[0].toUpperCase() + S.cpu.slice(1)})`;
+    const meName = g ? (g[g.me] || {}).name || "You" : "You";
+    const rows = pool.filter((r) => slots.some((s) => fits(s, r.pos)));
+    D = { rows, byId: new Map(rows.map((r) => [r.id, r])), byKey: new Map(rows.map((r) => [r.key, r])), slots, label: poolLabel(), val: valLabel(), kind: S.kind, kname: kindName(),
+          taken: new Set(), n: 0, total: slots.length * 2, game: g ? { id: g.id, role: g.me } : null,
+          side: [{ name: meName, picks: [] }, { name: oppName, picks: [] }],
+          firstSide: meFirst ? 0 : 1, show: S.mode === "fun" || S.show === "1", fun: S.mode === "fun", setup: setupQuery() };
+    $("lobby").hidden = true; $("setup").hidden = true; $("result").hidden = true; $("room").hidden = false; document.body.classList.add("drafting");
+    $("roomKick").textContent = (D.kind === "players" ? "" : D.kname + " · ") + D.val; $("roomTitle").textContent = D.label;
+    $("q").value = ""; posFilter = "ALL";
+    $("q").placeholder = D.kind === "coaches" ? "Search coaches" : "Search players";
+    const sorts = D.fun && D.kind === "jerseys" ? [["fame", "Best known first"], ["yrs", "Most seasons in it"], ["az", "A–Z"]]
+      : D.fun ? [["fame", "Longest careers first"], ["az", "A–Z"], ["new", "Newest first"], ["old", "Oldest first"]]
+      : D.show ? [["pts", D.kind === "coaches" ? "Most wins" : "Most points"], ["az", "A–Z"], ["new", "Newest first"]] : [["yrs", "Most seasons"], ["az", "A–Z"], ["new", "Newest first"], ["old", "Oldest first"]];
+    $("sort").innerHTML = sorts.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
+    const posList = [...new Set(slots.flatMap((s) => s === "FLEX" ? ["RB", "WR", "TE"] : s === "ANY" ? [...new Set(D.rows.map((r) => r.pos))] : [s]))];
+    const order = ["QB", "RB", "WR", "TE", "OL", "DL", "LB", "DB", "K"];
+    posList.sort((a, b) => a[0] === "#" ? +a.slice(1) - +b.slice(1) : order.indexOf(a) - order.indexOf(b));
+    $("posF").hidden = posList.length < 2;
+    $("posF").innerHTML = ["ALL", ...posList].map((p) => `<button type="button" data-p="${p}" aria-pressed="${p === "ALL"}">${p === "ALL" ? "All" : p}</button>`).join("");
+    scrollTo({ top: 0, behavior: "smooth" });
+    if (g) applyMoves(g); else step();
+  }
+  // Snake order with two sides: A B, B A, A B ...
+  const sideAt = (n) => { const r = Math.floor(n / 2), first = r % 2 === 0 ? D.firstSide : 1 - D.firstSide; return n % 2 === 0 ? first : 1 - first; };
+  const openSlots = (side) => D.slots.map((s, i) => D.side[side].picks.some((p) => p.si === i) ? null : s);
+  function slotFor(side, pos) {
+    const open = openSlots(side);
+    const pref = [pos, "FLEX", "ANY"];
+    for (const want of pref) { const i = open.findIndex((s) => s && s === want && fits(s, pos)); if (i >= 0) return i; }
+    return -1;
+  }
+  const value = (r) => D.fun ? r.fame : r.pts;
+
+  function step() {
+    renderTeams();
+    if (D.n >= D.total) return finish();
+    const side = sideAt(D.n);
+    const mine = side === 0;
+    $("turn").textContent = mine ? `Your pick · ${D.n + 1} of ${D.total}` : `${D.side[1].name.split(" ")[0]} is picking…`;
+    $("quitBtn").textContent = D.game ? "Leave the draft" : "Start over";
+    $("turn").className = "dr-turn" + (mine ? " me" : "");
+    $("roomNote").textContent = `Round ${Math.floor(D.n / 2) + 1} of ${D.slots.length}`;
+    renderBoard();
+    if (!mine && !D.game) setTimeout(cpuPick, PICK_MS);
+  }
+  function draft(side, row) {
+    const si = slotFor(side, row.pos);
+    if (si < 0 || D.taken.has(row.id)) return false;
+    D.taken.add(row.id);
+    if (row.pid) D.rows.forEach((x) => { if (x.pid === row.pid) D.taken.add(x.id); }); // one player, one jersey
+    D.side[side].picks.push({ row, si });
+    D.last = row.id;
+    D.n++;
+    return true;
+  }
+  function cpuPick() {
+    if (!D || D.n >= D.total) return;
+    const cand = D.rows.filter((r) => !D.taken.has(r.id) && slotFor(1, r.pos) >= 0).sort((a, b) => value(b) - value(a));
+    const top = { easy: 30, medium: 8, hard: 2 }[S.cpu] || 8;
+    // Weighted toward the best of the top few, so it drafts like a person, not a sort.
+    const k = Math.min(top, cand.length), w = Array.from({ length: k }, (_, i) => 1 / (i + 1));
+    let x = Math.random() * w.reduce((a, b) => a + b, 0), i = 0;
+    while (i < k - 1 && (x -= w[i]) > 0) i++;
+    draft(1, cand[i]);
+    step();
+  }
+
+  let posFilter = "ALL";
+  const LIMIT = 150;
+  function renderBoard() {
+    const mine = sideAt(D.n) === 0 && D.n < D.total;
+    const q = nkey($("q").value), sort = $("sort").value;
+    let list = D.rows.filter((r) => !D.taken.has(r.id) && (posFilter === "ALL" || r.pos === posFilter) && (!q || nkey(r.name).includes(q)));
+    const last = (r) => r.name.split(" ").filter((w) => !/^(jr|sr|ii|iii|iv|v)\.?$/i.test(w)).pop() || r.name;
+    if (sort === "pts" || sort === "fame") list.sort((a, b) => value(b) - value(a));
+    else if (sort === "yrs") list.sort((a, b) => (b.y2 - b.y1) - (a.y2 - a.y1) || last(a).localeCompare(last(b)));
+    else if (sort === "new") list.sort((a, b) => b.y2 - a.y2 || value(b) - value(a));
+    else if (sort === "old") list.sort((a, b) => a.y1 - b.y1 || value(b) - value(a));
+    else list.sort((a, b) => last(a).localeCompare(last(b)) || a.name.localeCompare(b.name));
+    $("board").innerHTML = list.slice(0, LIMIT).map((r) => {
+      const ok = slotFor(0, r.pos) >= 0;
+      return `<li class="${ok ? "" : "cant"}"><span class="pos">${r.pos}</span><span class="who"><b>${esc(r.name)}</b><small>${esc(r.sub)}</small></span>
+        <span class="pts">${D.show && !D.fun ? fmtv(r.pts) : ""}</span>
+        <button class="btn${mine && ok ? " gold" : ""}" type="button" data-id="${r.id}" ${mine && ok ? "" : "disabled"}>${ok ? "Draft" : "Full"}</button></li>`;
+    }).join("") || `<li style="display:block;color:var(--muted)">Nobody left who matches.</li>`;
+    $("boardMore").textContent = list.length > LIMIT ? `Showing ${LIMIT} of ${list.length.toLocaleString()}. Search to find anyone else.` : "";
+  }
+  function renderTeams(reveal) {
+    $("teams").innerHTML = D.side.map((sd, s) => teamCard(sd, s, reveal, sideAt(D.n) === s && D.n < D.total)).join("");
+  }
+  const teamTotal = (sd) => sd.picks.reduce((a, p) => a + (p.row.pts || 0), 0);
+  function teamCard(sd, s, reveal, on) {
+    const showPts = !D.fun && (D.show || reveal);
+    const rows = D.slots.map((slot, i) => {
+      const p = sd.picks.find((x) => x.si === i);
+      const lbl = slot === "HC" ? String(i + 1) : slot; // coaches are just numbered
+      if (!p) return `<li><span class="slot">${lbl}</span><span class="open">open</span><span></span></li>`;
+      const r = p.row;
+      return `<li class="${r.id === D.last && !reveal ? "new" : ""}"><span class="slot">${lbl}</span>
+        <span class="nm">${esc(r.name)}<small>${esc(showPts && r.note ? r.note : r.sub)}</small></span><span class="pts">${showPts ? fmtv(r.pts) : ""}</span></li>`;
+    }).join("");
+    return `<div class="lu${on ? " on" : ""}"><div class="lu-h"><b>${esc(sd.name)}</b><span>${showPts ? fmtv(teamTotal(sd)) : ""}</span></div><ol>${rows}</ol></div>`;
+  }
+
+  $("board").addEventListener("click", async (e) => {
+    const b = e.target.closest("button[data-id]"); if (!b || !D || sideAt(D.n) !== 0 || D.busy) return;
+    const r = D.byId.get(+b.dataset.id);
+    if (!D.game) { if (draft(0, r)) step(); return; }
+    D.busy = true; b.textContent = "…"; $("board").querySelectorAll("button").forEach((x) => x.disabled = true);
+    try {
+      const res = await LFI.games.move(D.game.id, r.key);
+      if (res.ok) { if (draft(0, r)) step(); }
+      else toast(res.why === "taken" ? `${r.name} was just taken.` : res.why === "turn" ? "Hang on, it's not your pick yet." : "The draft is over.");
+    } catch (err) { toast(err.message); }
+    D.busy = false;
+    if (watcher) watcher.poke();
+    if (D && D.n < D.total) renderBoard();
+  });
+  $("posF").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    posFilter = b.dataset.p;
+    $("posF").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    renderBoard();
+  });
+  $("q").addEventListener("input", () => renderBoard());
+  $("sort").addEventListener("change", () => renderBoard());
+  const toSetup = () => {
+    if (watcher) watcher.stop();
+    D = null; GAME = null; $("room").hidden = true; $("result").hidden = true; $("lobby").hidden = true; $("setup").hidden = false;
+    document.body.classList.remove("drafting"); scrollTo({ top: 0 }); refresh();
+  };
+  $("quitBtn").addEventListener("click", async () => {
+    if (D && D.game) {
+      if (!confirm("Leave this draft? It ends where it stands.")) return;
+      try { await LFI.games.leave(D.game.id); } catch (err) {}
+    }
+    toSetup();
+  });
+
+  // ---------- result ----------
+  let lastEntry = null;
+  function finish(early) {
+    if (D.finished) return;
+    D.finished = true;
+    if (watcher) watcher.stop();
+    $("room").hidden = true; $("result").hidden = false;
+    const [me, op] = D.side, a = teamTotal(me), b = teamTotal(op);
+    $("resKick").textContent = `${D.kind === "players" ? "" : D.kname + " · "}${D.label} · ${D.val}`;
+    const unit = D.kind === "coaches" ? "wins" : "fantasy points", f = D.kind === "coaches" ? (n) => String(Math.round(n)) : fmt;
+    let result;
+    if (D.fun) {
+      $("resH").textContent = "Draft complete"; $("resP").textContent = D.kind === "jerseys" ? "Nothing is scored in the for-fun jersey draft, so this one is up to your friends. Send it and let them pick a winner."
+        : "No stats go back to 1920, so this one is up to your friends. Send it and let them pick a winner.";
+      result = "For fun";
+    } else {
+      const win = a > b, tie = Math.abs(a - b) < .05;
+      $("resH").textContent = tie ? "Dead even" : win ? "You win" : `${op.name.split(" ")[0]} wins`;
+      $("resP").textContent = `${f(a)} to ${f(b)} ${unit}.` + (early ? " The draft ended early, so open spots score zero." : win ? "" : " Run it back?");
+      result = tie ? `Tied at ${f(a)}` : `${win ? "Won" : "Lost"} ${f(a)} to ${f(b)}`;
+    }
+    $("resTeams").innerHTML = D.side.map((sd, s) => teamCard(sd, s, true, false)).join("");
+    const pack = (sd) => D.slots.map((slot, i) => { const p = sd.picks.find((x) => x.si === i); return p ? [slot === "HC" ? String(i + 1) : slot, p.row.name, p.row.pts == null ? null : Math.round(p.row.pts * 10) / 10] : [slot === "HC" ? String(i + 1) : slot, "", null]; });
+    const e = {
+      id: D.game ? `draft-g-${D.game.id}` : `draft-${Date.now()}`, kind: "draft", title: `${D.kname}: ${D.label}`, sub: D.val, result,
+      data: { me: pack(me), op: pack(op), mn: me.name, on: op.name, mt: D.fun ? null : Math.round(a * 10) / 10, ot: D.fun ? null : Math.round(b * 10) / 10, q: D.setup, u: D.kind === "coaches" ? "wins" : undefined },
+      shareText: D.kind === "jerseys" ? `I ran a jersey draft on Last Four In (${D.label}${D.fun ? "" : ": " + result}). Think you can beat my numbers?`
+        : D.kind === "coaches" ? `I drafted head coaches on Last Four In (${D.label}): ${result}. Think you can beat my staff?`
+        : D.fun ? `I drafted ${D.label.replace(/^Every/, "every").replace(/^All-time/, "the all-time")} on Last Four In. Whose team is better?` : `I drafted ${D.label.replace(/^Every/, "every").replace(/^All-time/, "the all-time")} on Last Four In: ${result}. Think you can beat my lineup?`,
+    };
+    lastEntry = entries.put(e);
+    if (D.game && !D.fun) LFI.games.finish(D.game.id, D.game.role === "host" ? { host: e.data.mt, guest: e.data.ot } : { host: e.data.ot, guest: e.data.mt }).catch(() => {});
+    scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(() => LFI.share(lastEntry, { kicker: "Your draft is saved", note: "Send it to your friends and see who drafts it better." }), 900);
+  }
+  $("shareBtn").addEventListener("click", () => lastEntry && LFI.share(lastEntry, { kicker: "Your draft", note: "Send it to your friends and see who drafts it better." }));
+  $("againBtn").addEventListener("click", () => D && D.game ? toSetup() : start());
+  $("newBtn").addEventListener("click", toSetup);
+  $("startBtn").addEventListener("click", () => S.opp === "friend" ? createGame() : start());
+
+  // ---------- friend drafts ----------
+  let ME = null, GAME = null, watcher = null;
+  const pickFields = ["kind", "nums", "nc", "mode", "pool", "name", "team", "div", "conf", "val", "sc", "lu", "show"];
+
+  async function createGame() {
+    const btn = $("startBtn"); btn.disabled = true;
+    try {
+      const hostFirst = S.first === "me" || (S.first === "coin" && Math.random() < .5);
+      const setup = Object.fromEntries(pickFields.map((k) => [k, S[k]]));
+      const r = await LFI.games.create("draft", { settings: { title: poolLabel(), val: (S.kind === "players" ? "" : kindName() + " · ") + valLabel(), setup, data: meta.built },
+        total: slotsNow().length * 2, hostFirst, title: `${kindName()}: ${poolLabel()}` });
+      history.replaceState(null, "", "?g=" + r.code);
+      openGame(r.code);
+    } catch (err) { toast(err.message); btn.disabled = false; }
+  }
+
+  function lobby(html, h, chip) {
+    $("setup").hidden = true; $("room").hidden = true; $("result").hidden = true; $("lobby").hidden = false; document.body.classList.add("drafting");
+    $("lobbyH").textContent = h || "Draft room"; $("lobbyChip").textContent = chip || "";
+    $("lobbyB").innerHTML = html;
+  }
+
+  async function openGame(code) {
+    GAME = code;
+    lobby(`<p class="empty">Opening the draft room…</p>`);
+    ME = await LFI.games.me();
+    if (!ME) {
+      return lobby(`<p>A friend invited you to a live draft on Last Four In. Sign in free to join. You'll come right back here.</p>
+        <div class="go-row"><a class="btn gold big" href="${LFI.games.signInUrl()}">Sign in to join</a><a class="btn" href="./">Draft the computer instead</a></div>`, "You're invited", "Live draft");
+    }
+    let g;
+    try { g = await LFI.games.get(await LFI.games.join(code)); LFI.countChallenges(); } // joining answers any challenge for it
+    catch (err) {
+      return lobby(`<p>${esc(err.message)}</p><div class="go-row"><a class="btn gold" href="./">Set up your own draft</a></div>`, "Draft room", "");
+    }
+    pickFields.forEach((k) => { if (g.settings.setup && g.settings.setup[k] != null) S[k] = g.settings.setup[k]; });
+    $("poolName").value = S.name; $("nums").value = S.nums;
+    document.querySelectorAll(".modes button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.mode === S.mode)));
+    paints.forEach((p) => p());
+    await refresh();
+    if (g.status === "open") waiting(g);
+    else enter(g);
+    watcher = LFI.games.watch(g.id, onGame);
+  }
+
+  function waiting(g) {
+    const url = LFI.games.link("draft", g.code);
+    lobby(`<div><div class="kicker">${esc(g.settings.val || "")}</div><h3 class="disp" style="font-size:30px;margin:4px 0 0">${esc(g.settings.title || "")}</h3></div>
+      <p style="margin:0">Send this link to the friend you want to draft against. The draft starts the moment they join. ${g.host_first ? "You pick first." : "They pick first."}</p>
+      <input class="lobby-link" readonly value="${esc(url)}" aria-label="Draft link">
+      <div class="go-row"><button class="btn gold big" type="button" id="lbShare">Send the link</button><button class="btn" type="button" id="lbCopy">Copy link</button></div>
+      <div class="set-row" id="lbFr" hidden><div class="set-lbl">Or challenge a friend on Last Four In</div><div class="friend-pick" id="lbFrList"></div></div>
+      <div class="go-row"><span class="pool-count">Waiting for your friend… this page updates by itself.</span><button class="btn" type="button" id="lbCancel">Call it off</button></div>`,
+      "Draft room", "Waiting");
+    const sk = (g.settings.setup || {}).kind;
+    const text = sk === "jerseys" ? `Jersey draft against me on Last Four In: ${g.settings.title}.` : sk === "coaches" ? `Draft head coaches against me on Last Four In: ${g.settings.title}.`
+      : `Draft ${g.settings.title.replace(/^Every/, "every").replace(/^All-time/, "the all-time")} against me on Last Four In.`;
+    $("lbShare").onclick = () => LFI.games.shareLink(url, text);
+    $("lbCopy").onclick = async () => toast((await LFI.copyText(url)) ? "Link copied" : "Couldn't copy the link here");
+    $("lbCancel").onclick = async () => { try { await LFI.games.leave(g.id); } catch (err) {} history.replaceState(null, "", setupQuery()); toSetup(); };
+    LFI.games.friends().then((fr) => {
+      if (!fr.length || !$("lbFrList")) return;
+      $("lbFr").hidden = false;
+      $("lbFrList").innerHTML = fr.map((f) => `<button type="button" data-h="${esc(f.username)}">${esc(f.display_name || f.username)}</button>`).join("");
+      $("lbFrList").onclick = async (e) => {
+        const b = e.target.closest("button[data-h]"); if (!b) return;
+        b.disabled = true;
+        try { await LFI.games.challenge(b.dataset.h, "draft", `${sk === "jerseys" ? "Jersey draft" : sk === "coaches" ? "Coaches' draft" : "Draft"}: ${g.settings.title}`, `/drafts/?g=${g.code}`); b.textContent = "✓ " + b.textContent; toast("Challenge sent"); }
+        catch (err) { toast(err.message); b.disabled = false; }
+      };
+    });
+  }
+
+  function enter(g) {
+    if (!D || !D.game || D.game.id !== g.id) start(g);
+    else applyMoves(g);
+  }
+  // Bring the board up to date with the server's list of picks.
+  function applyMoves(g) {
+    for (const m of g.moves.slice(D.n)) {
+      const row = D.byKey.get(m.item);
+      const side = m.by === D.game.role ? 0 : 1;
+      if (!row || !draft(side, row)) { toast("This draft's player list changed. Reload the page."); return; }
+    }
+    if (g.status === "done" && D.n < D.total) return finish(true);
+    if (g.status === "cancelled") { toast("The draft was called off."); return toSetup(); }
+    step();
+  }
+  function onGame(g) {
+    if (g.status === "cancelled" && !D) { lobby(`<p>This draft was called off.</p><div class="go-row"><a class="btn gold" href="./">Set up your own draft</a></div>`, "Draft room", ""); return; }
+    if (g.status === "open") return;
+    if (!D) toast(`${(g[g.me === "host" ? "guest" : "host"] || {}).name || "Your friend"} joined. Let's draft.`);
+    enter(g);
+  }
+
+  LFI.games.me().then((m) => { ME = m; if (!GAME) refresh(); });
+  if (qs.get("g")) openGame(qs.get("g")); else refresh();
+})();
+</script>
+</body>
+</html>

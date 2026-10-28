@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Challenges · Last Four In</title>
+<meta name="description" content="Challenge your friends on Last Four In: pick'em, trivia, drafts and the Grid Race.">
+<meta property="og:title" content="Challenges · Last Four In">
+<meta property="og:description" content="Take on your friends. Free to play.">
+<meta property="og:url" content="https://lastfourin.com/challenges/">
+<meta property="og:site_name" content="Last Four In">
+<meta name="theme-color" content="#0d0820">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/assets/lfi.css">
+<script src="/assets/theme.js"></script>
+<link rel="stylesheet" href="/assets/social.css">
+<meta name="robots" content="noindex">
+<style>
+  .crow { display: flex; gap: 12px; align-items: center; padding: 12px 0; }
+  .crow + .crow { border-top: 1px solid var(--line); }
+  .crow .avatar { width: 40px; height: 40px; font-size: 16px; border-width: 0; flex: none; }
+  .crow-b { flex: 1; min-width: 0; }
+  .crow-b b { display: block; font-weight: 800; }
+  .crow-b span { display: block; color: var(--muted); font-size: 13.5px; }
+  .crow-b q { display: block; margin-top: 3px; color: var(--ink-2); font-size: 14px; quotes: "“" "”"; }
+  .crow-acts { display: flex; gap: 6px; flex: none; }
+  .crow-acts .btn { padding: 7px 12px; font-size: 13.5px; min-height: 38px; }
+  .st { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  .st.go { color: var(--win); }
+  @media (max-width: 560px) { .crow { flex-wrap: wrap; } .crow-acts { width: 100%; padding-left: 52px; } }
+  .start { display: grid; gap: 10px; }
+  .start a { display: block; padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--card-2); color: var(--ink); text-decoration: none; }
+  .start a:hover { border-color: var(--accent); }
+  .start a b { display: block; font-weight: 800; }
+  .start a span { display: block; color: var(--muted); font-size: 13.5px; }
+</style>
+</head>
+<body>
+
+<header class="nav" data-active="challenges"></header>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <div class="kicker" id="kick">Head to head</div>
+      <h1 class="disp">Challenges</h1>
+      <p>Take on your friends. Anything they challenge you to lands here, and so do your live races and drafts.</p>
+    </div>
+  </div>
+  <div id="body"><p class="empty">Loading…</p></div>
+</main>
+<footer class="foot"></footer>
+
+<script src="/assets/lfi.js"></script>
+<script src="/assets/cloud.js"></script>
+<script src="/assets/games.js"></script>
+<script>
+(function () {
+  const { $, esc, toast, cloud } = LFI;
+  const G = LFI.games;
+  let list = [], games = [];
+
+  const av = (p) => `<span class="avatar">${p && p.avatar ? `<img src="${esc(p.avatar)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : esc(((p && p.name) || "?").trim()[0].toUpperCase())}</span>`;
+  const name = (p) => esc((p && p.name) || "A friend");
+  function ago(t) {
+    const m = Math.round((Date.now() - new Date(t)) / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return `${m} min ago`;
+    const h = Math.round(m / 60);
+    if (h < 24) return `${h} hr${h > 1 ? "s" : ""} ago`;
+    const d = Math.round(h / 24);
+    return d === 1 ? "yesterday" : `${d} days ago`;
+  }
+  const GAME_NAME = { draft: "Draft", grid: "Grid Race" };
+  // A challenge tied to a game room is only answerable while the room is open.
+  const gameOver = (c) => c.game && c.game.status !== "open";
+  const gameWord = (s) => ({ live: "Started", done: "Finished", cancelled: "Called off" }[s] || "");
+
+  function row(c) {
+    const pending = c.incoming && c.status === "pending" && !gameOver(c);
+    const who = c.incoming ? `${name(c.who)} challenged you` : `You challenged ${name(c.who)}`;
+    let acts;
+    if (pending) acts = `<button class="btn gold" type="button" data-acc>Play</button><button class="btn" type="button" data-dec>Decline</button>`;
+    else if (c.game && gameOver(c)) acts = `<span class="st">${gameWord(c.game.status)}</span>`;
+    else if (c.status === "pending") acts = `<span class="st">Waiting</span>`;
+    else acts = `<span class="st${c.status === "accepted" ? " go" : ""}">${c.status === "accepted" ? "Accepted" : "Declined"}</span>${c.incoming && c.status === "accepted" ? `<a class="btn" href="${esc(c.url)}">Open</a>` : ""}`;
+    return `<div class="crow" data-id="${c.id}" data-url="${esc(c.url)}" data-game="${c.game ? 1 : ""}">${av(c.who)}
+      <div class="crow-b"><b>${esc(c.title)}</b><span>${who} · ${ago(c.created_at)}</span>${c.note ? `<q>${esc(c.note)}</q>` : ""}</div>
+      <div class="crow-acts">${acts}</div></div>`;
+  }
+  function gameRow(g) {
+    const live = g.status === "live", open = g.status === "open";
+    const what = g.kind === "grid" ? `${g.moves} of 25 squares claimed` : `${g.moves} of ${g.total} picks made`;
+    const vs = g.opponent ? `vs ${name(g.opponent)}` : "Waiting for a friend to join";
+    return `<div class="crow">${av(g.opponent)}
+      <div class="crow-b"><b>${esc(g.title || GAME_NAME[g.kind] || "Game")}</b><span>${vs} · ${open ? "room open" : live ? what : gameWord(g.status).toLowerCase()}</span></div>
+      <div class="crow-acts"><a class="btn${live ? " gold" : ""}" href="/${g.kind === "draft" ? "drafts" : "grid"}/?g=${esc(g.code)}">${live || open ? "Go" : "See it"}</a></div></div>`;
+  }
+  const card = (h, chip, body) => `<section class="card"><div class="card-h"><h2 class="disp">${h}</h2>${chip ? `<span class="chip">${chip}</span>` : ""}</div><div class="card-b">${body}</div></section>`;
+
+  function draw() {
+    const waiting = list.filter((c) => c.incoming && c.status === "pending" && !gameOver(c));
+    const sent = list.filter((c) => !c.incoming);
+    const past = list.filter((c) => c.incoming && !waiting.includes(c));
+    const going = games.filter((g) => g.status === "open" || g.status === "live");
+    $("body").innerHTML = `<div class="grid2">
+      <div class="stack">
+        ${card("Waiting on you", waiting.length ? `${waiting.length} new` : "", waiting.length ? waiting.map(row).join("")
+          : `<p class="empty" style="margin:0">Nothing waiting. When a friend challenges you, it shows up here.</p>`)}
+        ${going.length ? card("Your games", going.length, going.map(gameRow).join("")) : ""}
+        ${sent.length ? card("You sent", "", sent.map(row).join("")) : ""}
+        ${past.length ? card("Earlier", "", past.map(row).join("")) : ""}
+      </div>
+      <aside class="side stack">${card("Start one", "", `<div class="start">
+          <a href="/grid/"><b>Grid Race</b><span>Same 25 squares, first right answer claims it</span></a>
+          <a href="/drafts/"><b>Draft</b><span>Snake-draft any slice of NFL history, live</span></a>
+        </div><p class="empty" style="margin:12px 0 0">Or finish any pick'em, poll, trivia or draft and tap a friend under <b>Challenge a friend</b>.</p>`)}</aside>
+    </div>`;
+  }
+
+  async function load() {
+    if (!cloud.on || !cloud.user) {
+      $("body").innerHTML = `<section class="card" style="max-width:560px"><div class="card-b">
+        <p style="margin:0 0 8px;font-weight:700">Sign in to challenge your friends.</p>
+        <p class="empty" style="margin-top:0">It's free. Race them in the Grid, draft against them live, or dare them to beat your picks.</p>
+        <a class="btn gold" href="/signin/?next=/challenges/">Sign in or create account</a></div></section>`;
+      return;
+    }
+    if (!cloud.profile || !cloud.profile.onboarded) { location.replace("/signin/?next=/challenges/"); return; }
+    $("kick").textContent = `@${cloud.profile.username}`;
+    try {
+      [list, games] = await Promise.all([G.challenges(), G.mine().catch(() => [])]);
+      draw();
+      LFI.countChallenges();
+    } catch (e) {
+      $("body").innerHTML = `<section class="card"><div class="card-b"><p style="margin:0">Couldn't load your challenges. Refresh to try again.</p></div></section>`;
+    }
+  }
+
+  $("body").addEventListener("click", async (ev) => {
+    const r = ev.target.closest(".crow[data-id]"), btn = ev.target.closest("button");
+    if (!r || !btn) return;
+    btn.disabled = true;
+    try {
+      if (btn.matches("[data-acc]")) {
+        if (!r.dataset.game) await G.respond(r.dataset.id, true); // a game room answers the challenge when you join it
+        location.href = r.dataset.url;
+      } else if (btn.matches("[data-dec]")) {
+        await G.respond(r.dataset.id, false); toast("Declined"); load();
+      }
+    } catch (err) { toast(err.message); btn.disabled = false; load(); }
+  });
+
+  cloud.ready.then(() => { load(); let uid = cloud.user && cloud.user.id; cloud.onChange((c, what) => { if (what !== "entries" && (c.user && c.user.id) !== uid) { uid = c.user && c.user.id; load(); } }); });
+})();
+</script>
+</body>
+</html>

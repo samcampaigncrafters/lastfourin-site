@@ -48,11 +48,11 @@
     const k = KIND[e.kind] || {};
     const who = e.by ? esc(e.by) : "A friend";
     $("k").textContent = `${e.by || "A friend"} challenged you`;
-    $("h").textContent = e.kind === "bracket" ? "Think you can build a better bracket?" : e.kind === "ap" ? "Think you can call the AP poll better?" : e.kind === "trivia" ? "Think you can beat this score?" : "Think you can beat these picks?";
-    $("p").innerHTML = `${who} made ${e.kind === "bracket" ? "their playoff bracket" : e.kind === "ap" ? "their AP poll prediction" : e.kind === "trivia" ? "today's trivia" : "their picks"} on Last Four In. Make yours, then send it back.`;
+    $("h").textContent = e.kind === "bracket" ? "Think you can build a better bracket?" : e.kind === "ap" ? "Think you can call the AP poll better?" : e.kind === "trivia" ? "Think you can beat this score?" : e.kind === "draft" ? "Think you can draft it better?" : "Think you can beat these picks?";
+    $("p").innerHTML = `${who} made ${e.kind === "bracket" ? "their playoff bracket" : e.kind === "ap" ? "their AP poll prediction" : e.kind === "trivia" ? "today's trivia" : e.kind === "draft" ? "this draft" : "their picks"} on Last Four In. Make yours, then send it back.`;
     $("entry").innerHTML = renderEntry(e, { full: true, by: e.by });
     $("make").textContent = (k.make || "Make your own") + " →";
-    $("make").href = k.url || "/";
+    $("make").href = e.kind === "draft" && /^\?[\w=&%.+-]*$/.test((e.data || {}).q || "") ? k.url + e.data.q : k.url || "/"; // same pool as the friend's draft
     document.title = `${e.by || "A friend"} challenged you · Last Four In`;
   } catch (err) {
     $("entry").innerHTML = `<p class="empty">This share link looks broken, but you can still play.</p>`;

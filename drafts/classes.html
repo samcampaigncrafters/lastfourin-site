@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Draft Classes · Last Four In</title>
+<meta name="description" content="Mock any NFL draft class since 1999 with what you know now, or see every class redrafted by the fantasy points the careers actually scored.">
+<meta property="og:title" content="Draft Classes · Last Four In">
+<meta property="og:description" content="Redraft any NFL class since 1999 with hindsight. Could you beat the real draft?">
+<meta property="og:url" content="https://lastfourin.com/drafts/classes.html">
+<meta property="og:site_name" content="Last Four In">
+<meta name="theme-color" content="#0d0820">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect width='30' height='30' rx='7' fill='%230d0820'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='5' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='5' y='16' width='9' height='9' rx='1.6' fill='%23fff'/%3E%3Crect x='16' y='16' width='9' height='9' rx='1.6' fill='%23ff3dbb'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/assets/lfi.css">
+<script src="/assets/theme.js"></script>
+<style>
+.modes { display: inline-flex; flex-wrap: wrap; margin-top: 16px; background: var(--card); border: 1px solid var(--line-2); border-radius: 8px; padding: 3px; gap: 3px; }
+.modes button { border: 0; background: none; cursor: pointer; padding: 8px 14px; border-radius: 6px; font-family: var(--f-display); text-transform: uppercase; font-size: 16px; letter-spacing: .03em; color: var(--ink-2); white-space: nowrap; }
+.modes button[aria-pressed="true"] { background: var(--field); color: #fff; }
+.pick-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+.pick-row select { padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 8px; font: 700 16px var(--f-body); background: var(--card-2); color: var(--ink); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { border: 1px solid var(--line-2); background: var(--card-2); border-radius: 6px; padding: 8px 12px; font: 700 14px var(--f-body); color: var(--ink-2); min-height: 40px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--field); border-color: var(--field); color: #fff; }
+.young { font-size: 14px; color: var(--ink-2); margin: -6px 0 14px; }
+
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+@media (max-width: 980px) { .cols { grid-template-columns: minmax(0, 1fr); } .cols .mine-col { order: -1; } }
+.bd-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.bd-tools .search { margin: 0; flex: 1 1 200px; }
+.pos-f { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.pos-f button { border: 1px solid var(--line-2); background: var(--card-2); border-radius: 999px; padding: 6px 12px; font: 800 13px var(--f-body); color: var(--ink-2); cursor: pointer; }
+.pos-f button[aria-pressed="true"] { background: var(--field); border-color: var(--field); color: #fff; }
+.hint-t { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--ink-2); font-weight: 700; margin-left: auto; cursor: pointer; }
+.board { list-style: none; margin: 0; padding: 0; }
+.board li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.board li.took { opacity: .42; }
+.pos { font-family: var(--f-display); font-size: 14px; letter-spacing: .05em; text-align: center; padding: 3px 0; border-radius: 4px; background: var(--card-2); color: var(--ink-2); }
+.board .who b { display: block; font-weight: 800; }
+.board .who small { color: var(--muted); font-size: 12.5px; }
+.board .btn { padding: 8px 14px; }
+
+.lu { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.lu-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.lu-h b { font-family: var(--f-display); font-size: 19px; text-transform: uppercase; letter-spacing: .02em; }
+.lu-h span { font-family: var(--f-display); font-size: 19px; }
+.lu ol { list-style: none; margin: 0; padding: 0; }
+.lu li { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 12px; border-bottom: 1px solid var(--line); min-height: 44px; font-size: 14px; }
+.lu li:last-child { border-bottom: 0; }
+.lu .slot { font-family: var(--f-display); font-size: 14px; color: var(--muted); }
+.lu .nm { font-weight: 700; min-width: 0; }
+.lu .nm small { display: block; font-weight: 500; color: var(--muted); font-size: 12px; }
+.lu .open { color: var(--muted); font-style: italic; font-weight: 500; }
+.lu .pts { font-family: var(--f-display); font-size: 16px; }
+.lu .x { border: 0; background: none; color: var(--muted); font-size: 20px; cursor: pointer; padding: 0 4px; }
+.mine-col .lu-f { padding: 12px; display: grid; gap: 8px; }
+@media (max-width: 980px) { /* above the board on phones: two short columns so the class list stays in view */
+  .mine-col ol { display: grid; grid-template-columns: 1fr 1fr; grid-auto-flow: column; grid-template-rows: repeat(5, auto); }
+  .mine-col .lu li { min-height: 34px; padding: 3px 8px; font-size: 13px; grid-template-columns: 20px minmax(0, 1fr) auto; }
+  .mine-col .lu .nm small { display: none; }
+  .mine-col .lu-f { padding: 8px; } }
+
+.res-banner { padding: 22px 20px; border-radius: var(--r); background: var(--field); color: #fff; margin-bottom: 16px; }
+.res-banner .disp { font-size: clamp(34px, 6vw, 52px); margin: 4px 0 0; }
+.res-banner p { margin: 8px 0 0; opacity: .9; }
+.res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 640px) { .res-grid { grid-template-columns: 1fr; } }
+.res-acts { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+/* Hindsight redraft */
+.calls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+@media (max-width: 760px) { .calls { grid-template-columns: 1fr; } }
+.call { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; }
+.call small { display: block; font-family: var(--f-display); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.call b { display: block; font-family: var(--f-display); font-size: 24px; text-transform: uppercase; margin-top: 4px; line-height: 1.05; }
+.call span { display: block; font-size: 14px; color: var(--ink-2); margin-top: 4px; }
+.rd { list-style: none; margin: 0; padding: 0; }
+.rd li { display: grid; grid-template-columns: 34px 44px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.rd .rk { font-family: var(--f-display); font-size: 20px; text-align: center; }
+.rd .who b { display: block; font-weight: 800; }
+.rd .who small { color: var(--muted); font-size: 12.5px; }
+.rd .pts { font-family: var(--f-display); font-size: 17px; text-align: right; min-width: 56px; }
+.rd .mv { font-weight: 800; font-size: 13px; min-width: 44px; text-align: right; }
+.mv.up { color: var(--win); } .mv.dn { color: var(--loss); } .mv.eq { color: var(--muted); }
+@media (max-width: 560px) { .rd li { grid-template-columns: 26px 38px minmax(0, 1fr) auto; } .rd .mv { display: none; } .rd .who small .mvs { display: inline; } }
+.mvs { display: none; font-weight: 800; }
+.more { padding: 12px 0 2px; }
+.credit { margin-top: 26px; font-size: 12.5px; color: var(--muted); }
+.credit a { color: inherit; }
+</style>
+</head>
+<body>
+
+<header class="nav" data-active="redraft"></header>
+
+<main class="page">
+  <div class="head">
+    <div>
+      <div class="kicker">NFL draft classes since 1999</div>
+      <h1 class="disp">Draft Classes</h1>
+      <p>Every quarterback, running back, receiver and tight end drafted since 1999, judged by the fantasy points their careers actually scored. Mock a class with what you know now, or see how it should have gone.</p>
+      <nav class="modes" aria-label="Mode">
+        <button type="button" data-tab="mock" aria-pressed="true">Mock it</button>
+        <button type="button" data-tab="hind" aria-pressed="false">Hindsight redraft</button>
+      </nav>
+    </div>
+  </div>
+
+  <div class="pick-row">
+    <select id="year" aria-label="Draft class"></select>
+    <div class="seg" id="sc">
+      <button type="button" data-v="ppr" aria-pressed="true">PPR</button>
+      <button type="button" data-v="half" aria-pressed="false">Half PPR</button>
+      <button type="button" data-v="std" aria-pressed="false">Standard</button>
+    </div>
+  </div>
+  <p class="young" id="young" hidden></p>
+
+  <!-- Mock: pick the best 10 careers from the class -->
+  <section id="mock">
+    <div class="cols">
+      <section class="card">
+        <div class="card-h"><h2 class="disp" id="mockH">You're on the clock</h2><span class="chip" id="mockChip"></span></div>
+        <div class="card-b">
+          <p style="margin:0 0 12px;color:var(--ink-2)" id="mockP"></p>
+          <div class="bd-tools">
+            <input class="search" id="q" type="search" autocomplete="off" placeholder="Search the class" aria-label="Search the class">
+            <label class="hint-t"><input type="checkbox" id="hint"> Show where they went</label>
+          </div>
+          <div class="pos-f" id="posF"></div>
+          <ul class="board" id="board"></ul>
+        </div>
+      </section>
+      <div class="mine-col">
+        <div class="lu"><div class="lu-h"><b>Your board</b><span id="mineN">0/10</span></div><ol id="mine"></ol>
+          <div class="lu-f"><button class="btn gold big" type="button" id="lockBtn" disabled>Lock it in</button></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Mock result -->
+  <section id="result" hidden>
+    <div class="res-banner"><div class="kicker" style="color:#fff;opacity:.85" id="resKick"></div><div class="disp" id="resH"></div><p id="resP"></p></div>
+    <div class="res-grid" id="resTeams"></div>
+    <div class="res-acts">
+      <button class="btn gold big" type="button" id="shareBtn">Share it</button>
+      <button class="btn" type="button" id="againBtn">Mock it again</button>
+      <button class="btn" type="button" id="seeBtn">See the hindsight redraft</button>
+    </div>
+  </section>
+
+  <!-- Hindsight redraft -->
+  <section id="hind" hidden>
+    <div class="calls" id="calls"></div>
+    <section class="card">
+      <div class="card-h"><h2 class="disp" id="hindH">The redraft</h2><span class="chip" id="hindChip"></span></div>
+      <div class="card-b">
+        <div class="pos-f" id="posH"></div>
+        <ol class="rd" id="rd"></ol>
+        <div class="more" id="rdMore"></div>
+      </div>
+    </section>
+  </section>
+
+  <p class="credit">Draft slots and player stats from <a href="https://github.com/nflverse" rel="noopener">nflverse</a> (CC BY 4.0). Fantasy points are regular season only, through <span id="thru">this season</span>. Only quarterbacks, running backs, receivers and tight ends score, so every other pick is left out.</p>
+</main>
+<footer class="foot"></footer>
+
+<script src="/assets/lfi.js"></script>
+<script>
+(function () {
+  const { $, esc, entries } = LFI;
+  const qs = new URLSearchParams(location.search);
+  const N = 10;
+  const POSN = ["QB", "RB", "WR", "TE"];
+  const nkey = (s) => String(s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z]/g, "");
+  const fmt = (n) => Math.round(n).toLocaleString();
+  const ord = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
+  const SC_LABEL = { ppr: "PPR", half: "Half PPR", std: "Standard" };
+  const S = { tab: qs.get("tab") === "hind" ? "hind" : "mock", y: qs.get("class") || "", sc: SC_LABEL[qs.get("s")] ? qs.get("s") : "ppr", pos: "", posH: "", q: "", hint: false, all: false };
+  let DATA = null, CLASS = [], mine = [], TEAMS = {};
+
+  // A class row: [name, pos, college, round, pick, team, ppr, std, firstYear, lastYear] plus its id and redraft rank.
+  const pts = (p) => S.sc === "ppr" ? p[6] : S.sc === "std" ? p[7] : (p[6] + p[7]) / 2;
+  const team = (c) => (TEAMS[c] || [c])[0];
+  function load() {
+    CLASS = (DATA.classes[S.y] || []).map((p, i) => Object.assign(p.slice(), { id: i, real: i + 1 }));
+    const by = CLASS.slice().sort((a, b) => pts(b) - pts(a) || a[4] - b[4]);
+    by.forEach((p, i) => { p.re = i + 1; });
+    const seasons = +DATA.thru.slice(0, 4) - +S.y + 1;
+    $("young").hidden = seasons > 3;
+    $("young").textContent = seasons <= 1 ? "This class has barely played. Check back in a few years." : `This class has only played ${seasons} seasons, so the order will keep moving.`;
+  }
+
+  // ---------- mock ----------
+  function drawMock() {
+    $("mockH").textContent = `The ${S.y} class`;
+    $("mockChip").textContent = `${CLASS.length} players`;
+    $("mockP").innerHTML = `Pick the ${N} players from the ${esc(S.y)} draft who went on to score the most fantasy points. Then see if you beat the teams who actually drafted them.`;
+    $("posF").innerHTML = ["", ...POSN].map((p) => `<button type="button" data-p="${p}" aria-pressed="${S.pos === p}">${p || "All"}</button>`).join("");
+    const k = nkey(S.q), took = new Set(mine);
+    const list = CLASS.filter((p) => (!S.pos || p[1] === S.pos) && (!k || nkey(p[0]).includes(k)))
+      .sort((a, b) => S.hint ? a[4] - b[4] : a[0].split(" ").slice(-1)[0].localeCompare(b[0].split(" ").slice(-1)[0]) || a[0].localeCompare(b[0]));
+    $("board").innerHTML = list.map((p) => `<li class="${took.has(p.id) ? "took" : ""}"><span class="pos">${p[1]}</span>
+        <div class="who"><b>${esc(p[0])}</b><small>${esc(p[2].split(";").pop().trim())}${S.hint ? ` · went #${p[4]} to the ${esc(team(p[5]))}` : ""}</small></div>
+        <button class="btn${took.has(p.id) ? "" : " navy"}" type="button" data-id="${p.id}" ${took.has(p.id) || mine.length >= N ? "disabled" : ""}>${took.has(p.id) ? "Taken" : "Draft"}</button></li>`).join("")
+      || `<li><span></span><div class="who"><small>No one in this class matches.</small></div></li>`;
+    $("mine").innerHTML = Array.from({ length: N }, (_, i) => {
+      const p = CLASS[mine[i]];
+      return `<li><span class="slot">${i + 1}</span>${p ? `<span class="nm">${esc(p[0])}<small>${p[1]}</small></span><button class="x" type="button" data-rm="${i}" aria-label="Take ${esc(p[0])} off your board">×</button>`
+        : `<span class="nm open">Open</span><span></span>`}</li>`;
+    }).join("");
+    $("mineN").textContent = `${mine.length}/${N}`;
+    $("lockBtn").disabled = mine.length < N;
+  }
+  $("board").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-id]"); if (!b || mine.length >= N) return;
+    mine.push(+b.dataset.id); drawMock();
+  });
+  $("mine").addEventListener("click", (e) => { const b = e.target.closest("[data-rm]"); if (!b) return; mine.splice(+b.dataset.rm, 1); drawMock(); });
+  $("posF").addEventListener("click", (e) => { const b = e.target.closest("button[data-p]"); if (!b) return; S.pos = b.dataset.p; drawMock(); });
+  $("q").addEventListener("input", (e) => { S.q = e.target.value; drawMock(); });
+  $("hint").addEventListener("change", (e) => { S.hint = e.target.checked; drawMock(); });
+
+  let lastEntry = null;
+  function lock() {
+    const me = mine.map((i) => CLASS[i]);
+    const real = CLASS.slice(0, N);                                            // the first ten taken, in draft order
+    const best = CLASS.slice().sort((a, b) => a.re - b.re).slice(0, N);
+    const sum = (l) => l.reduce((t, p) => t + pts(p), 0);
+    const a = sum(me), b = sum(real), c = sum(best);
+    const win = a > b;
+    $("resKick").textContent = `${S.y} draft · ${SC_LABEL[S.sc]}`;
+    $("resH").textContent = win ? "You beat the real draft" : a === b ? "Dead even" : "The real draft wins";
+    $("resP").textContent = `Your ${N}: ${fmt(a)} points. The first ${N} taken: ${fmt(b)}. Perfect hindsight: ${fmt(c)}, so you got ${Math.round((a / c) * 100)}% of the way there.`;
+    const card = (title, list, sub) => `<div class="lu"><div class="lu-h"><b>${title}</b><span>${fmt(sum(list))}</span></div><ol>${list.map((p, i) =>
+      `<li><span class="slot">${i + 1}</span><span class="nm">${esc(p[0])}<small>${p[1]} · ${sub(p)}</small></span><span class="pts">${fmt(pts(p))}</span></li>`).join("")}</ol></div>`;
+    $("resTeams").innerHTML = card("Your board", me, (p) => `went #${p[4]}, redrafts ${ord(p.re)}`) + card("The real draft", real, (p) => `#${p[4]} ${esc(team(p[5]))}, redrafts ${ord(p.re)}`);
+    const row = (p, i) => [String(i + 1), p[0], Math.round(pts(p) * 10) / 10];
+    lastEntry = entries.put({
+      id: `draft-class-${S.y}-${Date.now()}`, kind: "draft", title: `Mock: ${S.y} draft class`, sub: SC_LABEL[S.sc],
+      result: win ? `Beat the real draft by ${fmt(a - b)}` : `Real draft won by ${fmt(b - a)}`,
+      data: { me: me.map(row), op: real.map(row), mn: "You", on: "The real draft", mt: Math.round(a * 10) / 10, ot: Math.round(b * 10) / 10, q: `?class=${S.y}&s=${S.sc}` },
+      shareText: `I mocked the ${S.y} NFL draft on Last Four In with hindsight: ${fmt(a)} fantasy points to the real draft's ${fmt(b)}. Can you do better?`,
+    });
+    tab("mock");
+    scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(() => LFI.share(lastEntry, { kicker: "Your mock is saved", note: "Send it to your friends and see who knows the class better." }), 900);
+  }
+  $("lockBtn").addEventListener("click", () => mine.length === N && lock());
+  $("shareBtn").addEventListener("click", () => lastEntry && LFI.share(lastEntry, { kicker: "Your mock", note: "Send it to your friends and see who knows the class better." }));
+  $("againBtn").addEventListener("click", () => { mine = []; lastEntry = null; tab("mock"); scrollTo({ top: 0 }); });
+  $("seeBtn").addEventListener("click", () => tab("hind"));
+
+  // ---------- hindsight ----------
+  function drawHind() {
+    const skillRank = (p) => p.real;                                           // where he went among QB/RB/WR/TE
+    const top = CLASS.slice().sort((a, b) => a.re - b.re);
+    const first = CLASS.filter((p) => p[3] === 1);
+    const steal = top.slice(0, 10).sort((a, b) => b[4] - a[4])[0];
+    const miss = first.slice().sort((a, b) => b.re - a.re)[0];
+    const call = (lbl, p, line) => p ? `<div class="call"><small>${lbl}</small><b>${esc(p[0])}</b><span>${line}</span></div>` : "";
+    $("calls").innerHTML = call("Should have gone first", top[0], `${top[0][1]} · went #${top[0][4]} to the ${esc(team(top[0][5]))} · ${fmt(pts(top[0]))} pts`)
+      + call("Biggest steal", steal, steal && `Went #${steal[4]} in round ${steal[3]}, redrafts ${ord(steal.re)}`)
+      + call("Biggest miss", miss, miss && `Went #${miss[4]} to the ${esc(team(miss[5]))}, redrafts ${ord(miss.re)} · ${fmt(pts(miss))} pts`);
+    $("hindH").textContent = `${S.y} redrafted`;
+    $("hindChip").textContent = SC_LABEL[S.sc];
+    $("posH").innerHTML = ["", ...POSN].map((p) => `<button type="button" data-p="${p}" aria-pressed="${S.posH === p}">${p || "All"}</button>`).join("");
+    const list = top.filter((p) => !S.posH || p[1] === S.posH);
+    const shown = S.all ? list : list.slice(0, 40);
+    $("rd").innerHTML = shown.map((p) => {
+      const mv = skillRank(p) - p.re;
+      const mvTxt = mv > 0 ? `▲ ${mv}` : mv < 0 ? `▼ ${-mv}` : "–";
+      const cls = mv > 0 ? "up" : mv < 0 ? "dn" : "eq";
+      return `<li><span class="rk">${p.re}</span><span class="pos">${p[1]}</span>
+        <div class="who"><b>${esc(p[0])}</b><small>Went #${p[4]} (round ${p[3]}) to the ${esc(team(p[5]))} <span class="mvs mv ${cls}">${mvTxt}</span></small></div>
+        <span class="pts">${fmt(pts(p))}</span><span class="mv ${cls}" title="Places moved among the class's QBs, RBs, WRs and TEs">${mvTxt}</span></li>`;
+    }).join("");
+    $("rdMore").innerHTML = list.length > shown.length ? `<button class="btn" type="button" id="allBtn">Show all ${list.length}</button>` : "";
+  }
+  $("posH").addEventListener("click", (e) => { const b = e.target.closest("button[data-p]"); if (!b) return; S.posH = b.dataset.p; drawHind(); });
+  $("rdMore").addEventListener("click", (e) => { if (e.target.closest("#allBtn")) { S.all = true; drawHind(); } });
+
+  // ---------- page ----------
+  function tab(t) {
+    S.tab = t;
+    document.querySelectorAll(".modes button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tab === t)));
+    const locked = !!lastEntry;                                                // a locked-in mock shows its result
+    $("mock").hidden = t !== "mock" || locked;
+    $("result").hidden = t !== "mock" || !locked;
+    $("hind").hidden = t !== "hind";
+    sync();
+  }
+  function sync() {
+    history.replaceState(null, "", `?class=${S.y}&s=${S.sc}${S.tab === "hind" ? "&tab=hind" : ""}`);
+    if (S.tab === "hind") drawHind(); else drawMock();
+  }
+  document.querySelector(".modes").addEventListener("click", (e) => { const b = e.target.closest("button[data-tab]"); if (b) tab(b.dataset.tab); });
+  $("year").addEventListener("change", (e) => { S.y = e.target.value; mine = []; S.all = false; lastEntry = null; load(); tab(S.tab); });
+  $("sc").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-v]"); if (!b) return;
+    S.sc = b.dataset.v; $("sc").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    lastEntry = null; load(); tab(S.tab);                                     // a new scoring re-opens the board to lock in again
+  });
+
+  fetch("data/classes.json").then((r) => r.json()).then((d) => {
+    DATA = d; TEAMS = d.teams;
+    const years = Object.keys(d.classes).sort((a, b) => b - a);
+    if (!d.classes[S.y]) S.y = String(Math.min(+years[0] - 5, 2017));        // a class with real careers to judge
+    $("year").innerHTML = years.map((y) => `<option value="${y}"${y === S.y ? " selected" : ""}>${y} NFL draft</option>`).join("");
+    $("sc").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.v === S.sc)));
+    $("thru").textContent = d.thru;
+    load(); tab(S.tab);
+  });
+})();
+</script>
+</body>
+</html>
