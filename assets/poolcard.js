@@ -29,7 +29,7 @@
     if (!cloud || !cloud.on) { box.innerHTML = `<p class="empty">👥 Pools with friends switch on with sign-in.</p>`; return; }
     if (!cloud.user || !cloud.profile || !cloud.profile.onboarded) {
       box.innerHTML = `<p class="empty" style="margin-top:0;color:var(--ink-2)">Start a private pool, send the link, and see who's really calling it. Your normal picks count, nothing extra to fill in.</p>
-        <a class="btn gold block" href="/signin/?next=${here}"><span class="em" aria-hidden="true">👥</span> ${cloud.user ? "Finish your profile" : "Sign in to start a pool"}</a>`;
+        <a class="btn gold block" href="/signin/?next=${here}" data-account="pool"><span class="em" aria-hidden="true">👥</span> ${cloud.user ? "Finish your profile" : "Start a pool"}</a>`;
       return;
     }
     box.innerHTML = (pools.length ? `<ul class="pool-list">${pools.map((p) => `<li><a href="/pools/?id=${p.id}">

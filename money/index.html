@@ -392,7 +392,7 @@
     $("rankChip").textContent = "";
     if (mode !== "cloud" || !signedIn()) {
       const why = !cloud || !cloud.on || mode !== "cloud" ? "Pretend money. No prize." : cloud.user ? "Finish setting up your profile to play." : "Sign in free to get your $1,000 for the week. Pretend money, no prize.";
-      const btn = mode === "cloud" ? `<a class="btn gold" href="/signin/?next=/money/" style="width:100%;margin-top:12px">${cloud.user ? "Finish my profile" : "Sign in or create account"}</a>` : "";
+      const btn = mode === "cloud" ? `<a class="btn gold" href="/signin/?next=/money/" data-account="money" style="width:100%;margin-top:12px">${cloud.user ? "Finish my profile" : "Get my $1,000 💰"}</a>` : "";
       $("bank").innerHTML = `${wkLine()}<div class="bank"><div class="big">$1,000</div></div><p class="empty" style="padding:6px 0 0">${why}</p>${btn}`;
       return;
     }
@@ -435,7 +435,7 @@
     }).join("");
     const can = mode === "cloud" && signedIn() && season && season.open;
     const btn = can ? `<button class="btn gold" type="button" id="placeBtn">Place ${slip.length === 1 ? "bet" : slip.length + " bets"}</button>`
-      : mode === "cloud" && !signedIn() ? `<a class="btn gold" id="placeBtn" href="/signin/?next=/money/">Sign in to place bets</a>`
+      : mode === "cloud" && !signedIn() ? `<button class="btn gold" type="button" id="placeBtn" data-account="money">Place ${slip.length === 1 ? "bet" : slip.length + " bets"}</button>`
       : `<button class="btn gold" type="button" id="placeBtn" disabled>${mode === "espn" ? "Opens soon" : "Betting is closed"}</button>`;
     $("slip").innerHTML = `${items}
       <div class="quick" aria-label="Same stake on every bet">${[10, 25, 50, 100].map((v) => `<button type="button" data-all="${v}">$${v} each</button>`).join("")}</div>
@@ -524,6 +524,7 @@
   $("lgs").addEventListener("change", (e) => { league = e.target.value; renderMain(); });
   $("scope").addEventListener("click", async (e) => {
     const b = e.target.closest("button[data-scope]"); if (!b || b.dataset.scope === scope) return;
+    if (b.dataset.scope === "friends" && mode === "cloud" && !LFI.needAccount("leaderboard")) return;
     scope = b.dataset.scope; renderLeaderboard(); await loadBoard(); renderLeaderboard();
   });
   $("bweek").addEventListener("click", async (e) => {

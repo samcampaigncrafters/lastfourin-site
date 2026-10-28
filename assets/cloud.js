@@ -28,6 +28,69 @@
   let readyResolve;
   cloud.ready = new Promise((r) => { readyResolve = r; });
   const markReady = () => { if (!cloud.ready.done) { cloud.ready.done = true; readyResolve(cloud); } };
+
+  // ---- "Create account" pop-up: what a signed-out visitor sees when they reach for something that needs one ----
+  // LFI.needAccount(reason, next) is true when the action can go ahead; otherwise it opens the pop-up and is false.
+  // Any button or link with data-account="<reason>" gets the same check before its own click handler runs.
+  // Games that work without an account never call it.
+  const WHY = {
+    picks: ["📋", "Save your picks", "Make a free account to keep your picks on every device, get graded and climb the leaderboard."],
+    post: ["📣", "Post it to your profile", "Make a free account to post your picks, keep a record friends can follow and get on the leaderboard."],
+    contest: ["🏆", "Enter the contest", "Make a free account to enter, get graded and see where you finish on the leaderboard."],
+    challenge: ["⚔️", "Challenge your friends", "Make a free account so the site can referee. Then send the link and play live."],
+    leaderboard: ["🏆", "See the leaderboard", "Make a free account to get on the leaderboard and see how you stack up against your friends."],
+    friends: ["👋", "Add friends", "Make a free account to add friends, follow their picks and challenge them."],
+    comment: ["💬", "Join the conversation", "Make a free account to comment on picks and posts."],
+    pool: ["👥", "Start a pool", "Make a free account to start a private pool with your friends. Your normal picks count."],
+    money: ["💰", "Get your $1,000", "Make a free account to get your $1,000 for the week and place bets. Pretend money, no prize."],
+  };
+  const accountReady = () => !on || !!(cloud.profile && cloud.profile.onboarded);
+  let pop;
+  function accountPop(reason, next) {
+    const [emo, title, body] = WHY[reason] || ["🔑", "Make a free account", reason || "Make a free account to keep your picks on every device and get on the leaderboard."];
+    const half = !!cloud.user; // signed in, handle not picked yet
+    if (!pop) {
+      pop = document.createElement("div");
+      pop.className = "ov acct-pop"; pop.hidden = true;
+      pop.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="apH">
+        <div class="dlg-h"><div><div class="kicker">Free account · 30 seconds <span class="em" aria-hidden="true">⚡</span></div><h2 class="disp" id="apH"></h2></div>
+          <button class="dlg-x" type="button" data-x aria-label="Close">×</button></div>
+        <div class="dlg-b"><div class="acct-emo" aria-hidden="true"></div><p class="acct-why"></p>
+          <div class="share-acts"><a class="btn gold big" data-go></a><button class="btn" type="button" data-x>Not now</button></div>
+          <p class="acct-fine">Free forever. Sign in with Google or an email link, no password.</p></div></div>`;
+      document.body.appendChild(pop);
+      pop.addEventListener("click", (ev) => { if (ev.target === pop || ev.target.closest("[data-x]")) closePop(); });
+      document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && pop && !pop.hidden) closePop(); });
+    }
+    pop.querySelector("#apH").textContent = half ? "Finish your profile" : title;
+    pop.querySelector(".acct-emo").textContent = emo;
+    pop.querySelector(".acct-why").textContent = half ? "Pick a handle and you're in. It takes a few seconds." : body;
+    const go = pop.querySelector("[data-go]");
+    go.href = `/signin/?next=${encodeURIComponent(next || location.pathname + location.search + location.hash)}`;
+    go.innerHTML = half ? `Finish my profile <span class="em" aria-hidden="true">✅</span>` : `Create account <span class="em" aria-hidden="true">🚀</span>`;
+    pop.lastFocus = document.activeElement;
+    pop.hidden = false; document.body.style.overflow = "hidden";
+    setTimeout(() => go.focus(), 30);
+  }
+  function closePop() {
+    pop.hidden = true;
+    if (!document.querySelector(".ov:not([hidden])")) document.body.style.overflow = "";
+    if (pop.lastFocus && pop.lastFocus.focus) pop.lastFocus.focus();
+  }
+  LFI.needAccount = (reason, next) => {
+    if (accountReady()) return true;
+    // Still finding out who this is (first moment after load): ask once we know, so a signed-in player never sees it.
+    if (!cloud.ready.done) { cloud.ready.then(() => { if (!accountReady()) accountPop(reason, next); }); return false; }
+    accountPop(reason, next);
+    return false;
+  };
+  document.addEventListener("click", (ev) => {
+    const el = ev.target.closest && ev.target.closest("[data-account]");
+    if (!el || accountReady()) return;
+    ev.preventDefault(); ev.stopImmediatePropagation();
+    LFI.needAccount(el.dataset.account, el.dataset.next);
+  }, true);
+
   if (!on) { markReady(); return; }
 
   // Visitor counter (supabase/60_visits.sql): one anonymous ping per page view on the live site. No cookies,
@@ -290,8 +353,9 @@
   LFI.onShareOpen = (e, slot) => {
     const p = cloud.profile;
     if (!p || !p.onboarded) {
-      slot.innerHTML = `<div class="post-box"><p><b>Post it to your profile.</b> Sign in free to keep your picks on every device and let friends follow your record.</p>
-        <a class="btn navy" href="/signin/?next=${encodeURIComponent(here())}">Sign in</a></div>`;
+      // Same box a signed-in player gets; tapping Post asks them to make an account first.
+      slot.innerHTML = `<div class="post-box"><p><b>Post it to your profile</b> so friends can see it, comment and follow your record.</p>
+        <a class="btn navy" href="/signin/?next=${encodeURIComponent(here())}" data-account="post"><span class="em" aria-hidden="true">📣</span> Post to my profile</a></div>`;
       return;
     }
     const draw = () => {

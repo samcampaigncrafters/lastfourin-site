@@ -202,7 +202,7 @@ body.playing .head { display: none; }
     $("friendNote").innerHTML = ME ? "You get a link to send. You both see the same grid and race live."
       : `Friend races need an account so the site can referee. <a href="${LFI.games.signInUrl()}">Sign in free</a>, then come back.`;
     $("startBtn").innerHTML = friend ? `Create the race room ${em("🔗")}` : `Start the race ${em("🚀")}`;
-    $("startBtn").disabled = !BANK || (friend && !ME) || !fits();
+    $("startBtn").disabled = !BANK || !fits();
   }
 
   // ---------- years ----------
@@ -402,6 +402,7 @@ body.playing .head { display: none; }
       const secs = +S.time;
       return begin(deal(), { endAt: secs ? Date.now() + secs * 1000 : null });
     }
+    if (!ME && !LFI.needAccount("challenge")) return;
     const btn = $("startBtn"); btn.disabled = true;
     try {
       const cells = deal(), range = rangeName(S.from, S.to), title = range ? `Grid Race · ${range}` : "Grid Race";

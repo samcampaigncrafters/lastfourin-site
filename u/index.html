@@ -65,7 +65,7 @@
     const share = `<button class="btn" type="button" id="shareP">Share</button>`;
     // Friend button: what it says depends on where you stand with them. Signed out, it sends you to sign in.
     const fb = myBlocks.includes(p.id) ? ""
-      : !viewer ? (cloud.on ? `<a class="btn gold" href="/signin/?next=${encodeURIComponent(location.pathname + location.search)}">Add friend</a>` : "")
+      : !viewer ? (cloud.on ? `<a class="btn gold" href="/signin/?next=${encodeURIComponent(location.pathname + location.search)}" data-account="friends">Add friend</a>` : "")
       : { none: `<button class="btn gold" type="button" id="fb" data-f="add">Add friend</button>`,
           outgoing: `<button class="btn" type="button" id="fb" data-f="cancel">Requested</button>`,
           incoming: `<button class="btn gold" type="button" id="fb" data-f="accept">Accept friend</button>`,
@@ -176,7 +176,7 @@
     const canPost = viewer && viewer.onboarded && !myBlocks.includes(P.id);
     box.innerHTML = list.map((c) => cmtHTML(c)).join("") + (list.length ? "" : `<p class="empty" style="margin:0">No comments yet.${canPost ? " Start it off." : ""}</p>`)
       + (canPost ? `<form class="cmt-form"><textarea rows="1" maxlength="280" placeholder="Add a comment" aria-label="Add a comment"></textarea><button class="btn navy" type="submit">Post</button></form>`
-        : viewer ? "" : `<p class="empty" style="margin:0"><a href="/signin/?next=${encodeURIComponent(location.pathname + location.search + "#p-" + post.dataset.id)}">Sign in</a> to comment.</p>`);
+        : viewer || !cloud.on ? "" : `<a class="btn navy" href="/signin/?next=${encodeURIComponent(location.pathname + location.search + "#p-" + post.dataset.id)}" data-account="comment" data-next="${esc(location.pathname + location.search + "#p-" + post.dataset.id)}"><span class="em" aria-hidden="true">💬</span> Add a comment</a>`);
   }
   function cmtHTML(c) {
     const p = c.profiles || (viewer && c.user_id === viewer.id ? viewer : { username: "fan" });

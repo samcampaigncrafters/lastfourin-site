@@ -116,6 +116,7 @@ body.drafting .head { display: none; }
         <button type="button" data-mode="fun" aria-pressed="false">For fun · everyone since 1920</button>
       </nav>
       <p style="margin:10px 0 0;font-size:14.5px"><a href="classes.html"><span class="em" aria-hidden="true">🎓</span> Mock or redraft a real draft class →</a></p>
+      <p style="margin:6px 0 0;font-size:14.5px"><a href="/redraft/"><span class="em" aria-hidden="true">🔁</span> Redraft the whole NFL into 32 new teams →</a></p>
     </div>
   </div>
 
@@ -547,7 +548,7 @@ body.drafting .head { display: none; }
         : S.kind === "coaches" ? "No coaches found." : `No players found${S.kind === "jerseys" ? " in these numbers" : ""}${S.mode === "scored" ? " since 1999. Try the for-fun mode" + (S.kind === "jerseys" ? "." : " for older players.") : "."}`)
       : `<b>${pool.length.toLocaleString()}</b> ${esc(countLabel().replace(/^players/, pool.length === 1 ? "player" : "players").replace(/^head coaches/, pool.length === 1 ? "head coach" : "head coaches"))} since ${S.mode === "fun" ? meta.first : 1999}${why ? ". " + esc(why) + tip : "."}`;
     const friend = S.opp === "friend";
-    $("startBtn").disabled = !pool.length || !!why || (friend && !ME);
+    $("startBtn").disabled = !pool.length || !!why;
     $("startBtn").innerHTML = friend ? `Create the draft room ${em("🔗")}` : `Start the draft ${em("🚀")}`;
     $("friendNote").hidden = !friend;
     $("friendNote").innerHTML = !friend ? "" : ME ? "You get a link to send. Your friend opens it signed in, and you take turns live."
@@ -785,7 +786,7 @@ body.drafting .head { display: none; }
   $("shareBtn").addEventListener("click", () => lastEntry && LFI.share(lastEntry, { kicker: "Your draft", note: "Send it to your friends and see who drafts it better." }));
   $("againBtn").addEventListener("click", () => D && D.game ? toSetup() : start());
   $("newBtn").addEventListener("click", toSetup);
-  $("startBtn").addEventListener("click", () => S.opp === "friend" ? createGame() : start());
+  $("startBtn").addEventListener("click", () => S.opp !== "friend" ? start() : ME || LFI.needAccount("challenge") ? createGame() : null);
 
   // ---------- friend drafts ----------
   let ME = null, GAME = null, watcher = null;
