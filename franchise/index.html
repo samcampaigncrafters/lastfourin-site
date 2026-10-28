@@ -711,7 +711,7 @@
       <div class="bx">${scoring ? `<h3>Scoring</h3><table>${scoring}</table>` : ""}${team3}${side(g.box.a)}${side(g.box.h)}${defs(g.box.h, g.box.a)}${defs(g.box.a, g.box.h)}</div>`;
     overlay(g.po != null ? E.ROUNDS[g.po] : `Week ${g.wk}${g.ot ? " · Overtime" : ""}`, "Box score", html);
     const rb = $("replayBtn");
-    if (rb) rb.onclick = () => { closeOv(); live = { g, pv: { plays: g.pbp, sc: [g.hs, g.as] }, times: E.live.times(g.pbp), ms: 0, speed: 10, idx: -1, half: 1e9, paused: false, committed: true, key, sync: 0, last: 0 }; liveView(); window.scrollTo(0, 0); };
+    if (rb) rb.onclick = () => { closeOv(); live = { g, pv: { plays: g.pbp, sc: [g.hs, g.as] }, times: E.live.times(g.pbp), ms: 0, speed: 12, idx: -1, half: 1e9, paused: false, committed: true, key, sync: 0, last: 0 }; liveView(); window.scrollTo(0, 0); };
   }
 
   // ---- Game week: next game, game plan, scouting, lineup, injuries ----
@@ -817,7 +817,14 @@
   // The game is worked out before it starts (previewGame), then shown play by play. Which play shows is a pure
   // function of time (E.live.at), so a friends league (build 2) can set live.sync = the server's start time and
   // two browsers show the same play at the same moment; a late joiner lands on the current play.
-  const SPEEDS = [["live", "Live", 1], ["x10", "10x", 10], ["x20", "20x", 20]];
+  // Speeds are against the real game clock (no ads, no halftime): "Real time" plays 60 minutes of game clock in about
+  // 60 minutes; 4x takes about 15, 12x about 5 ("5-min game"), 20x about 3. L.base turns that into viewer time.
+  const SPEEDS = [["rt", "Real time", 1], ["x4", "4x", 4], ["x12", "5-min game", 12], ["x20", "20x", 20]];
+  function clockBase(plays, times) {
+    const last = plays[plays.length - 1], ot = last.q >= 5 ? (last.q - 4) * 600 - last.c : 0;
+    const half = plays.some((p) => p.k === "half") ? E.live.HALF_MS : 0;
+    return (times[times.length - 1] - half) / ((3600 + Math.max(0, ot)) * 1000);
+  }
   const clk = (c) => `${Math.floor(c / 60)}:${String(c % 60).padStart(2, "0")}`;
   const qn = (q) => (q <= 4 ? `Q${q}` : q === 5 ? "OT" : `${q - 4}OT`);
   const SCRIM = new Set(["run", "pass", "inc", "sack", "int", "fum", "pen", "kneel", "punt", "fg"]);
@@ -912,7 +919,7 @@
   }
   function liveView() {
     const L = live, g = L.g, H = team(g.h), A = team(g.a);
-    L.dr = drivesOf(L.pv.plays);
+    L.dr = drivesOf(L.pv.plays); L.base = clockBase(L.pv.plays, L.times);
     head(`${E.teamName(team(lg.user))} · ${g.po != null ? E.ROUNDS[g.po] : `Week ${g.wk}`}`, `${E.teamName(A)} at ${E.teamName(H)}`, "");
     $("body").onchange = null;
     $("body").innerHTML = `<div class="lv">
@@ -927,7 +934,7 @@
         <section class="card"><div class="card-h"><h2 class="disp" style="font-size:18px">Current drive</h2></div><div class="card-b" style="display:grid;gap:8px">
           <div class="dsum" id="dSum"></div><div class="dch" id="dCh"></div></div></section></div>
         <section class="card"><div class="card-h"><h2 class="disp" style="font-size:18px">Play by play</h2></div><div class="feed" id="feed"></div></section></div></div>`;
-    const setSpeed = () => { $("fld").style.setProperty("--tt", `${Math.min(0.75, 3.2 / L.speed).toFixed(2)}s`); };
+    const setSpeed = () => { $("fld").style.setProperty("--tt", `${Math.min(0.75, 3.2 / (L.speed * L.base)).toFixed(2)}s`); };
     setSpeed();
     $("body").onclick = (e) => {
       const b = e.target.closest("button"); if (!b) return;
@@ -945,7 +952,7 @@
     const loop = (now) => {
       if (live !== L) return;
       const dt = Math.min(1000, now - L.last); L.last = now;
-      if (!L.paused) L.ms += dt * L.speed;
+      if (!L.paused) L.ms += dt * L.speed * (L.base || 1);
       show(E.live.at(L.times, L.sync ? Date.now() - L.sync : L.ms));
       L.raf = requestAnimationFrame(loop);
     };
@@ -1026,7 +1033,7 @@
       if (E.apply(lg, { t: "half", plan: { ...cur, ...p } })) {
         persist();
         const before = L.pv.plays.slice(0, L.half + 1).map((x) => x.t).join("|");
-        L.pv = E.previewGame(lg, L.g); L.times = E.live.times(L.pv.plays);
+        L.pv = E.previewGame(lg, L.g); L.times = E.live.times(L.pv.plays); L.base = clockBase(L.pv.plays, L.times); L.dr = drivesOf(L.pv.plays);
         if (L.pv.plays.slice(0, L.half + 1).map((x) => x.t).join("|") !== before) console.warn("first half changed after the halftime move");
       }
     }
