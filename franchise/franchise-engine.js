@@ -168,6 +168,9 @@
   // opts: seed (string), team (0-31, the user's franchise), slot (1-32 draft slot, 0 = random),
   //       userRounds (how many Redraft rounds the user picks; the AI drafts the rest for them),
   //       straight (1 = the same order every round instead of a snake; the League Redraft page offers it).
+  // Friends leagues: humans = every team a person runs (settings.humans), me = which of them this browser shows.
+  // Everything shared (results, rosters, drafts) depends only on humans, never on me, so every member's browser
+  // replays the identical league; me only picks whose fans, news and history the page shows.
   function create(data, opts) {
     if (opts.mode === "real") return createReal(data, opts);
     const seed = String(opts.seed || Date.now().toString(36));
@@ -179,8 +182,8 @@
       players[p.id] = p;
     }
     const lg = {
-      v: 1, seed, data: data.built, year: data.season, user: opts.team | 0,
-      settings: { team: opts.team | 0, slot: opts.slot | 0, userRounds: clamp(opts.userRounds || 15, 1, REDRAFT_ROUNDS), ...(opts.lr ? { lr: 1 } : {}), ...(opts.straight ? { straight: 1 } : {}) },
+      v: 1, seed, data: data.built, year: data.season, user: viewer(opts),
+      settings: { team: opts.team | 0, slot: opts.slot | 0, userRounds: clamp(opts.userRounds || 15, 1, REDRAFT_ROUNDS), ...(opts.lr ? { lr: 1 } : {}), ...(opts.straight ? { straight: 1 } : {}), ...humansOpt(opts) },
       teams: TEAMS.map((t) => ({ ...t, roster: [] })),
       players, moves: [], phase: "redraft", week: 0, games: [], log: [], history: [], stats: {}, lastRank: null,
       fa: [], notes: [],
@@ -188,9 +191,13 @@
     lrInit(lg);
     // Redraft order: the user's slot (or a random one), the other 31 franchises shuffled.
     const r = rng(seed, "order");
-    const others = r.shuffle(lg.teams.map((t) => t.i).filter((i) => i !== lg.user));
-    const slot = lg.settings.slot ? lg.settings.slot - 1 : r.int(32);
-    others.splice(slot, 0, lg.user);
+    let others;
+    if (lg.settings.humans) others = r.shuffle(lg.teams.map((t) => t.i)); // friends league: one random order for all 32
+    else {
+      others = r.shuffle(lg.teams.map((t) => t.i).filter((i) => i !== lg.user));
+      const slot = lg.settings.slot ? lg.settings.slot - 1 : r.int(32);
+      others.splice(slot, 0, lg.user);
+    }
     lg.draft = startDraft(lg, "redraft", others, REDRAFT_ROUNDS, !lg.settings.straight, Object.keys(players));
     settle(lg);
     return lg;
@@ -202,8 +209,8 @@
   function createReal(data, opts) {
     const seed = String(opts.seed || Date.now().toString(36));
     const lg = {
-      v: 1, seed, data: data.built, year: data.season, user: opts.team | 0,
-      settings: { mode: "real", year: data.season, team: opts.team | 0, hindsight: !!opts.hindsight, ...(opts.lr ? { lr: 1 } : {}) },
+      v: 1, seed, data: data.built, year: data.season, user: viewer(opts),
+      settings: { mode: "real", year: data.season, team: opts.team | 0, hindsight: !!opts.hindsight, ...(opts.lr ? { lr: 1 } : {}), ...humansOpt(opts) },
       teams: TEAMS.map((t) => ({ ...t, roster: [] })),
       players: {}, moves: [], phase: "season", week: 0, games: [], log: [], history: [], stats: {}, lastRank: null,
       fa: [], notes: [], drafts: data.drafts || null, realSched: data.sched,
@@ -227,6 +234,22 @@
     return lg;
   }
 
+  function humansOpt(opts) {
+    const h = Array.isArray(opts.humans) ? [...new Set(opts.humans.map(Number).filter((t) => Number.isInteger(t) && t >= 0 && t < 32))].sort((a, b) => a - b) : [];
+    return h.length ? { humans: h } : {};
+  }
+  function viewer(opts) {
+    const h = humansOpt(opts).humans, me = opts.me == null ? opts.team | 0 : opts.me | 0;
+    return h && !h.includes(me) ? h[0] : me;
+  }
+  const multi = (lg) => !!lg.settings.humans;
+  const humansOf = (lg) => lg.settings.humans || [lg.user];
+  // Which team a move is for. Solo: always the user. Friends league: the move's own team, which must be a person's.
+  function actor(lg, m) {
+    if (!multi(lg)) return lg.user;
+    return Number.isInteger(m.team) && lg.settings.humans.includes(m.team) ? m.team : -1;
+  }
+
   function startDraft(lg, kind, order, rounds, snake, pool) {
     const seq = [];
     for (let rd = 0; rd < rounds; rd++) {
@@ -243,8 +266,8 @@
     return ok !== false;
   }
 
-  function replay(data, save) {
-    const lg = create(data, save.settings ? { seed: save.seed, ...save.settings } : save);
+  function replay(data, save, me) {
+    const lg = create(data, save.settings ? { seed: save.seed, ...save.settings, ...(me != null ? { me } : {}) } : save);
     for (const m of save.moves || []) apply(lg, m);
     return lg;
   }
@@ -254,24 +277,27 @@
   const SAVE_V = 2;
   function saveOf(lg) { return { v: SAVE_V, seed: lg.seed, data: lg.data, settings: lg.settings, moves: lg.moves.slice() }; }
 
+  const LEAGUE_MOVES = new Set(["week", "season", "offseason"]); // moves for the whole league, not one team
   function step(lg, m) {
-    const d = lg.draft;
+    const d = lg.draft, T = actor(lg, m);
+    if (T < 0 && !LEAGUE_MOVES.has(m.t)) return false;
     switch (m.t) {
       case "pick": { // the user drafts a player
-        if (!d || d.seq[d.n] !== lg.user || !d.pool.has(m.p)) return false;
-        draftPlayer(lg, lg.user, m.p);
+        if (!d || d.seq[d.n] !== T || !d.pool.has(m.p)) return false;
+        draftPlayer(lg, T, m.p);
         return true;
       }
       case "auto": { // the AI makes this one pick for the user
-        if (!d || d.seq[d.n] !== lg.user) return false;
-        draftPlayer(lg, lg.user, aiPick(lg, lg.user));
+        if (!d || d.seq[d.n] !== T) return false;
+        draftPlayer(lg, T, aiPick(lg, T));
         return true;
       }
       case "finish": { // the AI drafts the rest of the user's picks
         if (!d) return false;
-        d.autoUser = true;
+        if (multi(lg)) d.autoT = { ...(d.autoT || {}), [T]: 1 }; else d.autoUser = true;
         return true;
       }
+      case "ready": return multi(lg); // a friends-league owner is done for now; the server counts these, the league doesn't change
       case "week": return lg.phase === "season" ? simWeek(lg) : lg.phase === "playoffs" ? simPlayoffRound(lg) : false;
       case "season": { // play out the rest of the regular season
         if (lg.phase !== "season") return false;
@@ -279,10 +305,10 @@
         return true;
       }
       case "offseason": return lg.phase === "done" ? startOffseason(lg) : false;
-      case "resign": return lg.phase === "resign" ? resign(lg, new Set(m.keep || [])) : false;
-      case "cut": return lg.phase === "cuts" ? cutDown(lg, m.ids || []) : false;
+      case "resign": return lg.phase === "resign" ? resign(lg, new Set(m.keep || []), T) : false;
+      case "cut": return lg.phase === "cuts" ? cutDown(lg, m.ids || [], T) : false;
       case "depth": { // set who starts at one position: { g, ids } in order; ids empty = best grades start
-        const t = lg.user, ids = m.ids || [];
+        const t = T, ids = m.ids || [];
         if (!STARTERS[m.g] || !Array.isArray(ids) || ids.length > STARTERS[m.g] || new Set(ids).size !== ids.length) return false;
         if (ids.some((id) => !lg.teams[t].roster.includes(id) || lg.players[id].g !== m.g)) return false;
         lg.depth = lg.depth || {}; lg.depth[t] = { ...(lg.depth[t] || {}) };
@@ -291,23 +317,23 @@
       }
       case "plan": { // your game plan, used every game until you change it
         const p = cleanPlan(m.plan); if (!p) return false;
-        lg.plans = { ...(lg.plans || {}), [lg.user]: p };
+        lg.plans = { ...(lg.plans || {}), [T]: p };
         return true;
       }
       case "half": { // a second-half plan for this week's game only (the halftime hook)
         const p = cleanPlan(m.plan); if (!p || (lg.phase !== "season" && lg.phase !== "playoffs")) return false;
-        lg.h2 = { ...(lg.h2 || {}), [lg.user]: p };
+        lg.h2 = { ...(lg.h2 || {}), [T]: p };
         return true;
       }
       case "call": { // a coach decision during this week's game: { k: decision id from simGame's asks, c: choice, team }
-        const t = m.team == null ? lg.user : m.team;
+        const t = multi(lg) ? T : m.team == null ? lg.user : m.team;
         if ((lg.phase !== "season" && lg.phase !== "playoffs") || !lg.teams[t] || typeof m.k !== "string" || !CALL_OPTS[m.c]) return false;
         lg.calls = { ...(lg.calls || {}), [t]: { ...((lg.calls && lg.calls[t]) || {}), [m.k]: m.c } };
         return true;
       }
       case "name": { // rename your franchise (the page runs the word filter first)
         const s = String(m.name || "").trim().slice(0, 24);
-        lg.teams[lg.user].custom = s || undefined;
+        lg.teams[T].custom = s || undefined;
         return true;
       }
       default: return false;
@@ -320,7 +346,8 @@
     if (!d) return;
     while (d.n < d.seq.length) {
       const t = d.seq[d.n];
-      const userTurn = t === lg.user && !d.autoUser && !(d.kind === "redraft" && Math.floor(d.n / 32) >= lg.settings.userRounds);
+      const auto = multi(lg) ? !!(d.autoT && d.autoT[t]) : d.autoUser;
+      const userTurn = isHuman(lg, t) && !auto && !(d.kind === "redraft" && Math.floor(d.n / 32) >= lg.settings.userRounds);
       if (userTurn) return;
       const pid = aiPick(lg, t);
       if (!pid) { d.n++; continue; }
@@ -356,9 +383,9 @@
       // Undrafted rookies join the free agents; teams then cut down to 53 (the user may need to choose).
       lg.fa.push(...d.pool);
       for (const pid of d.pool) lg.players[pid].yrs = 1;
-      for (const t of lg.teams) if (t.i !== lg.user) aiCut(lg, t);
-      const u = lg.teams[lg.user];
-      if (u.roster.length > ROSTER) { lg.phase = "cuts"; return; }
+      for (const t of lg.teams) if (!isHuman(lg, t.i)) aiCut(lg, t);
+      lg.cutsDue = humansOf(lg).filter((t) => lg.teams[t].roster.length > ROSTER);
+      if (lg.cutsDue.length) { lg.phase = "cuts"; return; }
       finishCuts(lg);
     }
   }
@@ -463,7 +490,7 @@
       feature: skill.length > 1 && skill[0].grade - skill[1].grade > 1 && r() < 0.5 ? skill[0].id : null,
     };
   }
-  function isHuman(lg, t) { return t === lg.user; }
+  function isHuman(lg, t) { return lg.settings.humans ? lg.settings.humans.includes(t) : t === lg.user; }
   function planFor(lg, t, opp, wk) { return (lg.plans && lg.plans[t]) || (isHuman(lg, t) ? PLAN0 : aiPlan(lg, t, opp, wk)); }
 
   // ---- Model constants (tuned by build/franchise/calibrate.js) ----
@@ -909,7 +936,7 @@
   function playGame(lg, g, neutral) {
     const H = units(lg, g.h), A = units(lg, g.a);
     g.spread = r1(expectedPoints(lg, H, A, neutral ? 0 : 1) - expectedPoints(lg, A, H, neutral ? 0 : -1));
-    const res = simGame(lg, g, neutral, g.h === lg.user || g.a === lg.user);
+    const res = simGame(lg, g, neutral, isHuman(lg, g.h) || isHuman(lg, g.a));
     g.hs = res.sc[0]; g.as = res.sc[1]; g.ot = res.ot; g.done = true;
     g.scoring = res.scoring; g.tend = res.tend;
     if (res.plays) g.pbp = res.plays;
@@ -1213,7 +1240,7 @@
   function startOffseason(lg) {
     const done = lg.year;
     lg.year++;
-    lg.offseason = { from: done, retired: [], changes: [], expiring: [], wont: [] };
+    lg.offseason = { from: done, retired: [], changes: [], expiring: [], wont: [], exp: {} };
     const O = lg.offseason;
     for (const p of Object.values(lg.players)) {
       if (p.gone) continue;
@@ -1237,13 +1264,13 @@
         continue;
       }
       if (p.team === lg.user && Math.abs(p.grade - before) >= 0.5) O.changes.push([p.id, r1(p.grade - before)]);
-      if (p.team >= 0) { p.yrs--; if (p.yrs <= 0 && p.team === lg.user) O.expiring.push(p.id); }
+      if (p.team >= 0) { p.yrs--; if (p.yrs <= 0 && isHuman(lg, p.team)) (O.exp[p.team] = O.exp[p.team] || []).push(p.id); }
     }
     // Unsigned free agents who are old or poor drift away.
     lg.fa = lg.fa.filter((id) => { const p = lg.players[id]; if (p.age > PEAK[p.g] + 2 || p.grade < 2.5) { p.gone = true; return false; } return true; });
     // AI teams re-sign the ones worth keeping: starters, young players, anyone above their team's need line.
     for (const t of lg.teams) {
-      if (t.i === lg.user) continue;
+      if (isHuman(lg, t.i)) continue;
       const exp = t.roster.map((id) => lg.players[id]).filter((p) => p.yrs <= 0);
       for (const p of exp) {
         const keep = p.grade >= 6 || p.age < 26 || rng(lg.seed, "keep", lg.year, p.id)() < 0.35;
@@ -1252,12 +1279,15 @@
         if (keep && !no) newDeal(lg, p); else release(lg, p);
       }
     }
-    for (const id of O.expiring) { const p = lg.players[id]; if (refuses(lg, p)) { O.wont.push(id);
-      news(lg, { k: "walk", t: lg.user, p: id, pr: 9, wk: 24, h: `${p.name} won't re-sign with ${teamName(lg.teams[lg.user])}`, b: "Unhappy with last season, he wants to test free agency." }); } }
+    O.expiring = O.exp[lg.user] || [];
+    for (const ht of humansOf(lg)) for (const id of O.exp[ht] || []) { const p = lg.players[id]; if (refuses(lg, p)) { O.wont.push(id);
+      news(lg, { k: "walk", t: ht, p: id, pr: 9, wk: 24, h: `${p.name} won't re-sign with ${teamName(lg.teams[ht])}`, b: "Unhappy with last season, he wants to test free agency." }); } }
     for (const id of O.retired) { const p = lg.players[id]; if (p.grade >= 6)
       news(lg, { k: "retire", t: lg.user, p: id, pr: 6, wk: 24, h: `${p.name} retires`, b: `The ${GROUP_NAME[p.g].toLowerCase()} calls it a career.` }); }
     lrOffseason(lg);
     lg.phase = "resign";
+    // Friends league: every owner with an expiring deal answers for their own team; nobody else waits on them.
+    if (multi(lg)) { O.left = humansOf(lg).filter((t) => (O.exp[t] || []).length); if (!O.left.length) startRookieDraft(lg); }
     return true;
   }
   function newDeal(lg, p) {
@@ -1269,9 +1299,16 @@
     if (p.team >= 0) lg.teams[p.team].roster = lg.teams[p.team].roster.filter((x) => x !== p.id);
     p.team = -1; p.yrs = 0; if (!lg.fa.includes(p.id)) lg.fa.push(p.id);
   }
-  function resign(lg, keep) {
-    const wont = new Set(lg.offseason.wont || []);
-    for (const id of lg.offseason.expiring) { const p = lg.players[id]; if (p.gone) continue; keep.has(id) && !wont.has(id) ? newDeal(lg, p) : release(lg, p); }
+  function resign(lg, keep, T) {
+    const O = lg.offseason, wont = new Set(O.wont || []);
+    if (multi(lg) && !(O.left || []).includes(T)) return false;
+    const ids = multi(lg) ? O.exp[T] || [] : O.expiring;
+    for (const id of ids) { const p = lg.players[id]; if (p.gone) continue; keep.has(id) && !wont.has(id) ? newDeal(lg, p) : release(lg, p); }
+    if (multi(lg)) { O.left = O.left.filter((t) => t !== T); if (O.left.length) return true; }
+    startRookieDraft(lg);
+    return true;
+  }
+  function startRookieDraft(lg) {
     // The rookie class (Real Rosters: the real draft class of that year while there is one; otherwise generated).
     const cls = rookieClass(lg);
     const rec = standings(lg);
@@ -1350,8 +1387,8 @@
       release(lg, worst);
     }
   }
-  function suggestCuts(lg) { // what the AI would cut from the user's team
-    const t = lg.teams[lg.user], ids = t.roster.slice(), out = [];
+  function suggestCuts(lg, team) { // what the AI would cut from the user's team
+    const t = lg.teams[team == null ? lg.user : team], ids = t.roster.slice(), out = [];
     const c = countBy(lg, t.i);
     while (ids.length - out.length > ROSTER) {
       let worst = null, wv = 1e9;
@@ -1361,11 +1398,14 @@
     }
     return out;
   }
-  function cutDown(lg, ids) {
-    const t = lg.teams[lg.user];
+  function cutDown(lg, ids, T) {
+    if (multi(lg) && !(lg.cutsDue || []).includes(T)) return false;
+    const t = lg.teams[T];
     const set = new Set(ids.filter((id) => t.roster.includes(id)));
     if (t.roster.length - set.size > ROSTER) return false;
     for (const id of set) release(lg, lg.players[id]);
+    lg.cutsDue = (lg.cutsDue || []).filter((x) => x !== T);
+    if (multi(lg) && lg.cutsDue.length) return true;
     finishCuts(lg);
     return true;
   }
@@ -1377,7 +1417,7 @@
       const sign = (p) => { lg.fa = lg.fa.filter((x) => x !== p.id); p.team = t.i; p.yrs = 1; t.roster.push(p.id); c[p.g]++; };
       for (const g of GROUPS) while (c[g] < MINPOS[g]) { const p = pool().find((x) => x.g === g); if (!p) break; sign(p); }
       while (t.roster.length < ROSTER) { const p = pool().find((x) => c[x.g] < MAXPOS[x.g]); if (!p) break; sign(p); }
-      if (t.i !== lg.user) aiCut(lg, t);
+      if (!isHuman(lg, t.i)) aiCut(lg, t);
     }
   }
   function finishCuts(lg) {
@@ -1735,11 +1775,19 @@
   function userGames(lg) { return lg.games.filter((g) => g.h === lg.user || g.a === lg.user); }
   function pickOwner(lg) { const d = lg.draft; return d && d.n < d.seq.length ? d.seq[d.n] : -1; }
   function userOnClock(lg) { return !!lg.draft && pickOwner(lg) === lg.user; }
+  // Friends league: which person teams the league is waiting on right now (draft: the team on the clock; re-sign and
+  // cuts: whoever has not answered). Empty during the season (weeks wait on "ready", which the server counts).
+  function waitingOn(lg) {
+    if (lg.draft) { const t = pickOwner(lg); return t >= 0 && isHuman(lg, t) ? [t] : []; }
+    if (lg.phase === "resign") return multi(lg) ? (lg.offseason.left || []).slice() : [lg.user];
+    if (lg.phase === "cuts") return (lg.cutsDue || []).slice();
+    return [];
+  }
 
   return {
     TEAMS, GROUPS, GROUP_NAME, FIRST_REAL, cityFor, STARTERS, TARGET, MINPOS, MAXPOS, ROSTER, REDRAFT_ROUNDS, ROOKIE_ROUNDS, ROUNDS, M,
     teamName, teamShort, teamLogo, nickFor, NAME_MODE, get LOGOS() { return !!LOGO; }, rng, create, apply, replay, saveOf, units, lineup, standings, divisionTables, seeds, leaders,
-    record, userGames, pickOwner, userOnClock, suggestCuts, countBy, playGame, expectedPoints, startSeason, boardValue,
+    record, userGames, pickOwner, userOnClock, suggestCuts, isHuman, humansOf, waitingOn, countBy, playGame, expectedPoints, startSeason, boardValue,
     REAL_NAMES, fakeName, setPack, SAVE_V, PLAN0, PM, cleanPlan, aiPlan, planFor, simGame, previewGame, playoffGames, nextGame, short,
     live: { times: liveTimes, at: liveAt, HALF_MS, MS: LIVE_MS },
     moodOf, MOOD_WORD, WHY, moraleEdge, lrOn,

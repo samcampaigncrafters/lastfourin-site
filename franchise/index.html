@@ -62,6 +62,12 @@
   .field label { font-weight: 800; }
   .field select, .field input { padding: 10px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--card-2); color: var(--ink); font-weight: 700; }
   .slots { display: grid; gap: 10px; }
+  .owners { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .owners span { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 800; padding: 3px 8px 3px 3px; border-radius: 999px; background: var(--card-2); border: 1px solid var(--line-2); }
+  .owners span.ok { border-color: var(--win); }
+  .owners .tc { margin: 0; }
+  .teams32 button:disabled { opacity: .55; cursor: default; }
+  .invites { display: grid; gap: 6px; }
   .slot { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--card); }
   .slot b { display: block; font-size: 16px; }
   .slot span { color: var(--muted); font-size: 13px; }
@@ -280,6 +286,7 @@
   const weeks = () => lg.weeks || 18;
   let newsF = "all", newsN = 12;
   let lg = null, slot = -1, tab = "week", posF = "ALL", q = "", showN = 60, boardSort = "board", sel = null, live = null;
+  let ML = null, sticky = null; // ML: the friends league open in this tab (see "Friends leagues" below)
 
   // ---- Saves: three slots in this browser. A save is the seed + your moves; loading replays them. ----
   const store = {
@@ -300,6 +307,7 @@
     if (!store.write(s)) toast("Couldn't save in this browser. Download your save to keep it.");
   }
   function move(m) {
+    if (ML) { const p = mlSend(m); render(); p.then(() => { if (ML && lg && !live) render(); }); return true; }
     if (!E.apply(lg, m)) { toast("That move isn't allowed right now."); return false; }
     persist(); render(); return true;
   }
@@ -324,14 +332,16 @@
   function closeOv() { $("ov").hidden = true; document.body.style.overflow = ""; }
   $("ov").addEventListener("click", (e) => { if (e.target.id === "ov" || e.target.closest("[data-x]")) closeOv(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("ov").hidden) closeOv(); });
-  function head(kick, title, lede) { $("kick").textContent = kick; $("title").textContent = title; $("lede").textContent = lede || ""; $("lede").hidden = !lede; $("allF").hidden = !lg; }
+  function head(kick, title, lede) { $("kick").textContent = kick; $("title").textContent = title; $("lede").textContent = lede || ""; $("lede").hidden = !lede; $("allF").hidden = !lg && !ML; }
 
   // ---- Start screen: save slots ----
   function home() {
-    lg = null; slot = -1;
+    stopMl(); lg = null; slot = -1;
+    if (location.search.includes("league=")) history.replaceState(null, "", "/franchise/?new");
     head("NFL · Single player", "Franchise Simulator", "Redraft every current NFL player into a new franchise, or take over a real roster from any season since 2002. Play the season and the playoffs, then run the offseason. Saved in this browser.");
     const s = store.read();
     $("body").innerHTML = `<div class="grid2"><div class="stack">
+      <section class="card"><div class="card-h"><h2 class="disp">Friends leagues</h2><button class="btn gold" data-mlnew>New friends league</button></div><div class="card-b"><div class="slots" id="mlList"><p class="empty" style="margin:0">Loading your leagues…</p></div></div></section>
       <section class="card"><div class="card-h"><h2 class="disp">Your franchises</h2></div><div class="card-b"><div class="slots">
       ${s.slots.map((x, i) => x ? `<div class="slot" style="border-left:6px solid ${esc(x.meta.c1)}">
           <div><b>${esc(x.meta.team)} · ${esc(String(x.meta.year))}</b><span>${esc(x.meta.mode || "The Redraft")} · ${esc(x.meta.where)}</span></div>
@@ -348,6 +358,8 @@
       </ol><p class="empty">Player ratings are a 1-100 overall (OVR), our own, from that season's stats, draft slot, experience and age.</p></div></section></div></div>`;
     $("body").onclick = (e) => {
       const b = e.target.closest("button"); if (!b) return;
+      if (b.dataset.mlnew != null) return mlSetup();
+      if (b.dataset.ml) return mlOpen(b.dataset.ml);
       if (b.dataset.new) setup(+b.dataset.new);
       if (b.dataset.open) open(+b.dataset.open);
       if (b.dataset.dl) download(+b.dataset.dl);
@@ -366,6 +378,7 @@
         s.slots[i] = sv; store.write(s); open(i);
       } catch { toast("That file isn't a Franchise Simulator save."); }
     };
+    mlList();
   }
   function download(i) {
     const sv = store.read().slots[i]; if (!sv) return;
@@ -467,15 +480,16 @@
 
   // ---- Router ----
   function render() {
+    if (ML && ML.info.status === "lobby") return lobbyView();
     if (!lg) return home();
     $("body").onclick = null;
     const t = team(lg.user), name = E.teamName(t);
-    if (lg.phase === "redraft") return draftRoom(name, "The Redraft");
-    if (lg.phase === "rookie") return draftRoom(`${name} · ${lg.year} offseason`, "Rookie draft");
-    if (lg.phase === "resign") return resignView();
-    if (lg.phase === "cuts") return cutsView();
-    if (lg.phase === "done") return doneView();
-    return seasonView();
+    if (lg.phase === "redraft") draftRoom(name, "The Redraft");
+    else if (lg.phase === "rookie") draftRoom(`${name} · ${lg.year} offseason`, "Rookie draft");
+    else if (lg.phase === "resign") resignView();
+    else if (lg.phase === "cuts") cutsView();
+    else if (lg.phase === "done") doneView(); else seasonView();
+    if (ML) mlClock();
   }
 
   // ---- Draft room (Redraft and rookie draft share it) ----
@@ -492,12 +506,12 @@
     if (q) { const s = q.toLowerCase(); pool = pool.filter((p) => p.name.toLowerCase().includes(s)); }
     pool.sort(boardSort === "ceil" ? (a, b) => b.ceil - a.ceil || b.grade - a.grade : boardSort === "grade" ? (a, b) => b.grade - a.grade || a.age - b.age
       : (a, b) => E.boardValue(b, rookie) - E.boardValue(a, rookie));
-    const onClock = E.userOnClock(lg);
+    const onClock = E.userOnClock(lg), who = E.pickOwner(lg);
     const recent = d.picks.slice(-10).reverse();
     const minePicks = d.picks.filter(([tm]) => tm === lg.user).map(([, id]) => lg.players[id]);
     $("body").innerHTML = `
-      <div class="clock"><div><small>Round ${round} of ${d.rounds} · pick ${inRound} · ${ord(d.n + 1)} overall</small><div class="disp">${onClock ? "You're on the clock" : "Waiting"}</div></div>
-        <div class="actbar" style="margin:0"><button class="btn" id="autoBtn">Auto-pick this one</button><button class="btn" id="finBtn">${rookie ? "Let the AI finish" : "AI finishes my draft"}</button></div></div>
+      <div class="clock"><div><small>Round ${round} of ${d.rounds} · pick ${inRound} · ${ord(d.n + 1)} overall</small><div class="disp">${onClock ? "You're on the clock" : ML ? `On the clock: ${esc(whoName(who))}` : "Waiting"}</div>${ML ? `<small id="mlClock"></small>${ownersBar()}` : ""}</div>
+        <div class="actbar" style="margin:0"><button class="btn" id="autoBtn" ${ML && !onClock ? "disabled" : ""}>Auto-pick this one</button><button class="btn" id="finBtn">${rookie ? "Let the AI finish" : "AI finishes my draft"}</button></div></div>
       <div class="grid2"><div class="stack">
         <section class="card"><div class="card-b" style="padding-bottom:12px">
           <div class="needs">${needs}</div>
@@ -511,7 +525,7 @@
         ${pool.length > showN ? `<div style="padding:12px"><button class="btn block" id="moreBtn">Show more (${pool.length - showN} left)</button></div>` : ""}</div></section>
       </div>
       <div class="side">
-        <section class="card"><div class="card-h"><h2 class="disp">Latest picks</h2></div><div class="ticker">${recent.map(([tm, id]) => { const p = lg.players[id]; return `<div><em>${ord(d.picks.indexOf(recent.find((x) => x[1] === id)) + 1)}</em>${chip(tm)}<span><b>${esc(p.name)}</b> <span class="muted">${esc(posName(p))} ${ovr(p.grade)}</span></span></div>`; }).join("") || `<p class="empty" style="padding:12px">No picks yet.</p>`}</div></section>
+        <section class="card"><div class="card-h"><h2 class="disp">Latest picks</h2></div><div class="ticker">${recent.map(([tm, id]) => { const p = lg.players[id]; return `<div><em>${ord(d.picks.indexOf(recent.find((x) => x[1] === id)) + 1)}</em>${chip(tm)}<span><b>${esc(p.name)}</b> <span class="muted">${esc(posName(p))} ${ovr(p.grade)}${ML && ownerOf(tm) ? ` · ${esc(whoName(tm))}` : ""}</span></span></div>`; }).join("") || `<p class="empty" style="padding:12px">No picks yet.</p>`}</div></section>
         <section class="card"><div class="card-h"><h2 class="disp">Your picks</h2><span class="muted" style="font-weight:700">${mine} on roster</span></div><div class="ticker">${minePicks.slice().reverse().map((p) => `<div><em>${esc(posName(p))}</em>${grade(p.grade, 1)}<span><b>${esc(p.name)}</b></span></div>`).join("") || `<p class="empty" style="padding:12px">Your first pick is coming.</p>`}</div></section>
       </div></div>`;
     $("body").onclick = (e) => {
@@ -521,6 +535,7 @@
       else if (b.dataset.sort) { boardSort = b.dataset.sort; render(); }
       else if (b.id === "moreBtn") { showN += 80; render(); }
       else if (b.id === "autoBtn") move({ t: "auto" });
+      else if (b.id === "finBtn" && ML) { if (b.dataset.sure) { b.disabled = true; move({ t: "finish" }); } else { b.dataset.sure = "1"; b.textContent = "Tap again: AI drafts for me"; b.classList.add("gold"); } }
       else if (b.id === "finBtn") { if (confirm(rookie ? "Let the AI make the rest of your rookie picks?" : "Let the AI draft the rest of your roster?")) { b.disabled = true; b.textContent = "Drafting…"; setTimeout(() => move({ t: "finish" }), 20); } }
     };
     const qi = $("q");
@@ -541,10 +556,11 @@
     const nextWk = lg.week + 1;
     const my = E.userGames(lg), next = my.find((g) => !g.done);
     head(`${E.teamName(t)} · ${lg.year} season`, po ? "Playoffs" : lg.week === 0 ? "Season preview" : `Week ${lg.week} done`, "");
-    const btn = po ? `<button class="btn gold" id="wkBtn">Play the ${E.ROUNDS[P.round]}</button>`
+    const btn = ML ? readyBtn(po ? `the ${E.ROUNDS[P.round]}` : `week ${nextWk}`)
+      : po ? `<button class="btn gold" id="wkBtn">Play the ${E.ROUNDS[P.round]}</button>`
       : `<button class="btn gold" id="wkBtn">Play week ${nextWk}</button><button class="btn" id="seasonBtn">Sim to the end of the season</button>`;
     const tabs = [["week", po ? "Playoffs" : "This week"], ["locker", "Locker room"], ["plan", "Game plan"], ["lineup", "Lineup"], ["sched", "My schedule"], ["stand", "Standings"], ["team", "My team"], ["lead", "Leaders"]];
-    $("body").innerHTML = `<div class="clock"><div><small>${E.teamName(t)} · ${E.record(lg, lg.user)}</small><div class="disp">${po ? E.ROUNDS[P.round] : `Week ${Math.min(nextWk, weeks())} of ${weeks()}`}</div></div><div class="actbar" style="margin:0">${btn}</div></div>
+    $("body").innerHTML = `<div class="clock"><div><small>${E.teamName(t)} · ${E.record(lg, lg.user)}</small><div class="disp">${po ? E.ROUNDS[P.round] : `Week ${Math.min(nextWk, weeks())} of ${weeks()}`}</div>${ML ? `<small id="mlClock"></small>${ownersBar(true)}` : ""}</div><div class="actbar" style="margin:0">${btn}</div></div>
       <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-tab="${k}" aria-selected="${tab === k}">${l}</button>`).join("")}</div>
       <div id="tabBody"></div>`;
     const body = $("tabBody");
@@ -575,6 +591,8 @@
       else if (b.dataset.team) teamOverlay(+b.dataset.team);
       else if (b.dataset.nf) { newsF = b.dataset.nf; newsN = 12; render(); }
       else if (b.id === "moreNews") { newsN += 20; render(); }
+      else if (b.id === "mlReady") mlReady();
+      else if (b.dataset.join) joinParty(b.dataset.join);
       else if (b.id === "wkBtn") { move({ t: "week" }); }
       else if (b.id === "seasonBtn") { b.disabled = true; b.textContent = "Simming…"; setTimeout(() => { move({ t: "season" }); }, 20); }
     };
@@ -584,7 +602,7 @@
     const myLast = last.find((g) => g.h === lg.user || g.a === lg.user);
     const nx = next ? nextCard(`Next up · week ${next.wk}`, next)
       : `<section class="card"><div class="card-b"><p class="empty" style="margin:0">${lg.week < weeks() ? `Bye in week ${lg.week + 1}.` : "Regular season over."}</p></div></section>`;
-    return `<div class="grid2"><div class="stack">${myLast ? `<section class="card"><div class="card-h"><h2 class="disp">Your week ${wk}</h2></div>${scoreRow(myLast)}</section>` : ""}${fanMini()}${nx}
+    return `<div class="grid2"><div class="stack">${mlParties()}${myLast ? `<section class="card"><div class="card-h"><h2 class="disp">Your week ${wk}</h2></div>${scoreRow(myLast)}</section>` : ""}${fanMini()}${nx}
       ${wk ? `<section class="card"><div class="card-h"><h2 class="disp">Week ${wk} scores</h2></div>${last.map((g) => scoreRow(g)).join("")}</section>` : ""}</div>
       <div class="side">${miniStand()}</div></div>`;
   }
@@ -964,9 +982,10 @@
       else if (b.dataset.hk) { const p = { ...L.h2plan, [b.dataset.hk]: +b.dataset.pv }; L.h2plan = p; b.parentNode.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b)); }
       else if (b.id === "h2Go") secondHalf(true);
       else if (b.id === "h2Keep") secondHalf(false);
+      else if (b.id === "lvLeave" && L.guest && ML) { stopLive(); mlOpen(ML.id, true); }
       else if (b.id === "lvLeave" && L.guest) { stopLive(); location.href = "/franchise/"; }
-      else if (b.id === "lvLeave") { if (L.committed || confirm("Leave the game? The rest of it plays out instantly.")) { if (L.party) partyEnd(); commitLive(); stopLive(); tab = "week"; render(); } }
-      else if (b.id === "lvBack") { stopLive(); tab = "week"; render(); }
+      else if (b.id === "lvLeave") { if (L.committed || confirm("Leave the game? The rest of it plays out instantly.")) { if (L.party) partyEnd(); commitLive(); stopLive(); tab = "week"; afterLive(L); } }
+      else if (b.id === "lvBack") { stopLive(); tab = "week"; afterLive(L); }
       else if (b.dataset.g) boxScore(b.dataset.g);
     };
     L.last = performance.now();
@@ -1056,10 +1075,7 @@
     const changed = change && ["lean", "fourth", "tempo", "blitz"].some((k) => p[k] !== cur[k]);
     if (changed) {
       // The halftime hook: a "half" move, then the same game worked out again. The first half is identical.
-      if (E.apply(lg, { t: "half", plan: { ...cur, ...p } })) {
-        persist();
-        repreview(L.half + 1, "first half changed after the halftime move");
-      }
+      if (keepMove({ t: "half", plan: { ...cur, ...p }, ...(ML ? { team: lg.user } : {}) })) repreview(L.half + 1, "first half changed after the halftime move");
     }
     $("lvBox").innerHTML = ""; L.inHalf = false; L.ms = L.times[L.half + 1]; L.paused = false; L.last = performance.now();
   }
@@ -1124,13 +1140,15 @@
   // The answer is a move in the save (solo) or the shared answer both screens apply (watch party).
   function applyCall(a, c) {
     const L = live; endAsk();
-    if (E.apply(lg, { t: "call", k: a.id, c, team: a.t }) && !L.guest) persist();
+    keepMove({ t: "call", k: a.id, c, team: a.t });
     repreview(a.at, "plays before a coach decision changed");
     $("lvBox").innerHTML = ""; L.ms = L.times[a.at]; L.paused = false; L.last = performance.now();
   }
   // Play the week for real. It plays out exactly what was shown (same league, same draws).
   function commitLive() {
     const L = live; if (!L || L.committed) return;
+    // A friends league plays the week when every owner is ready, so watching your game marks you ready instead.
+    if (ML) { L.committed = true; L.key = ""; mlRecord({ t: "ready", team: ML.me }); return; }
     if (L.guest) { L.committed = true; L.key = ""; return; } // a watch party guest only watches the host's league
     E.apply(lg, { t: "week" }); persist(); L.committed = true;
     const done = [...lg.games, ...(lg.playoffs ? lg.playoffs.games : [])].find((x) => x.done && x.wk === L.g.wk && x.h === L.g.h && x.a === L.g.a);
@@ -1143,7 +1161,8 @@
     const g = L.g, myT = L.party ? [...L.party.mine][0] : lg.user, me = myT === g.a ? 1 : 0, won = L.pv.sc[me] > L.pv.sc[1 - me], tie = L.pv.sc[0] === L.pv.sc[1];
     const wt = L.pv.sc[0] > L.pv.sc[1] ? g.h : g.a, line = tie ? "A tie" : myT == null ? `${E.teamShort(team(wt))} wins` : won ? "You win" : "You lose";
     $("lvBox").innerHTML = `<section class="card"><div class="card-b"><p class="disp" style="font-size:30px;margin:0">${line} ${L.pv.sc[myT == null ? (wt === g.a ? 1 : 0) : me]}-${L.pv.sc[myT == null ? (wt === g.a ? 0 : 1) : 1 - me]}</p>
-      <div class="actbar" style="margin:12px 0 0">${L.key ? `<button class="btn gold" data-g="${L.key}">Box score</button>` : ""}${L.guest ? `<a class="btn" href="/franchise/">Back to my franchise</a>` : `<button class="btn" id="lvBack">Back to the season</button>`}</div></div></section>`;
+      ${ML ? `<p class="empty" style="margin:6px 0 0">It counts once every owner is ready and the week is played. You're marked ready.</p>` : ""}
+      <div class="actbar" style="margin:12px 0 0">${L.key ? `<button class="btn gold" data-g="${L.key}">Box score</button>` : ""}${L.guest && !ML ? `<a class="btn" href="/franchise/">Back to my franchise</a>` : `<button class="btn" id="lvBack">Back to the ${ML ? "league" : "season"}</button>`}</div></div></section>`;
   }
   const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 
@@ -1156,7 +1175,7 @@
       <section class="card" style="border-top:6px solid ${t.c1}"><div class="card-b">
         <div class="bigrec">${rec}</div><p style="font-weight:800;font-size:18px;margin:6px 0 2px">${esc(h.fate)}${h.seed ? ` · ${ord(h.seed)} seed` : ""}</p>
         <p class="empty" style="margin:0">${h.pf} points for, ${h.pa} against.</p>
-        <div class="actbar" style="margin:16px 0 0"><button class="btn gold big" id="shareBtn">Share my season</button><button class="btn" id="offBtn">Start the ${h.year + 1} offseason</button></div></div></section>
+        <div class="actbar" style="margin:16px 0 0"><button class="btn gold big" id="shareBtn">Share my season</button>${ML ? readyBtn(`the ${h.year + 1} offseason`) : `<button class="btn" id="offBtn">Start the ${h.year + 1} offseason</button>`}</div>${ML ? `<small id="mlClock"></small>${ownersBar(true)}` : ""}</div></section>
       <section class="card"><div class="card-h"><h2 class="disp">The Final</h2></div>${scoreRow(lg.playoffs.games[lg.playoffs.games.length - 1], { meta: "" })}
         <div class="card-b"><p style="margin:0"><b>Champion:</b> ${esc(E.teamName(team(h.champ)))}</p>
         ${h.mvpName ? `<p style="margin:6px 0 0"><b>Most valuable player:</b> ${esc(h.mvpName)} (${esc(E.teamName(team(h.mvpTeam)))})</p>` : ""}
@@ -1167,6 +1186,7 @@
       const b = e.target.closest("button"); if (!b) return;
       if (b.dataset.g) boxScore(b.dataset.g);
       if (b.id === "offBtn") { tab = "week"; move({ t: "offseason" }); }
+      if (b.id === "mlReady") { tab = "week"; mlReady(); }
       if (b.dataset.nf) { newsF = b.dataset.nf; newsN = 12; render(); }
       if (b.id === "moreNews") { newsN += 20; render(); }
       if (b.id === "shareBtn") LFI.share({ id: `franchise-${lg.seed}-${h.year}`, kind: "franchise", title: `${E.teamName(t)} · ${h.year} Franchise Simulator`,
@@ -1178,10 +1198,11 @@
   // ---- Offseason: re-sign or let go ----
   function resignView() {
     const O = lg.offseason, t = team(lg.user);
+    if (ML && !E.waitingOn(lg).includes(lg.user)) return mlWaiting(`${lg.year} offseason`, "Contracts", "Your contracts are done. Waiting on");
     head(`${E.teamName(t)} · ${lg.year} offseason`, "Contracts", "Everyone got a year older. Young players grew, older ones faded, and a few retired. Now decide who stays.");
     const exp = O.expiring.map((id) => lg.players[id]).filter((p) => !p.gone).sort((a, b) => b.grade - a.grade);
     const wont = new Set(O.wont || []);
-    const keep = new Set(exp.filter((p) => (p.grade >= 6 || p.age < 27) && !wont.has(p.id)).map((p) => p.id));
+    const keep = held("keep", () => defaultKeep(lg.user));
     const draw = () => {
       $("body").innerHTML = `<div class="grid2"><div class="stack"><section class="card"><div class="card-h"><h2 class="disp">Contracts ending</h2><span class="muted" style="font-weight:700">${keep.size} of ${exp.length} kept</span></div>
         ${exp.map((p) => wont.has(p.id) ? `<label class="chk off"><input type="checkbox" disabled>${grade(p.grade)}<span class="pn"><b>${esc(p.name)}</b><span>${plabel(p)} · ${face(E.moodOf(lg, p.id))} won't re-sign</span></span><span class="muted" style="font-weight:700">Leaving</span></label>`
@@ -1200,9 +1221,10 @@
 
   // ---- Offseason: cut down to 53 ----
   function cutsView() {
+    if (ML && !E.waitingOn(lg).includes(lg.user)) return mlWaiting(`${lg.year} offseason`, "Cut to 53", "Your roster is set. Waiting on");
     const t = team(lg.user), ros = t.roster.map((id) => lg.players[id]).sort((a, b) => a.g === b.g ? b.grade - a.grade : E.GROUPS.indexOf(a.g) - E.GROUPS.indexOf(b.g));
     head(`${E.teamName(t)} · ${lg.year} offseason`, "Cut to 53", "Your roster is over the limit. We ticked the players we'd cut; change any you like.");
-    const cut = new Set(E.suggestCuts(lg));
+    const cut = held("cut", () => E.suggestCuts(lg));
     const draw = () => {
       const need = ros.length - cut.size - E.ROSTER;
       $("body").innerHTML = `<div class="clock"><div><small>${ros.length} on the roster · ${cut.size} to cut</small><div class="disp">${need > 0 ? `Cut ${need} more` : need < 0 ? `${-need} spot${need === -1 ? "" : "s"} open` : "Ready"}</div></div>
@@ -1231,7 +1253,7 @@
     $("body").onchange = null;
     $("body").innerHTML = `<section class="card" style="max-width:620px"><div class="card-h"><h2 class="disp">Watch party</h2></div><div class="card-b">
       <p style="margin:0 0 10px">Watch ${esc(E.teamName(team(g.a)))} at ${esc(E.teamName(team(g.h)))} with a friend, in sync. You run the clock; the game stops for both of you whenever there's a coach decision.</p>
-      <label class="tog" style="margin:0 0 12px"><input type="checkbox" id="pCoach" checked> <span><b>My friend coaches ${esc(E.teamName(team(opp)))}</b><span>They make that team's calls. Off: they just watch.</span></span></label>
+      <label class="tog" style="margin:0 0 12px"${ML && !ownerOf(opp) ? " hidden" : ""}><input type="checkbox" id="pCoach" ${!ML || ownerOf(opp) ? "checked" : ""}> <span><b>My friend coaches ${esc(E.teamName(team(opp)))}</b><span>They make that team's calls. Off: they just watch.</span></span></label>
       <div class="actbar" style="margin:0"><button class="btn gold" id="pMake">Make the party</button><button class="btn" id="pBack">Back</button></div></div></section>`;
     $("body").onclick = async (e) => {
       const b = e.target.closest("button"); if (!b) return;
@@ -1242,18 +1264,20 @@
         const pv = E.previewGame(lg, g), sv = E.saveOf(lg);
         const code = await rpc("franchise_party_create", { p_save: sv, p_game: { wk: g.wk, h: g.h, a: g.a, n: pv.plays.length, sc: pv.sc },
           p_host_team: lg.user, p_guest_team: $("pCoach").checked ? opp : null });
+        if (ML) await rpc("franchise_league_party", { p_league: ML.id, p_code: code });
         const st = await rpc("franchise_party_get", { p_code: code });
         partyStart(code, true, st);
       } catch (err) { toast(err.message || "Couldn't make the party."); b.disabled = false; }
     };
   }
   async function joinParty(code) {
+    if (ML) ML.paused = true; // the league stops refreshing while this tab holds the party's copy
     head("Watch party", "Joining…", "");
     $("body").innerHTML = `<p class="empty">Loading the game…</p>`;
     try {
       const st = await rpc("franchise_party_join", { p_code: code });
       const sv = st.save, data = sv.settings && sv.settings.mode === "real" ? await realData(sv.settings.year) : DATA;
-      lg = E.replay(data, sv); slot = -1;
+      lg = E.replay(data, sv, st.host_team); slot = -1; // seen from the host's side, so "next game" is the party's game
       const g = E.nextGame(lg);
       if (!g || g.wk !== st.game.wk || g.h !== st.game.h || g.a !== st.game.a) throw new Error("That game isn't next in the host's league any more.");
       // Before any answers, this copy must work out exactly the host's game.
@@ -1263,7 +1287,7 @@
     } catch (err) {
       console.error(err);
       $("body").innerHTML = `<section class="card" style="max-width:560px"><div class="card-b"><p class="disp" style="font-size:26px;margin:0 0 6px">Couldn't join the watch party.</p>
-        <p style="margin:0 0 14px">${esc(err.message || "Something went wrong.")}</p><div class="actbar" style="margin:0"><a class="btn gold" href="/franchise/">My franchise</a></div></div></section>`;
+        <p style="margin:0 0 14px">${esc(err.message || "Something went wrong.")}</p><div class="actbar" style="margin:0"><a class="btn gold" href="/franchise/${ML ? `?league=${ML.id}` : ""}">${ML ? "Back to the league" : "My franchise"}</a></div></div></section>`;
     }
   }
   function partyStart(code, host, st) {
@@ -1306,7 +1330,7 @@
       const key = `${a.t}:${a.id}`; if (!(key in ans)) return;
       const c = ans[key] == null || !a.opts.includes(ans[key]) ? a.def : ans[key];
       if (L.asking === a) applyCall(a, c);
-      else { E.apply(lg, { t: "call", k: a.id, c, team: a.t }); if (!L.guest) persist(); repreview(a.at, "plays before a coach decision changed"); }
+      else { keepMove({ t: "call", k: a.id, c, team: a.t }); repreview(a.at, "plays before a coach decision changed"); }
     }
   }
   async function partyAnswer(a, c) {
@@ -1342,6 +1366,289 @@
     if ($("pBar").dataset.h !== html) { $("pBar").innerHTML = html; $("pBar").dataset.h = html; }
   }
 
+  // ---- Friends leagues: one shared league, each friend runs a team, the AI runs the rest ----
+  // The server keeps the seed, the settings and an ordered log of moves, each tagged with the team that made it
+  // (supabase/68_franchise_league.sql). Every member's browser replays the log with this engine, so all of them see
+  // the same league; each one shows its own team (E.replay's "me"). The page polls for new moves (every 2 s in a draft,
+  // 5 s otherwise). Weeks play once every owner is ready; when a deadline passes, any open browser hands out the
+  // defaults (an auto-pick, the suggested re-signings and cuts, the week itself), so a missing friend never stalls it.
+  const ORDERLESS = new Set(["ready", "plan", "depth", "half", "call", "finish"]);
+  const TEAM_MOVES = new Set(["pick", "auto", "finish", "depth", "plan", "half", "call", "resign", "cut", "ready"]);
+  const ownerOf = (t) => ML && ML.info.people.find((p) => p.team === t);
+  const whoName = (t) => { const p = ownerOf(t); return p ? (p.me ? "You" : p.name) : E.teamName(team(t)); };
+  // Choices on the contracts and cuts screens survive the league refreshing underneath them.
+  function held(kind, make) {
+    const k = `${lg.seed}|${lg.year}|${lg.phase}|${kind}`;
+    if (!sticky || sticky.k !== k) sticky = { k, set: new Set(make()) };
+    return sticky.set;
+  }
+  function defaultKeep(t) {
+    const O = lg.offseason, wont = new Set(O.wont || []), ids = (O.exp && O.exp[t]) || (t === lg.user ? O.expiring : []);
+    return ids.map((id) => lg.players[id]).filter((p) => !p.gone && (p.grade >= 6 || p.age < 27) && !wont.has(p.id)).map((p) => p.id);
+  }
+  const SECS = [[60, "1 minute"], [120, "2 minutes"], [300, "5 minutes"], [3600, "1 hour"]];
+  const HOURS = [[12, "12 hours"], [24, "24 hours"], [48, "2 days"]];
+
+  async function mlList() {
+    const el = $("mlList"); if (!el) return;
+    let rows;
+    try { rows = await rpc("franchise_league_list", {}); } catch (err) { el.innerHTML = `<p class="empty" style="margin:0">${esc(err.message)}</p>`; return; }
+    if (!$("mlList")) return;
+    $("mlList").innerHTML = (rows || []).map((x) => {
+      const t = x.team != null ? team0(x.team) : null;
+      const st = x.status === "lobby" ? "Lobby · picking teams" : x.status === "over" ? "Over" : "Running";
+      return `<div class="slot" style="border-left:6px solid ${t ? esc(t.c1) : "var(--line-2)"}"><div><b>${esc(x.name)}</b><span>${x.mode === "real" ? `Real Rosters from ${esc(String(x.year))}` : "The Redraft"} · ${x.people} owner${x.people === 1 ? "" : "s"} · ${st}${t ? ` · you: ${esc(E.teamName(t))}` : ""}</span></div>
+        <div class="acts"><button class="btn gold" data-ml="${esc(x.id)}">Open</button></div></div>`;
+    }).join("") || `<p class="empty" style="margin:0">No friends leagues yet. Start one and invite your friends: each of you runs a team, the AI runs the rest.</p>`;
+  }
+  const team0 = (i) => E.TEAMS[i];
+  const chip0 = (i) => { const t = team0(i); return `<span class="tc" style="--c:${t.c1};--c2:${t.c2}">${logo(t)}${esc(E.teamShort(t))}</span>`; };
+
+  // ---- New friends league ----
+  async function mlSetup() {
+    stopMl();
+    head("Friends league", "New friends league", "You and your friends each run a team in one shared league. The AI runs every other team.");
+    $("body").innerHTML = `<p class="empty">Loading…</p>`;
+    let people, R;
+    try { [people, R] = await Promise.all([rpc("franchise_people", {}), realIndex()]); } catch (err) { toast(err.message); return home(); }
+    let mode = "redraft", year = R.years[R.years.length - 1], pickT = -1;
+    const inv = new Set((people || []).filter((p) => !p.me).map((p) => p.id));
+    const draw = () => {
+      const ts = E.TEAMS.map((t) => ({ ...t, city: mode === "real" ? E.cityFor(t.code, year) : t.city }));
+      const rec = (mode === "real" && R.rec[year]) || {};
+      $("body").innerHTML = `<section class="card"><div class="card-b">
+        <div class="field" style="margin-top:0"><label for="mName">League name</label><input id="mName" maxlength="40" value="${esc($("mName") ? $("mName").value : "Friends league")}"></div>
+        <div class="seg" style="margin-top:12px">${[["redraft", "The Redraft"], ["real", "Real Rosters"]].map(([k, l]) => `<button type="button" data-md="${k}" aria-pressed="${mode === k}">${l}</button>`).join("")}</div>
+        <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-top:6px">
+          ${mode === "real" ? `<div class="field"><label for="mYear">Season</label><select id="mYear">${R.years.slice().reverse().map((x) => `<option value="${x}" ${x === year ? "selected" : ""}>${x}</option>`).join("")}</select></div>`
+            : `<div class="field"><label for="mRounds">Rounds each of you drafts</label><select id="mRounds"><option value="10">First 10, AI does the rest</option><option value="15" selected>First 15, AI does the rest</option><option value="25">First 25</option><option value="53">All 53 rounds</option></select></div>`}
+          <div class="field"><label for="mClock">Draft clock</label><select id="mClock">${SECS.map(([v, l]) => `<option value="${v}" ${v === 120 ? "selected" : ""}>${l} a pick</option>`).join("")}</select></div>
+          <div class="field"><label for="mWeek">Each week plays within</label><select id="mWeek">${HOURS.map(([v, l]) => `<option value="${v}" ${v === 24 ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+        </div>
+        ${mode === "real" ? `<label class="tog" style="margin-top:12px"><input type="checkbox" id="mHind"><span><b>Hindsight rookies</b><span>Off: the real draft classes are graded only from where each player was picked. On: from how their careers went.</span></span></label>` : ""}
+        <h3 class="disp" style="margin:18px 0 8px">Invite</h3>
+        <div class="invites">${(people || []).filter((p) => !p.me).map((p) => `<label class="chk ${inv.has(p.id) ? "" : "off"}"><input type="checkbox" data-inv="${esc(p.id)}" ${inv.has(p.id) ? "checked" : ""}><span class="pn"><b>${esc(p.name)}</b></span><span class="muted" style="font-weight:700">${inv.has(p.id) ? "Invited" : "Not invited"}</span></label>`).join("") || `<p class="empty">Nobody else is on the list yet.</p>`}</div>
+        <h3 class="disp" style="margin:18px 0 8px">Your team</h3>
+        <div class="teams32">${ts.map((t) => `<button type="button" data-t="${t.i}" aria-pressed="${t.i === pickT}" style="--c:${t.c1};--c2:${t.c2}">${esc(mode === "real" ? E.teamName(t) : E.teamName(team0(t.i)))}<small>${t.conf} ${t.div}${rec[t.code] ? ` · went ${rec[t.code]}` : ""}</small></button>`).join("")}</div>
+        <div class="actbar" style="margin-top:14px"><button class="btn gold big" id="mGo" ${pickT < 0 ? "disabled" : ""}>Make the league</button><button class="btn" id="mBack">Back</button></div>
+      </div></section>`;
+      if ($("mYear")) $("mYear").onchange = () => { year = +$("mYear").value; draw(); };
+    };
+    draw();
+    $("body").onchange = (e) => { const k = e.target.dataset.inv; if (k) { e.target.checked ? inv.add(k) : inv.delete(k); const l = e.target.closest("label"); l.classList.toggle("off", !e.target.checked); l.lastElementChild.textContent = e.target.checked ? "Invited" : "Not invited"; } };
+    $("body").onclick = async (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      if (b.dataset.md) { mode = b.dataset.md; draw(); return; }
+      if (b.dataset.t) { pickT = +b.dataset.t; document.querySelectorAll("[data-t]").forEach((x) => x.setAttribute("aria-pressed", x === b ? "true" : "false")); $("mGo").disabled = false; return; }
+      if (b.id === "mBack") { $("body").onchange = null; return home(); }
+      if (b.id !== "mGo") return;
+      b.disabled = true; b.textContent = "Making it…";
+      try {
+        const data = mode === "real" ? await realData(year) : DATA;
+        const settings = mode === "real" ? { mode: "real", year, hindsight: !!($("mHind") && $("mHind").checked), lr: 1 } : { mode: "redraft", userRounds: +$("mRounds").value, lr: 1 };
+        settings.pickSecs = +$("mClock").value; settings.weekHours = +$("mWeek").value;
+        const id = await rpc("franchise_league_create", { p_name: $("mName").value.trim() || "Friends league", p_seed: Math.random().toString(36).slice(2, 10),
+          p_data: data.built || null, p_settings: settings, p_team: pickT, p_invite: [...inv] });
+        $("body").onchange = null; mlOpen(id);
+      } catch (err) { toast(err.message); b.disabled = false; b.textContent = "Make the league"; }
+    };
+  }
+
+  // ---- Open a league: the lobby, or replay its log ----
+  async function mlOpen(id, quiet) {
+    stopMl(); stopLive();
+    if (!quiet) { head("Friends league", "Loading…", ""); $("body").innerHTML = `<p class="empty">Loading the league…</p>`; }
+    try {
+      const info = await rpc("franchise_league_get", { p_league: id, p_since: -1 });
+      if (!info) throw new Error("That league isn't there, or you're not in it.");
+      const me = info.people.find((p) => p.me);
+      const M = { id: info.id, info, me: me.team, next: info.moves.length ? info.moves[info.moves.length - 1].s + 1 : 0, off: info.now - Date.now(), last: Date.now() };
+      ML = M; lg = null; slot = -1;
+      if (!location.search.includes(`league=${info.id}`)) history.replaceState(null, "", `/franchise/?league=${info.id}`);
+      if (info.status !== "lobby") {
+        const data = isReal(info) ? await realData(info.settings.year) : DATA;
+        if (ML !== M) return;
+        lg = E.replay(data, { seed: info.seed, settings: info.settings, moves: info.moves.map((x) => x.m) }, me.team);
+        if (info.data && info.data !== data.built) console.warn("league made with player data", info.data, "this page has", data.built);
+        if (!quiet) { tab = "week"; posF = "ALL"; q = ""; }
+      }
+      render();
+      M.poll = setInterval(mlTick, 1000); mlClock();
+    } catch (err) {
+      console.error(err); stopMl();
+      head("Friends league", "Couldn't open the league", "");
+      $("body").innerHTML = `<section class="card" style="max-width:560px"><div class="card-b"><p style="margin:0 0 14px">${esc(err.message || "Something went wrong.")}</p>
+        <div class="actbar" style="margin:0"><a class="btn gold" href="/franchise/?new">All my franchises</a></div></div></section>`;
+    }
+  }
+  function stopMl() { if (ML) clearInterval(ML.poll); ML = null; }
+  async function mlResync() { if (ML) await mlOpen(ML.id, true); }
+  // After watching a game: anything recorded meanwhile may have crossed with a friend's moves, so reload when needed.
+  function afterLive(L) { if (ML && (ML.dirty || L.guest)) mlOpen(ML.id, true); else render(); }
+
+  async function mlTick() {
+    const M = ML; if (!M) return;
+    mlClock();
+    if (live || M.busy || M.paused) return;
+    const lobby = M.info.status === "lobby", every = lobby ? 3000 : lg && lg.draft ? 2000 : 5000;
+    if (Date.now() - M.last < every) return;
+    M.busy = true; M.last = Date.now();
+    try {
+      const info = await rpc("franchise_league_get", { p_league: M.id, p_since: M.next - 1 });
+      if (ML !== M || live) return;
+      if (!info) { toast("That league is gone."); return home(); }
+      const was = M.info, before = viewKey();
+      M.info = info; M.off = info.now - Date.now();
+      if (was.status !== info.status) return mlOpen(M.id, true);
+      if (lobby) { if (JSON.stringify(was.people) !== JSON.stringify(info.people)) lobbyView(); return; }
+      for (const x of info.moves) {
+        if (x.s !== M.next) return mlResync();
+        E.apply(lg, x.m); M.next = x.s + 1;
+      }
+      if (viewKey() !== before || JSON.stringify(was.people) !== JSON.stringify(info.people) || JSON.stringify(was.parties) !== JSON.stringify(info.parties)) mlRender();
+      await mlDefaults();
+    } catch (err) { console.warn(err.message); } finally { M.busy = false; }
+  }
+  // What the screen depends on; re-render only when it changes, so a half-made choice isn't wiped by a refresh.
+  const viewKey = () => lg ? [lg.year, lg.phase, lg.week, lg.draft ? lg.draft.n : -1, E.waitingOn(lg).join(), lg.playoffs ? lg.playoffs.round : -1].join("|") : "";
+  function mlRender() {
+    const y = window.scrollY, qf = document.activeElement && document.activeElement.id === "q";
+    if (!$("ov").hidden) return; // a box score is open; the next change will redraw
+    render(); window.scrollTo(0, y);
+    if (qf && $("q")) { const n = $("q"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }
+  }
+  // Defaults once time runs out, from whichever browser notices first; and the week once every owner is ready.
+  async function mlDefaults() {
+    const M = ML, I = M.info; if (!lg || I.status !== "live") return;
+    const before = viewKey();
+    const late = I.deadline != null && Date.now() + M.off > I.deadline + 1500;
+    const allReady = I.people.every((p) => p.ready);
+    const w = E.waitingOn(lg);
+    if (lg.draft) { if (late && w.length) await mlSend({ t: "auto", team: w[0] }, { quiet: true }); }
+    else if (lg.phase === "resign") { if (late) for (const t of w) if (!(await mlSend({ t: "resign", team: t, keep: defaultKeep(t) }, { quiet: true }))) break; }
+    else if (lg.phase === "cuts") { if (late) for (const t of w) if (!(await mlSend({ t: "cut", team: t, ids: E.suggestCuts(lg, t) }, { quiet: true }))) break; }
+    else if (lg.phase === "season" || lg.phase === "playoffs") { if (allReady || late) await mlSend({ t: "week" }, { quiet: true }); }
+    else if (lg.phase === "done") { if (allReady || late) await mlSend({ t: "offseason" }, { quiet: true }); }
+    else return;
+    if (ML === M && !live && viewKey() !== before) mlRender();
+  }
+  // A move: apply it here first (the engine refuses illegal ones), then append it to the league's log.
+  async function mlSend(m, opts = {}) {
+    const M = ML; if (!M || !lg) return false;
+    if (TEAM_MOVES.has(m.t) && m.team == null) m = { ...m, team: M.me };
+    const ph = lg.phase, n0 = lg.draft ? lg.draft.n : -1, hadDraft = !!lg.draft;
+    if (!E.apply(lg, m)) { if (!opts.quiet) toast("That move isn't allowed right now."); return false; }
+    // Restart the clock: the draft clock when the pick moves on, the weekly deadline when a new week or phase starts.
+    const clock = lg.draft ? (lg.draft.n !== n0 || !hadDraft ? "pick" : null)
+      : hadDraft || m.t === "week" || m.t === "offseason" || lg.phase !== ph ? "week" : null;
+    try {
+      const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: clock });
+      if (ML !== M) return false;
+      M.next = r.s + 1; M.info.deadline = r.deadline; M.off = r.now - Date.now();
+      if (m.t === "ready") M.info.people.forEach((p) => { if (p.team === m.team) p.ready = true; });
+      if (m.t === "week" || m.t === "offseason") M.info.people.forEach((p) => (p.ready = false));
+      return true;
+    } catch (err) {
+      const stale = /stale/.test(err.message);
+      await mlResync();
+      // A friend's move landed first. Moves that don't depend on order (ready, lineups, plans) just go again.
+      if (stale && !opts.again && ML && lg && ORDERLESS.has(m.t)) return mlSend(m, { ...opts, again: true });
+      if (!opts.quiet) toast(stale ? "A friend moved first. Here's the league as it is now." : err.message);
+      return false;
+    }
+  }
+  // While a game is on screen the move is already in this browser's copy; only the league's log needs it.
+  async function mlRecord(m) {
+    const M = ML; if (!M || (TEAM_MOVES.has(m.t) && m.team !== M.me)) return;
+    for (let i = 0; i < 5; i++) {
+      try {
+        const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: null });
+        M.next = r.s + 1;
+        if (m.t === "ready") M.info.people.forEach((p) => { if (p.team === m.team) p.ready = true; });
+        return;
+      } catch (err) {
+        if (!/stale/.test(err.message)) { console.warn(err.message); return; }
+        const info = await rpc("franchise_league_get", { p_league: M.id, p_since: M.next - 1 }).catch(() => null);
+        if (info && info.moves.length) { M.next = info.moves[info.moves.length - 1].s + 1; M.dirty = true; }
+      }
+    }
+  }
+  // A move made during a watched game: kept in the save (solo) or in the league's log (friends league).
+  function keepMove(m) {
+    if (!E.apply(lg, m)) return false;
+    if (ML) mlRecord(m); else if (!(live && live.guest)) persist();
+    return true;
+  }
+  async function mlReady() {
+    if (!ML) return;
+    if (await mlSend({ t: "ready" })) { await mlDefaults(); if (ML && !live) mlRender(); }
+  }
+
+  // ---- League screens ----
+  function mlClock() {
+    const el = $("mlClock"), M = ML; if (!el || !M) return;
+    const d = M.info.deadline; if (d == null) { el.textContent = ""; return; }
+    const left = Math.max(0, Math.round((d - (Date.now() + M.off)) / 1000));
+    const t = left >= 3600 ? `${Math.floor(left / 3600)}h ${Math.floor((left % 3600) / 60)}m` : `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+    el.textContent = lg && lg.draft ? `${left ? `${t} left on the clock` : "Time's up: auto-picking"}` : left ? `Plays automatically in ${t}` : "Time's up: playing on";
+  }
+  function ownersBar(ready) {
+    if (!ML) return "";
+    return `<div class="owners">${ML.info.people.map((p) => p.team == null ? "" : `<span class="${ready && p.ready ? "ok" : ""}">${chip(p.team)}${esc(p.me ? "You" : p.name)}${ready ? (p.ready ? " ✅" : " ⏳") : ""}</span>`).join("")}</div>`;
+  }
+  function readyBtn(what) {
+    const me = ML.info.people.find((p) => p.me), left = ML.info.people.filter((p) => !p.ready).length;
+    return me.ready ? `<button class="btn" disabled>Ready ✅ waiting on ${left}</button>` : `<button class="btn gold" id="mlReady">I'm ready for ${esc(what)}</button>`;
+  }
+  function mlWaiting(kick, title, lede) {
+    const w = E.waitingOn(lg).map((t) => `${chip(t)} ${esc(whoName(t))}`).join(", ");
+    head(`${E.teamName(team(lg.user))} · ${kick}`, title, "");
+    $("body").innerHTML = `<section class="card" style="max-width:620px"><div class="card-b"><p style="margin:0 0 8px;font-weight:800">${esc(lede)} ${w}.</p>
+      <small id="mlClock"></small>${ownersBar()}</div></section>`;
+    mlClock();
+  }
+  // Watch parties for this league's games, so the other owner can jump in.
+  function mlParties() {
+    if (!ML || !ML.info.parties.length) return "";
+    return ML.info.parties.filter((x) => x.host_team !== ML.me).map((x) => `<section class="card" style="border-top:5px solid var(--accent)"><div class="card-b">
+      <p style="margin:0 0 10px;font-weight:800">👥 ${esc(whoName(x.host_team))} started a watch party: ${esc(E.teamName(team(x.game.a)))} at ${esc(E.teamName(team(x.game.h)))}.</p>
+      <button class="btn gold" data-join="${esc(x.code)}" ${x.joined ? "disabled" : ""}>${x.joined ? "Someone already joined" : "Join the watch party"}</button></div></section>`).join("");
+  }
+  function lobbyView() {
+    const M = ML, I = M.info, meP = I.people.find((p) => p.me), taken = new Map(I.people.filter((p) => p.team != null).map((p) => [p.team, p]));
+    const real = isReal(I), ts = E.TEAMS.map((t) => ({ ...t, city: real ? E.cityFor(t.code, I.settings.year) : t.city }));
+    const ready = I.people.every((p) => p.team != null);
+    head("Friends league · lobby", I.name, `${real ? `Real Rosters from ${I.settings.year}` : "The Redraft"}. Everyone picks a team, then ${I.owner ? "you start" : "the creator starts"} the league. The AI runs every other team.`);
+    $("body").innerHTML = `<div class="grid2"><div class="stack">
+      <section class="card"><div class="card-h"><h2 class="disp">Pick your team</h2></div><div class="card-b">
+        <div class="teams32">${ts.map((t) => { const o = taken.get(t.i); return `<button type="button" data-claim="${t.i}" aria-pressed="${!!o && o.me}" ${o && !o.me ? "disabled" : ""} style="--c:${t.c1};--c2:${t.c2}">${esc(real ? E.teamName(t) : E.teamName(team0(t.i)))}<small>${o ? esc(o.me ? "You" : o.name) : `${t.conf} ${t.div}`}</small></button>`; }).join("")}</div></div></section></div>
+      <div class="side"><section class="card"><div class="card-h"><h2 class="disp">Who's in</h2></div><div class="card-b">
+        ${I.people.map((p) => `<div class="prow" style="padding:6px 0">${p.team != null ? chip0(p.team) : "<span></span>"}<div class="pn"><b>${esc(p.me ? `${p.name} (you)` : p.name)}</b><span>${p.owner ? "Created the league · " : ""}${p.team != null ? esc(E.teamName(team0(p.team))) : "Picking a team"}</span></div>${I.owner && !p.owner ? `<button class="btn" data-kick="${esc(p.id)}">Remove</button>` : "<span></span>"}</div>`).join("")}
+        ${I.owner ? `<div class="field"><label for="lInv">Invite someone else</label><select id="lInv"><option value="">Pick a friend</option></select></div>` : ""}
+        <div class="actbar" style="margin:14px 0 0">${I.owner ? `<button class="btn gold big" id="lStart" ${ready ? "" : "disabled"}>Start the league</button>` : ""}<button class="btn" id="lLeave">${I.owner ? "Delete the league" : "Leave"}</button></div>
+        ${I.owner && !ready ? `<p class="empty" style="margin:8px 0 0">Everyone needs a team before you can start (or remove whoever isn't coming).</p>` : ""}
+        <p class="empty" style="margin:8px 0 0">League link: <span class="lnk">${esc(location.origin)}/franchise/?league=${esc(I.id)}</span></p></div></section></div></div>`;
+    if (I.owner) rpc("franchise_people", {}).then((ps) => {
+      const s = $("lInv"); if (!s) return;
+      const inL = new Set(I.people.map((p) => p.id));
+      s.innerHTML = `<option value="">Pick a friend</option>` + (ps || []).filter((p) => !inL.has(p.id)).map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");
+      s.onchange = async () => { if (!s.value) return; try { await rpc("franchise_league_invite", { p_league: I.id, p_user: s.value, p_add: true }); M.last = 0; mlTick(); } catch (err) { toast(err.message); } };
+    }, () => {});
+    $("body").onchange = null;
+    $("body").onclick = async (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      try {
+        if (b.dataset.claim) { await rpc("franchise_league_claim", { p_league: I.id, p_team: +b.dataset.claim }); M.last = 0; await mlTick(); }
+        else if (b.dataset.kick) { await rpc("franchise_league_invite", { p_league: I.id, p_user: b.dataset.kick, p_add: false }); M.last = 0; await mlTick(); }
+        else if (b.id === "lStart") { b.disabled = true; await rpc("franchise_league_start", { p_league: I.id }); mlOpen(I.id); }
+        else if (b.id === "lLeave") {
+          if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = I.owner ? "Tap again to delete" : "Tap again to leave"; b.classList.add("gold"); return; }
+          await rpc("franchise_league_leave", { p_league: I.id }); home();
+        }
+      } catch (err) { toast(err.message); b.disabled = false; }
+    };
+  }
+
   function gate(kind) {
     head("NFL · Private league", "Franchise Simulator", "");
     const next = encodeURIComponent("/franchise/" + location.search);
@@ -1375,6 +1682,8 @@
     const s0 = store.read();
     const pc = new URLSearchParams(location.search).get("party");
     if (pc) return joinParty(pc);
+    const lc = new URLSearchParams(location.search).get("league");
+    if (lc) return mlOpen(lc);
     if (new URLSearchParams(location.search).has("new") || s0.last == null || !s0.slots[s0.last]) home(); else open(s0.last);
   })();
 })();
