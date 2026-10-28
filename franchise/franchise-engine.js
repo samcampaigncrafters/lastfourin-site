@@ -1428,10 +1428,81 @@
   // ---- Locker room (build B): fans, morale, news ----
   // Everything here is worked out from the games and the moves, with labelled draws, so it replays like the rest.
   // SAFETY RULE: players carry real names, so every story and fan post is about football inside the sim only
-  // (results, snaps, contracts, trade wishes, sideline frustration after a loss). Never anything off the field.
+  // (results, snaps, contracts, trade wishes, sideline frustration after a loss). The only exception is the made-up
+  // off-field stories below, which keep to absurd stuff and football drama and never touch anyone's personal life.
   // Every story is labelled simulated by the page. Morale only touches play and re-signing in leagues made with
   // build B (settings.lr), so a save from before replays to the identical league.
   const LR = { mor: 0.03, keep: 40 };
+
+  // ---- Off-field stories (Sam, 2026-10-28): random locker-room news, made up, never tied to or taken from real news. ----
+  // Two kinds only: absurd stuff nobody could mistake for news, and football drama (holdouts, beef with the coaches,
+  // skipped practice, contract demands, odd little injuries that cost no time, sideline blowups). NEVER on anyone:
+  // arrests, fights between people, drugs, domestic matters, cheating, or anything about a player's personal life.
+  // Pure news: no draw here touches the games, moods or rosters, so every save replays to the identical league.
+  // On since Sam said "ship it" (2026-10-28); setOffField(false) turns it off.
+  let OFF_FIELD = true;
+  const setOffField = (on) => { OFF_FIELD = !!on; };
+  // [headline, body, when] with {n} the player, {t} his team, {pos} his position. when(p, ctx) says if it fits.
+  const ANY = () => true, LOST = (p, c) => c.lost, DEAL = (p) => p.yrs <= 1 && p.grade >= 6.5, SKILL = (p) => ["WR", "RB", "TE"].includes(p.g);
+  const OFF_ABSURD = [
+    ["{n} challenges the practice-field goose to a fight", "Witnesses say the goose won on points. Both are expected at practice Wednesday.", ANY],
+    ["{n} gets lost in a corn maze on the {t} team outing", "Found two hours later by the equipment staff, holding a map he had drawn himself.", ANY],
+    ["{n} demands a trade over the cafeteria food", "Four straight days of beige casserole was the last straw. {t} has hired a second chef.", ANY],
+    ["{n} insists he can kick a 70-yard field goal", "The kicker has asked him to stop trying it during warmups. He has not stopped.", (p) => p.g !== "K" && p.g !== "P"],
+    ["{n} locks himself in the cold-tub room", "He was in there 40 minutes. Says it was the best recovery session of his life.", ANY],
+    ["{n} reveals he has named every football in the building", "There are 41 of them. One is named Kevin, and he won't say why.", ANY],
+    ["{n} shows up to the walkthrough in full medieval armor", "He says he misread the dress code. The coaches let him run the install anyway.", ANY],
+    ["{n} starts a feud with the stadium vending machine", "It ate his dollar twice. He has filed a formal complaint with team operations.", ANY],
+    ["{n} tries to race the {t} team bus to the airport on foot", "He lost by eleven minutes but says he was gaining on it.", ANY],
+    ["{n} says a seagull stole his game-plan sheet", "Team staff confirm the seagull. The play sheet has not been recovered.", ANY],
+    ["{n} spends practice teaching the {t} mascot a spin move", "The mascot is a quick learner. The special teams coach wants him on kick returns.", ANY],
+    ["{n} gets stuck in the inflatable tunnel before kickoff", "Teammates freed him in time for the anthem. The tunnel has been retired.", ANY],
+    ["{n} sets off the sprinklers during film study", "Nobody is sure how. The film room is drying out.", ANY],
+    ["{n} challenges the head coach to a hot-dog-eating contest", "The coach accepted and won, 9 to 7. He has demanded a rematch.", ANY],
+    ["{n} will only wear mismatched cleats now", "One red, one green, for luck. The equipment manager has stopped asking.", ANY],
+    ["{n} claims the {t} practice turf hums at night", "He stayed late twice to listen. The grounds crew say it's the sprinkler pump.", ANY],
+    ["{n} loses the locker-room ping-pong final to the long snapper", "He has asked for best of seven. The long snapper has retired from ping-pong, undefeated.", ANY],
+    ["{n} adopts a lucky traffic cone from practice", "It now travels with the team and has its own seat on the plane.", ANY],
+    ["{n} tries to sign the team's punting net to a contract", "The front office says the net is not eligible. He says the net is the best catcher on the roster.", ANY],
+    ["{n} brings a 40-foot sub sandwich to the team meeting", "The meeting ran long. Nobody complained.", ANY],
+  ];
+  const OFF_DRAMA = [
+    ["{n} sits out practice in a contract standoff", "He's at the facility but won't put on pads until {t} talks about an extension. He's expected to play Sunday.", DEAL],
+    ["{n}'s agent: pay him or trade him", "The {pos} is in the last stretch of his deal and wants {t} to move before the season ends.", DEAL],
+    ["{n} and the {t} coaching staff aren't speaking", "It started over a red-zone play call that didn't go to him. Both sides say it will get sorted out.", ANY],
+    ["{n} skips the team walkthrough", "He says his alarm didn't go off. The head coach was not amused, but he'll play Sunday.", ANY],
+    ["{n} skips practice, says he already knows the plays", "He was back the next day. The coaches made him run the scout team.", ANY],
+    ["{n}'s sideline rant goes viral", "Cameras caught him demanding the ball after a bad loss. He says it's football and he'd do it again.", LOST],
+    ["{n} slams his helmet on the bench in a loss", "The clip has a few million views. The helmet is fine; the bench is not.", LOST],
+    ["{n} says he needs the ball more", "After a quiet week, the {pos} says he is open on every play and wants the coaches to notice.", SKILL],
+    ["{n} calls the {t} offense too vanilla", "He wants more trick plays. The offensive coordinator says the playbook is fine, thanks.", ANY],
+    ["{n} late to the team flight", "The plane waited six minutes. He's been fined and has to bring breakfast for the whole position room.", ANY],
+    ["{n} tweaks his back sneezing", "Listed as probable. He says it was a very big sneeze.", ANY],
+    ["{n} jams a finger opening a sports drink", "Taped up and expected to play. The {t} trainers have started opening his bottles for him.", ANY],
+    ["{n} pulls a muscle celebrating a teammate's touchdown", "He went too big on the celebration. No time missed; he's been told to tone it down.", ANY],
+    ["{n} in a standoff with {t} over his practice reps", "He wants fewer reps midweek to stay fresh. The coaches want more. It's a negotiation.", ANY],
+    ["{n} feuding with a teammate over the locker by the window", "Both say they had it first. The equipment staff has proposed a time-share.", ANY],
+    ["{n} fined by {t} for missing a team meeting", "He says he was in the wrong building. It was the right building.", ANY],
+  ];
+  function offFieldNews(lg, games, N) {
+    const wk = lg.week, R = rng(lg.seed, "offfield", lg.year, wk), lost = new Set();
+    for (const g of games) if (g.hs !== g.as) lost.add(g.hs > g.as ? g.a : g.h);
+    // About one story a week across the league; about three a season on your team.
+    const teams = [], n = R.poisson(0.8);
+    for (let i = 0; i < n; i++) teams.push(R.int(32));
+    if (R() < 0.15) teams.push(lg.user);
+    const used = lg.flags.off || (lg.flags.off = {});
+    for (const t of teams) {
+      const T = lg.teams[t], mine = t === lg.user;
+      const pool = T.roster.map((id) => lg.players[id]).filter((p) => p && !p.inj && !used[p.id]).sort((a, b) => b.grade - a.grade).slice(0, 24);
+      if (!pool.length) continue;
+      const p = R.pick(pool), list = R() < 0.5 ? OFF_ABSURD : OFF_DRAMA, ctx = { lost: lost.has(t) };
+      const fit = list.filter((x) => x[2](p, ctx)); if (!fit.length) continue;
+      const [h, b] = R.pick(fit), fill = (x) => x.replace(/\{n\}/g, p.name).replace(/\{t\}/g, teamName(T)).replace(/\{pos\}/g, GROUP_NAME[p.g].toLowerCase());
+      used[p.id] = 1;
+      N.push({ k: "off", t, p: p.id, pr: mine ? 6 : 2 + R() * 2, h: fill(h), b: fill(b) });
+    }
+  }
   const lrOn = (lg) => !!lg.settings.lr;
   function lrInit(lg) {
     lg.mood = {}; lg.why = {}; lg.tm = TEAMS.map(() => 55); lg.starts = {}; lg.tgp = TEAMS.map(() => 0); lg.wkStart = new Set();
@@ -1718,6 +1789,7 @@
           N.push({ k: "side", t, p: star.id, pr: mine ? 7 : 2.5, h: `${star.name} frustrated on the sideline in ${th}-${my} loss`, b: `${tn(t)} fell to ${tn(t === g.h ? g.a : g.h)}, and its ${GROUP_NAME[star.g].toLowerCase()} let it show on the bench.` });
       }
     }
+    if (OFF_FIELD && !po) offFieldNews(lg, games, N);
     // Keep the best eight for the league, plus up to four more about the user's team.
     N.sort((a, b) => b.pr - a.pr);
     const keep = [], mineN = [], per = {};
@@ -1790,6 +1862,6 @@
     record, userGames, pickOwner, userOnClock, suggestCuts, isHuman, humansOf, waitingOn, countBy, playGame, expectedPoints, startSeason, boardValue,
     REAL_NAMES, fakeName, setPack, SAVE_V, PLAN0, PM, cleanPlan, aiPlan, planFor, simGame, previewGame, playoffGames, nextGame, short,
     live: { times: liveTimes, at: liveAt, HALF_MS, MS: LIVE_MS },
-    moodOf, MOOD_WORD, WHY, moraleEdge, lrOn,
+    moodOf, MOOD_WORD, WHY, moraleEdge, lrOn, setOffField, get OFF_FIELD() { return OFF_FIELD; }, OFF_ABSURD, OFF_DRAMA,
   };
 });

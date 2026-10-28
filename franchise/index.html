@@ -732,7 +732,7 @@
     const wkName = (n) => n.wk === 0 ? "Preseason" : n.wk <= 18 ? `Week ${n.wk}` : n.wk <= 22 ? E.ROUNDS[n.wk - 19] : n.wk === 23 ? "Awards" : "Offseason";
     const seg = `<div class="seg" style="padding:10px 12px 0">${[["all", "Whole league"], ["mine", "My team"]].map(([k, l]) => `<button type="button" data-nf="${k}" aria-pressed="${newsF === k}">${l}</button>`).join("")}</div>`;
     return `<section class="card"><div class="card-h"><h2 class="disp">${opts.title || "League news"}</h2></div>
-      <p class="empty" style="margin:0;padding:10px 12px 0">Every story is simulated from games in your league. Football only.</p>${seg}
+      <p class="empty" style="margin:0;padding:10px 12px 0">${E.OFF_FIELD ? "Every story is simulated: from the games in your league, plus made-up locker-room stories that never come from real news." : "Every story is simulated from games in your league. Football only."}</p>${seg}
       <div style="margin-top:8px">${list.slice(0, newsN).map((n) => `<div class="story ${n.me ? "me" : ""}"><small><span class="simtag">Simulated</span>${n.y} · ${wkName(n)}</small><b>${esc(n.h)}</b><p>${esc(n.b)}</p></div>`).join("") || `<p class="empty" style="padding:12px;margin:0">No news yet. Play a week.</p>`}</div>
       ${list.length > newsN ? `<div class="card-b"><button class="btn block" id="moreNews">Show more</button></div>` : ""}</section>`;
   }
