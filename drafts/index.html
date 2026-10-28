@@ -182,6 +182,14 @@ body.drafting .head { display: none; }
         </div>
       </div>
 
+      <div class="set-row scored-only group-only">
+        <div class="set-lbl" id="crL">Points count</div>
+        <div class="seg" id="cr">
+          <button type="button" data-v="team" aria-pressed="true"><span id="crT">Only with this team</span><small>Years hidden while you draft</small></button>
+          <button type="button" data-v="all" aria-pressed="false">Whole career<small id="crAs">Every team he played for</small></button>
+        </div>
+      </div>
+
       <div class="set-row player-only">
         <div class="set-lbl">Lineup</div>
         <div class="seg" id="lu">
@@ -311,9 +319,12 @@ body.drafting .head { display: none; }
     team: qs.get("t") || "DEN", div: qs.get("d") || "AFC West", conf: qs.get("c") || "AFC",
     val: qs.get("val") || "career", sc: qs.get("sc") || "ppr", lu: qs.get("lu") || "fantasy",
     opp: "cpu", cpu: qs.get("cpu") || "medium", show: qs.get("show") || "0", first: "me",
+    cr: qs.get("cr") === "all" ? "all" : "team", // team / division / conference pools: score only the years there, or his whole career
   };
   let meta = null;        // teams + thru of the loaded data
 
+  const isGroup = () => S.pool === "team" || S.pool === "div" || S.pool === "conf";
+  const hideYears = () => S.mode === "scored" && isGroup() && S.cr === "team"; // years there would give away the points
   const groupTeams = () => {
     if (S.pool === "team") return [S.team];
     if (S.pool === "div") return Object.keys(meta.teams).filter((t) => meta.teams[t][2] === S.div);
@@ -327,18 +338,20 @@ body.drafting .head { display: none; }
 
   // One drafted-or-draftable player, normalised across both data sets.
   function rowsFor(d) {
-    const G = groupTeams(), key = nkey(S.name), out = [];
+    const G = groupTeams(), W = S.cr === "all" && S.mode === "scored", key = nkey(S.name), out = []; // W: whole career, any team
     if (S.kind === "coaches") {
       for (const c of d.c) {
-        const ts = Object.entries(c[1]).filter(([t]) => !G || G.includes(t)).sort((a, b) => a[1][3] - b[1][3]);
-        if (!ts.length) continue;
+        const all = Object.entries(c[1]).sort((a, b) => a[1][3] - b[1][3]);
+        if (G && !all.some(([t]) => G.includes(t))) continue;
+        const ts = G && !W ? all.filter(([t]) => G.includes(t)) : all;
         const sum = (i) => ts.reduce((a, [, v]) => a + v[i], 0), w = sum(0), l = sum(1), t = sum(2);
         const y1 = Math.min(...ts.map(([, v]) => v[3])), y2 = Math.max(...ts.map(([, v]) => v[4])), tl = ts.map(([x]) => x);
         let pts, note;
-        if (S.val === "career") { pts = w; note = `${w}-${l}${t ? "-" + t : ""}` + (!G && c[2] + c[3] ? ` · ${c[2]}-${c[3]} playoffs` : ""); }
+        if (S.val === "career") { pts = w; note = `${w}-${l}${t ? "-" + t : ""}` + ((!G || W) && c[2] + c[3] ? ` · ${c[2]}-${c[3]} playoffs` : ""); }
         else { const [bt, v] = ts.reduce((a, b) => b[1][6] > a[1][6] ? b : a); pts = v[6]; note = `${v[5]} ${bt} · ${v[6]}-${v[7]}`; }
         if (pts <= 0) continue;
-        out.push({ id: out.length, key: `${c[0]}|HC`, name: c[0], pos: "HC", y1, y2, pts, note, sub: `${span(y1, y2)} · ${tl.slice(0, 3).join(", ")}${tl.length > 3 ? "…" : ""}` });
+        const tls = `${tl.slice(0, 3).join(", ")}${tl.length > 3 ? "…" : ""}`;
+        out.push({ id: out.length, key: `${c[0]}|HC`, name: c[0], pos: "HC", y1, y2, cy1: all[0][1][3], cy2: Math.max(...all.map(([, v]) => v[4])), pts, note, sub: `${span(y1, y2)} · ${tls}`, subH: tls });
       }
       return out;
     }
@@ -359,15 +372,17 @@ body.drafting .head { display: none; }
       for (const r of d.p) {
         if (S.pool === "first" && !r[3].split("|").includes(key)) continue;
         if (S.pool === "last" && r[4] !== key) continue;
-        const ts = Object.entries(r[6]).filter(([t]) => !G || G.includes(t)).sort((a, b) => a[1][5] - b[1][5]);
-        if (!ts.length) continue;
+        const all = Object.entries(r[6]).sort((a, b) => a[1][5] - b[1][5]);
+        if (G && !all.some(([t]) => G.includes(t))) continue;
+        const ts = G && !W ? all.filter(([t]) => G.includes(t)) : all;
         const y1 = Math.min(...ts.map(([, v]) => v[5])), y2 = Math.max(...ts.map(([, v]) => v[6])), tl = ts.map(([t]) => t);
         let pts, note;
         if (S.val === "career") { pts = ts.reduce((a, [, v]) => a + mix(v[0], v[1]), 0); note = `${tl.join(", ")} · ${span(y1, y2)} in #${r[5]}`; }
         else { const [t, v] = ts.reduce((a, b) => mix(b[1][3], b[1][4]) > mix(a[1][3], a[1][4]) ? b : a); pts = mix(v[3], v[4]); note = `${v[2]} ${t} in #${r[5]}`; }
         if (pts <= 0) continue;
-        out.push({ id: out.length, key: `${r[1]}|${r[2]}|${r[5]}`, pid: `${r[1]}|${r[2]}|${r[0]}`, espn: r[0], name: r[1], pos: "#" + r[5], real: r[2], y1, y2, pts, note,
-                   sub: `${r[2]} · ${span(y1, y2)} · ${tl.slice(0, 3).join(", ")}${tl.length > 3 ? "…" : ""}` });
+        const tls = `${tl.slice(0, 3).join(", ")}${tl.length > 3 ? "…" : ""}`;
+        out.push({ id: out.length, key: `${r[1]}|${r[2]}|${r[5]}`, pid: `${r[1]}|${r[2]}|${r[0]}`, espn: r[0], name: r[1], pos: "#" + r[5], real: r[2], y1, y2,
+                   cy1: all[0][1][5], cy2: Math.max(...all.map(([, v]) => v[6])), pts, note, sub: `${r[2]} · ${span(y1, y2)} · ${tls}`, subH: `${r[2]} · ${tls}` });
       }
       return out;
     }
@@ -386,8 +401,9 @@ body.drafting .head { display: none; }
       if (S.pool === "first" && !r[3].split("|").includes(key)) continue;
       if (S.pool === "last" && r[4] !== key) continue;
       let pts, note, y1 = r[5], y2 = r[6], tl;
-      if (!G) {
-        if (S.val === "career") { pts = mix(r[7], r[8]); note = "career"; }
+      if (G && !Object.keys(r[13]).some((t) => G.includes(t))) continue;
+      if (!G || W) {
+        if (S.val === "career") { pts = mix(r[7], r[8]); note = G ? `${span(y1, y2)} · whole career` : "career"; }
         else { pts = mix(r[11], r[12]); note = `${r[9]} ${r[10]}`; }
         tl = Object.entries(r[13]).sort((a, b) => a[1][5] - b[1][5]).map(([t]) => t);
       } else {
@@ -399,8 +415,9 @@ body.drafting .head { display: none; }
         else { const [t, v] = ts.reduce((a, b) => mix(b[1][3], b[1][4]) > mix(a[1][3], a[1][4]) ? b : a); pts = mix(v[3], v[4]); note = `${v[2]} ${t}`; }
       }
       if (pts <= 0) continue;
-      out.push({ id: out.length, key: `${r[1]}|${r[2]}|${r[5]}`, espn: r[0], name: r[1], pos: r[2], y1, y2, pts, note,
-                 sub: `${y1 === y2 ? y1 : y1 + "–" + yy(y2)} · ${tl.slice(0, 3).join(", ")}${tl.length > 3 ? "…" : ""}` });
+      const tls = `${tl.slice(0, 3).join(", ")}${tl.length > 3 ? "…" : ""}`;
+      out.push({ id: out.length, key: `${r[1]}|${r[2]}|${r[5]}`, espn: r[0], name: r[1], pos: r[2], y1, y2, cy1: r[5], cy2: r[6], pts, note,
+                 sub: `${y1 === y2 ? y1 : y1 + "–" + yy(y2)} · ${tls}`, subH: tls });
     }
     return out;
   }
@@ -451,8 +468,11 @@ body.drafting .head { display: none; }
     return S.pool === "first" ? `players named ${nm}` : S.pool === "last" ? `players with the last name ${nm}` : S.pool === "team" ? `${meta.teams[S.team][0]} players`
       : S.pool === "div" ? `players from the ${S.div}` : S.pool === "conf" ? `${S.conf} players` : "players";
   }
-  const valLabel = () => S.kind === "coaches" ? `${S.val === "career" ? "Career wins" : "Best season"} · since 1999` : S.mode === "fun" ? "For fun · no points"
-    : `${S.val === "career" ? (S.kind === "jerseys" ? "Career in the number" : "Career") : "Best season"} · ${S.sc === "ppr" ? "PPR" : S.sc === "half" ? "Half PPR" : "Standard"}`;
+  const crLabel = () => !isGroup() || S.mode === "fun" ? "" : S.cr === "all" ? " · Whole careers"
+    : ` · ${S.pool === "team" ? "Team" : S.pool === "div" ? "Division" : "Conference"} years only`;
+  const valLabel = () => (S.kind === "coaches" ? `${S.val === "career" ? "Career wins" : "Best season"} · since 1999` : S.mode === "fun" ? "For fun · no points"
+    : `${S.val === "career" ? (S.kind === "jerseys" ? "Career in the number" : "Career") : "Best season"} · ${S.sc === "ppr" ? "PPR" : S.sc === "half" ? "Half PPR" : "Standard"}`) + crLabel();
+  const crTitle = () => isGroup() && S.mode === "scored" && S.cr === "all" ? " · whole careers" : ""; // on the share card and friend game titles
   const kindName = () => S.kind === "jerseys" ? "Jersey draft" : S.kind === "coaches" ? "Coaches' draft" : "Draft";
   const LEDE = {
     players: "Pick a pool, then take turns drafting a lineup. Every player named Chris, the all-time Broncos, a whole division. Higher fantasy total wins.",
@@ -485,7 +505,12 @@ body.drafting .head { display: none; }
     document.querySelector('.modes [data-mode="fun"]').textContent = S.kind === "jerseys" ? "For fun · everyone since 1996" : "For fun · everyone since 1920";
     const V = S.kind === "coaches" ? ["Career wins", "Every win in the pool", "Best season", "His most wins in one year"]
       : S.kind === "jerseys" ? ["Career in the number", "Every point in that jersey", "Best season", "His best year in it"] : ["Career points", "Whole career in the pool", "Best season", "His single best year"];
+    if (isGroup() && S.cr === "all") V[1] = S.kind === "coaches" ? "Every win, any team" : S.kind === "jerseys" ? "Every point in it, any team" : "His whole career";
     ["valC", "valCs", "valB", "valBs"].forEach((id, i) => $(id).textContent = V[i]);
+    document.querySelectorAll(".group-only").forEach((x) => x.hidden = S.mode === "fun" || !isGroup());
+    $("crL").textContent = S.kind === "coaches" ? "Wins count" : "Points count";
+    $("crT").textContent = S.pool === "div" ? "Only in this division" : S.pool === "conf" ? "Only in this conference" : "Only with this team";
+    $("crAs").textContent = S.kind === "coaches" ? "Every team he coached" : S.kind === "jerseys" ? "In that number, any team" : "Every team he played for";
     $("h1").textContent = S.kind === "jerseys" ? "Jersey Draft" : S.kind === "coaches" ? "Coaches' Draft" : "Drafts";
     document.title = `${$("h1").textContent} · Last Four In`;
     if (S.mode !== "fun" && S.lu === "full") { S.lu = "fantasy"; paints.forEach((p) => p()); }
@@ -536,6 +561,7 @@ body.drafting .head { display: none; }
     p.set("pool", S.pool);
     if (S.pool === "first" || S.pool === "last") p.set("q", S.name.trim());
     if (S.pool === "team") p.set("t", S.team); if (S.pool === "div") p.set("d", S.div); if (S.pool === "conf") p.set("c", S.conf);
+    if (S.mode === "scored" && isGroup() && S.cr === "all") p.set("cr", "all");
     if (S.mode === "scored") { p.set("val", S.val); if (S.kind !== "coaches") p.set("sc", S.sc); p.set("show", S.show); }
     if (S.kind === "players") p.set("lu", S.lu);
     if (S.kind === "jerseys") p.set("nums", numsList().join(","));
@@ -557,6 +583,7 @@ body.drafting .head { display: none; }
   $("nums").addEventListener("input", () => { S.nums = $("nums").value; clearTimeout(typing); typing = setTimeout(refresh, 300); });
   $("nums").addEventListener("change", () => { $("nums").value = numsList().join(", "); });
   $("shuffle").addEventListener("click", () => { S.nums = ""; refresh(); });
+  paints.push(seg("cr", "cr"));
   paints.push(seg("val", "val")); paints.push(seg("sc", "sc")); paints.push(seg("lu", "lu")); paints.push(seg("opp", "opp"));
   paints.push(seg("cpu", "cpu")); paints.push(seg("show", "show")); paints.push(seg("first", "first"));
   $("poolName").value = S.name;
@@ -579,17 +606,19 @@ body.drafting .head { display: none; }
     const oppName = g ? (them ? them.name : "Your friend") : `Computer (${S.cpu[0].toUpperCase() + S.cpu.slice(1)})`;
     const meName = g ? (g[g.me] || {}).name || "You" : "You";
     const rows = pool.filter((r) => slots.some((s) => fits(s, r.pos)));
-    D = { rows, byId: new Map(rows.map((r) => [r.id, r])), byKey: new Map(rows.map((r) => [r.key, r])), slots, label: poolLabel(), val: valLabel(), kind: S.kind, kname: kindName(),
+    D = { rows, byId: new Map(rows.map((r) => [r.id, r])), byKey: new Map(rows.map((r) => [r.key, r])), slots, label: poolLabel(), val: valLabel(), kind: S.kind, kname: kindName(), crt: crTitle(),
           taken: new Set(), n: 0, total: slots.length * 2, game: g ? { id: g.id, role: g.me } : null,
           side: [{ name: meName, picks: [] }, { name: oppName, picks: [] }],
-          firstSide: meFirst ? 0 : 1, show: S.mode === "fun" || S.show === "1", fun: S.mode === "fun", setup: setupQuery() };
+          firstSide: meFirst ? 0 : 1, show: S.mode === "fun" || S.show === "1", fun: S.mode === "fun", hide: hideYears(), setup: setupQuery() };
     $("lobby").hidden = true; $("setup").hidden = true; $("result").hidden = true; $("room").hidden = false; document.body.classList.add("drafting");
     $("roomKick").textContent = (D.kind === "players" ? "" : D.kname + " · ") + D.val; $("roomTitle").textContent = D.label;
     $("q").value = ""; posFilter = "ALL";
     $("q").placeholder = D.kind === "coaches" ? "Search coaches" : "Search players";
     const sorts = D.fun && D.kind === "jerseys" ? [["fame", "Best known first"], ["yrs", "Most seasons in it"], ["az", "A–Z"]]
       : D.fun ? [["fame", "Longest careers first"], ["az", "A–Z"], ["new", "Newest first"], ["old", "Oldest first"]]
-      : D.show ? [["pts", D.kind === "coaches" ? "Most wins" : "Most points"], ["az", "A–Z"], ["new", "Newest first"]] : [["yrs", "Most seasons"], ["az", "A–Z"], ["new", "Newest first"], ["old", "Oldest first"]];
+      : D.show ? [["pts", D.kind === "coaches" ? "Most wins" : "Most points"], ["az", "A–Z"], ["new", "Newest first"]]
+      : D.hide ? [["new", "Newest first"], ["az", "A–Z"], ["old", "Oldest first"]] // no "Most seasons": his years there are the answer
+      : [["yrs", "Most seasons"], ["az", "A–Z"], ["new", "Newest first"], ["old", "Oldest first"]];
     $("sort").innerHTML = sorts.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
     const posList = [...new Set(slots.flatMap((s) => s === "FLEX" ? ["RB", "WR", "TE"] : s === "ANY" ? [...new Set(D.rows.map((r) => r.pos))] : [s]))];
     const order = ["QB", "RB", "WR", "TE", "OL", "DL", "LB", "DB", "K"];
@@ -653,12 +682,13 @@ body.drafting .head { display: none; }
     const last = (r) => r.name.split(" ").filter((w) => !/^(jr|sr|ii|iii|iv|v)\.?$/i.test(w)).pop() || r.name;
     if (sort === "pts" || sort === "fame") list.sort((a, b) => value(b) - value(a));
     else if (sort === "yrs") list.sort((a, b) => (b.y2 - b.y1) - (a.y2 - a.y1) || last(a).localeCompare(last(b)));
-    else if (sort === "new") list.sort((a, b) => b.y2 - a.y2 || value(b) - value(a));
-    else if (sort === "old") list.sort((a, b) => a.y1 - b.y1 || value(b) - value(a));
+    // With years hidden, newest/oldest go by his whole career, not his years in the pool.
+    else if (sort === "new") list.sort((a, b) => D.hide ? b.cy2 - a.cy2 || last(a).localeCompare(last(b)) : b.y2 - a.y2 || value(b) - value(a));
+    else if (sort === "old") list.sort((a, b) => D.hide ? a.cy1 - b.cy1 || last(a).localeCompare(last(b)) : a.y1 - b.y1 || value(b) - value(a));
     else list.sort((a, b) => last(a).localeCompare(last(b)) || a.name.localeCompare(b.name));
     $("board").innerHTML = list.slice(0, LIMIT).map((r) => {
       const ok = slotFor(0, r.pos) >= 0;
-      return `<li class="${ok ? "" : "cant"}"><span class="pos">${r.pos}</span><span class="who"><b>${esc(r.name)}</b><small>${esc(r.sub)}</small></span>
+      return `<li class="${ok ? "" : "cant"}"><span class="pos">${r.pos}</span><span class="who"><b>${esc(r.name)}</b><small>${esc(D.hide ? r.subH : r.sub)}</small></span>
         <span class="pts">${D.show && !D.fun ? fmtv(r.pts) : ""}</span>
         <button class="btn${mine && ok ? " gold" : ""}" type="button" data-id="${r.id}" ${mine && ok ? "" : "disabled"}>${ok ? "Draft" : "Full"}</button></li>`;
     }).join("") || `<li style="display:block;color:var(--muted)">Nobody left who matches.</li>`;
@@ -676,7 +706,7 @@ body.drafting .head { display: none; }
       if (!p) return `<li><span class="slot">${lbl}</span><span class="open">open</span><span></span></li>`;
       const r = p.row;
       return `<li class="${r.id === D.last && !reveal ? "new" : ""}"><span class="slot">${lbl}</span>
-        <span class="nm">${esc(r.name)}<small>${esc(showPts && r.note ? r.note : r.sub)}</small></span><span class="pts">${showPts ? fmtv(r.pts) : ""}</span></li>`;
+        <span class="nm">${esc(r.name)}<small>${esc(D.hide && !reveal ? r.subH : showPts && r.note ? r.note : r.sub)}</small></span><span class="pts">${showPts ? fmtv(r.pts) : ""}</span></li>`;
     }).join("");
     return `<div class="lu${on ? " on" : ""}"><div class="lu-h"><b>${esc(sd.name)}</b><span>${showPts ? fmtv(teamTotal(sd)) : ""}</span></div><ol>${rows}</ol></div>`;
   }
@@ -740,7 +770,7 @@ body.drafting .head { display: none; }
     $("resTeams").innerHTML = D.side.map((sd, s) => teamCard(sd, s, true, false)).join("");
     const pack = (sd) => D.slots.map((slot, i) => { const p = sd.picks.find((x) => x.si === i); return p ? [slot === "HC" ? String(i + 1) : slot, p.row.name, p.row.pts == null ? null : Math.round(p.row.pts * 10) / 10] : [slot === "HC" ? String(i + 1) : slot, "", null]; });
     const e = {
-      id: D.game ? `draft-g-${D.game.id}` : `draft-${Date.now()}`, kind: "draft", title: `${D.kname}: ${D.label}`, sub: D.val, result,
+      id: D.game ? `draft-g-${D.game.id}` : `draft-${Date.now()}`, kind: "draft", title: `${D.kname}: ${D.label}${D.crt}`, sub: D.val, result,
       data: { me: pack(me), op: pack(op), mn: me.name, on: op.name, mt: D.fun ? null : Math.round(a * 10) / 10, ot: D.fun ? null : Math.round(b * 10) / 10, q: D.setup, u: D.kind === "coaches" ? "wins" : undefined },
       shareText: D.kind === "jerseys" ? `I ran a jersey draft on Last Four In (${D.label}${D.fun ? "" : ": " + result}). Think you can beat my numbers?`
         : D.kind === "coaches" ? `I drafted head coaches on Last Four In (${D.label}): ${result}. Think you can beat my staff?`
@@ -758,15 +788,15 @@ body.drafting .head { display: none; }
 
   // ---------- friend drafts ----------
   let ME = null, GAME = null, watcher = null;
-  const pickFields = ["kind", "nums", "nc", "mode", "pool", "name", "team", "div", "conf", "val", "sc", "lu", "show"];
+  const pickFields = ["kind", "nums", "nc", "mode", "pool", "name", "team", "div", "conf", "val", "sc", "lu", "show", "cr"];
 
   async function createGame() {
     const btn = $("startBtn"); btn.disabled = true;
     try {
       const hostFirst = S.first === "me" || (S.first === "coin" && Math.random() < .5);
       const setup = Object.fromEntries(pickFields.map((k) => [k, S[k]]));
-      const r = await LFI.games.create("draft", { settings: { title: poolLabel(), val: (S.kind === "players" ? "" : kindName() + " · ") + valLabel(), setup, data: meta.built },
-        total: slotsNow().length * 2, hostFirst, title: `${kindName()}: ${poolLabel()}` });
+      const r = await LFI.games.create("draft", { settings: { title: poolLabel() + crTitle(), val: (S.kind === "players" ? "" : kindName() + " · ") + valLabel(), setup, data: meta.built },
+        total: slotsNow().length * 2, hostFirst, title: `${kindName()}: ${poolLabel()}${crTitle()}` });
       history.replaceState(null, "", "?g=" + r.code);
       openGame(r.code);
     } catch (err) { toast(err.message); btn.disabled = false; }
