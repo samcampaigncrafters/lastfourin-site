@@ -317,7 +317,7 @@
   const isReal = (x) => !!x && !!x.settings && x.settings.mode === "real";
   const weeks = () => lg.weeks || 18;
   let newsF = "all", newsN = 12;
-  let lg = null, slot = -1, tab = "week", posF = "ALL", q = "", showN = 60, boardSort = "board", sel = null, live = null;
+  let lg = null, slot = -1, draftTab = "players", tab = "week", posF = "ALL", q = "", showN = 60, boardSort = "board", sel = null, live = null;
   let ML = null, sticky = null; // ML: the friends league open in this tab (see "Friends leagues" below)
 
   // ---- Saves: three slots per account. A save is the seed + your moves; loading replays them. ----
@@ -815,6 +815,29 @@
     if (ML && lg && !live) render();
   }
 
+  // Draft views only change this tab's display; they never submit a league move or rewrite a save.
+  function draftRosterHtml() {
+    const ros = team(lg.user).roster.map((id) => lg.players[id]);
+    return `<section class="card"><div class="card-h"><h2 class="disp">Your roster</h2><span class="muted">${ros.length} / ${E.ROSTER} players</span></div>
+      <div class="card-b"><div class="needs">${E.GROUPS.map((g) => `<span>${g === "ED" ? "Edge" : g} ${ros.filter((p) => p.g === g).length}/${E.TARGET[g]}</span>`).join("")}</div>
+      <p class="empty" style="margin:10px 0 0">Ratings change each offseason. A player's ceiling is an estimate of potential, not a guaranteed outcome.</p></div></section>
+      ${ros.length ? E.GROUPS.map((g) => { const ps = ros.filter((p) => p.g === g).sort((a, b) => b.grade - a.grade || a.name.localeCompare(b.name));
+        return ps.length ? `<section class="card" style="margin-top:12px"><div class="card-h"><h3 class="disp" style="font-size:20px;margin:0">${E.GROUP_NAME[g]}</h3></div>
+          ${ps.map((p) => `<div class="prow">${playerBadge(p)}<div class="pn"><b>${esc(p.name)}</b><span>${plabel(p)}</span></div><span class="muted" style="font-size:12px;font-weight:700">Ceiling ${ovr(p.ceil)}</span></div>`).join("")}</section>` : ""; }).join("")
+        : `<section class="card" style="margin-top:12px"><p class="empty" style="padding:16px">No players drafted yet. Your picks will appear here, grouped by position.</p></section>`}`;
+  }
+  function selectDraftTab(next, focus) {
+    draftTab = next === "roster" ? "roster" : "players";
+    for (const key of ["players", "roster"]) {
+      const b = $("draftTab-" + key), panel = $("draftPanel-" + key), selected = draftTab === key;
+      b.setAttribute("aria-selected", String(selected)); b.tabIndex = selected ? 0 : -1; panel.hidden = !selected;
+    }
+    const panel = $("draftPanel-" + draftTab), clock = $("draftTabs").closest(".clock");
+    panel.style.scrollMarginTop = `${clock.offsetHeight + (parseFloat(getComputedStyle(clock).top) || 0) + 12}px`;
+    panel.scrollIntoView({ block: "start" });
+    if (focus) $("draftTab-" + draftTab).focus({ preventScroll: true });
+  }
+
   // ---- Draft room ----
   function draftRoom(kick, title) {
     const d = lg.draft, rookie = d.kind === "rookie";
@@ -834,13 +857,17 @@
     const minePicks = d.picks.filter(([tm]) => tm === lg.user).map(([, id]) => lg.players[id]);
     $("body").innerHTML = `
       <div class="clock"><div><small>Round ${round} of ${d.rounds} · pick ${inRound} · ${ord(d.n + 1)} overall</small><div class="disp">${onClock ? "You're on the clock" : ML ? `On the clock: ${esc(whoName(who))}` : "Waiting"}</div>${ML ? `<small id="mlClock"></small>${ownersBar()}` : ""}</div>
-        <div class="actbar" style="margin:0"><button class="btn" id="autoBtn" ${ML && !onClock ? "disabled" : ""}>Auto-pick this one</button>${simBtns()}</div></div>
+        <div class="actbar" style="margin:0"><button class="btn" id="autoBtn" ${ML && !onClock ? "disabled" : ""}>Auto-pick this one</button>${simBtns()}</div>
+        <div class="tabs" role="tablist" aria-label="Draft views" id="draftTabs" style="flex-basis:100%;margin:0;border-color:rgba(255,255,255,.25)">
+          ${[["players", "Available players"], ["roster", `Roster (${mine})`]].map(([key, label]) => `<button type="button" role="tab" id="draftTab-${key}" data-draft-tab="${key}" aria-controls="draftPanel-${key}" aria-selected="${draftTab === key}" tabindex="${draftTab === key ? 0 : -1}" style="color:#fff">${label}</button>`).join("")}
+        </div></div>
       <section class="card" style="margin-bottom:14px"><div class="card-b" style="padding:10px 14px">
         ${lg.ratingVersion ? `<span>Ratings reference: Madden NFL 27, Week 6. Unmatched players are marked as estimates.</span>`
           : lg.year === REF.season ? `<span>This draft uses the old position-relative model. Update ratings for the remaining draft; earlier picks stay recorded.</span>${!ML || (ML.info.owner && ML.info.ratingPolicy === 1) ? ` <button class="btn" id="updateRatings">Use updated ratings</button>` : `<span> The league creator can update after refreshing.</span>`}`
           : `<span>Historical season: Bubble's own model estimates, not current Madden ratings.</span>`}
       </div></section>
-      <div class="grid2"><div class="stack">
+      <div id="draftPanel-roster" role="tabpanel" aria-labelledby="draftTab-roster" ${draftTab === "roster" ? "" : "hidden"}>${draftRosterHtml()}</div>
+      <div id="draftPanel-players" role="tabpanel" aria-labelledby="draftTab-players" ${draftTab === "players" ? "" : "hidden"}><div class="grid2"><div class="stack">
         <section class="card"><div class="card-b" style="padding-bottom:12px">
           <div class="needs">${needs}</div>
           <div class="seg" style="margin-top:12px" id="posSeg">${["ALL", ...E.GROUPS].map((g) => `<button type="button" data-pos="${g}" aria-pressed="${posF === g}">${g === "ALL" ? "All" : g === "ED" ? "Edge" : g}</button>`).join("")}</div>
@@ -855,10 +882,15 @@
       <div class="side">
         <section class="card"><div class="card-h"><h2 class="disp">Latest picks</h2></div><div class="ticker">${recent.map(([tm, id]) => { const p = lg.players[id]; return `<div><em>${ord(d.picks.indexOf(recent.find((x) => x[1] === id)) + 1)}</em>${chip(tm)}<span class="pick-player">${playerFace(p, true)}<span><b>${esc(p.name)}</b> <span class="muted">${esc(posName(p))} ${ovr(p.grade)}${ML && ownerOf(tm) ? ` · ${esc(whoName(tm))}` : ""}</span></span></span></div>`; }).join("") || `<p class="empty" style="padding:12px">No picks yet.</p>`}</div></section>
         <section class="card"><div class="card-h"><h2 class="disp">Your picks</h2><span class="muted" style="font-weight:700">${mine} on roster</span></div><div class="ticker">${minePicks.slice().reverse().map((p) => `<div><em>${esc(posName(p))}</em>${playerBadge(p, true)}<span><b>${esc(p.name)}</b></span></div>`).join("") || `<p class="empty" style="padding:12px">Your first pick is coming.</p>`}</div></section>
-      </div></div>`;
+      </div></div></div>`;
+    $("draftTabs").onkeydown = (e) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+      e.preventDefault(); selectDraftTab(e.key === "Home" ? "players" : e.key === "End" ? "roster" : draftTab === "players" ? "roster" : "players", true);
+    };
     $("body").onclick = (e) => {
       const b = e.target.closest("button"); if (!b) return;
-      if (b.dataset.pick) { move({ t: "pick", p: b.dataset.pick }); }
+      if (b.dataset.draftTab) { selectDraftTab(b.dataset.draftTab); }
+      else if (b.dataset.pick) { move({ t: "pick", p: b.dataset.pick }); }
       else if (b.dataset.pos) { posF = b.dataset.pos; showN = 60; render(); }
       else if (b.dataset.sort) { boardSort = b.dataset.sort; render(); }
       else if (b.id === "moreBtn") { showN += 80; render(); }
