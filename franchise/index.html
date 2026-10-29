@@ -269,7 +269,7 @@
   </div>
   <nav id="teamTools" class="actbar" aria-label="Team tools" hidden style="margin:0 0 14px">
     <button type="button" class="btn" data-team-tool="roster">My roster</button><button type="button" class="btn" data-team-tool="depth">Depth chart</button>
-    <button type="button" class="btn" data-team-tool="search">Find player</button><button type="button" class="btn" data-team-tool="money">Financials</button>
+    <button type="button" class="btn" data-team-tool="search">Find player</button><button type="button" class="btn" data-team-tool="money">Financials</button><button type="button" class="btn" data-team-tool="updates">League updates</button>
   </nav>
   <div id="body"><p class="empty">Loading…</p></div>
   <p class="credit">Player data: <a class="lnk" href="https://nflverse.com" rel="noopener">nflverse</a> (CC-BY 4.0). Madden NFL 27 is a ratings reference where noted; unmatched and historical ratings, development and results are bubble's own estimates. Private league for invited friends. Not affiliated with the NFL or any team.</p>
@@ -282,7 +282,7 @@
 
 <script src="/assets/lfi.js"></script>
 <script src="/assets/cloud.js"></script>
-<script src="/franchise/franchise-engine.js?v=prospects-20261028"></script>
+<script src="/franchise/franchise-engine.js?v=future-classes-20261028"></script>
 <script src="/franchise/sim-tools.js"></script>
 <script src="/franchise/team-planning.js?v=20261028"></script>
 <script src="/franchise/draft-clock.js"></script>
@@ -321,6 +321,7 @@
   }
   const isReal = (x) => !!x && !!x.settings && x.settings.mode === "real";
   const weeks = () => lg.weeks || 18;
+  const projectedYear = () => lg && (lg.year === 2027 && lg.prospectVersion || lg.futureClassesV === 1 && E.FUTURE_CLASS_VERSIONS[lg.year]);
   let newsF = "all", newsN = 12;
   let lg = null, slot = -1, draftTab = "players", tab = "week", posF = "ALL", q = "", showN = 60, boardSort = "board", sel = null, live = null;
   let ML = null, sticky = null; // ML: the friends league open in this tab (see "Friends leagues" below)
@@ -350,7 +351,7 @@
         try {
           if (v !== true) { await rpc("franchise_save_delete", { p_seed: seed, p_at: v }); continue; }
           const sv = store.read().slots.find((x) => x && x.seed === seed);
-          if (sv && await rpc("franchise_save_put", { p_save: sv }) === "full") toast("Your account already holds six franchises, so this one is saved in this browser only. Delete one to make room.");
+          if (sv && await rpc("franchise_save_put", { p_save: { ...sv, client: 4 } }) === "full") toast("Your account already holds six franchises, so this one is saved in this browser only. Delete one to make room.");
         } catch (err) { console.error(err); if (!(seed in sync.q)) sync.q[seed] = v; }
       }
     })();
@@ -362,17 +363,24 @@
   // keeps the newer copy (a deleted one counts by when it was deleted); one only this browser has goes up, so nothing
   // is lost the first time a browser signs in. Each keeps its slot here where it can; new arrivals take empty slots.
   // Returns true when this browser's slots changed.
+  async function savesGet() {
+    try { return await rpc("franchise_saves_get_v4", {}); }
+    catch (err) { if (!/PGRST202|could not find.*function|function.*does not exist/i.test(String(err.message || err))) throw err; return rpc("franchise_saves_get", {}); }
+  }
+  const upgradeMarkers = (sv) => new Set(((sv && sv.moves) || []).filter((m) => ["prospectsUpdate", "futureClassesUpdate"].includes(m.t)).map((m) => `${m.t}/${m.version}/${m.team == null ? "" : m.team}`));
+  const missingUpgrade = (local, account) => { const known = upgradeMarkers(local); return [...upgradeMarkers(account)].some((key) => !known.has(key)); };
   async function syncAccount() {
     const c = LFI.cloud; if (!c || !c.on) return false;
     await c.ready; if (!signedIn()) return false;
     await flushSync();
-    let rows; try { rows = await rpc("franchise_saves_get", {}); } catch (err) { console.error(err); return false; }
+    let rows; try { rows = await savesGet(); } catch (err) { console.error(err); return false; }
     if (!Array.isArray(rows)) return false;
     const s = store.read(), acct = new Map(rows.map((r) => [r.seed, r])), gone = s.gone || {};
     const lastSeed = s.last != null && s.slots[s.last] ? s.slots[s.last].seed : null;
     const out = s.slots.map((sv) => {
       if (!sv) return null;
       const r = acct.get(sv.seed);
+      if (r && r.save && missingUpgrade(sv, r.save)) return r.save;
       if (!r || savedAt(sv) > r.updated) { sync.q[sv.seed] = true; return sv; } // only here, or newer here: it goes up
       return r.save || null; // the account's copy is newer, or it was deleted since
     });
@@ -404,7 +412,7 @@
     const s = store.read(), old = s.slots[slot], sv = E.saveOf(lg);
     // Opening a save rewrites it but changes nothing, so it keeps its time (an old copy mustn't look new to the merge).
     const same = old && old.seed === sv.seed && old.v === sv.v && old.moves && old.moves.length === sv.moves.length;
-    s.slots[slot] = { ...sv, meta: { ...summary(), updated: same ? savedAt(old) || Date.now() : Date.now() } };
+    s.slots[slot] = { ...sv, client: 4, meta: { ...summary(), updated: same ? savedAt(old) || Date.now() : Date.now() } };
     s.last = slot;
     if (!store.write(s)) toast("Couldn't save in this browser. Download your save to keep it.");
     if (!same) queueSync(sv.seed);
@@ -655,13 +663,25 @@
   }
   function teamTool(which) {
     if (!lg) return;
-    const labels = { roster: "My roster", depth: "Depth chart", search: "Find player", money: "Financials" };
+    const labels = { roster: "My roster", depth: "Depth chart", search: "Find player", money: "Financials", updates: "League updates" };
     overlay(E.teamName(team(lg.user)), labels[which], `<div class="tabs" role="tablist" aria-label="Team views" style="flex-wrap:wrap;overflow:visible">${Object.entries(labels).map(([key, label]) => `<button type="button" role="tab" aria-selected="${which === key}" data-tool-view="${key}">${label}</button>`).join("")}</div><div id="teamToolBody"></div>`);
     $("ovB").onclick = (e) => { const b = e.target.closest("[data-tool-view]"); if (b) teamTool(b.dataset.toolView); };
     const body = $("teamToolBody");
     if (which === "roster") body.innerHTML = draftRosterHtml();
     if (which === "depth") body.innerHTML = depthReadHtml();
     if (which === "money") body.innerHTML = financialsHtml();
+    if (which === "updates") {
+      const ready = Object.values(E.FUTURE_CLASS_VERSIONS).every((v)=>PACK.prospects && PACK.prospects[v]);
+      body.innerHTML = `<h3 class="disp" style="font-size:24px">Real prospects through 2031</h3><p>ESPN's 2025–2028 college recruiting classes, plus verified kicker/punter prospects from Kohl’s (ESPN’s specialist rankings provider), projected into their earliest NFL-eligible years (three years later). These are long-range game projections, not confirmed NFL entrants, draft rankings or ESPN NFL grades.</p>
+        <p>OVR, potential, age 21 and future roles are modeled. Transfers, redshirts and reclassification can change timing. School names are known commitments from the source snapshot, not a guarantee of where they will play. The 2026 recruiting table uses a public ESPN-table copy because the original was unavailable during capture.</p>
+        ${ready ? `<table class="st"><thead><tr><th>NFL projection</th><th>College class</th><th>Real players</th></tr></thead><tbody>${Object.entries(E.FUTURE_CLASS_VERSIONS).map(([y,v])=>`<tr><td>${y}</td><td>${+y-3}</td><td>${PACK.prospects[v].players.length}</td></tr>`).join("")}</tbody></table>` : `<p>Refresh to load all four projected classes.</p>`}
+        <p>Your existing players, contracts, completed games, trades and current draft picks stay as they are. This enables only future classes; it does not restart a draft. Each future class contains 300 ESPN recruits and 20 specialists. After 2031 the league still waits for verified new data.</p>
+        ${lg.futureClassesV ? `<p><b>Enabled for this league.</b></p>` : ready && !lg.pendingRookieDraft && (!ML || ML.info.owner && ML.info.futureClassPolicy === 1) ? `<button class="btn gold" id="adoptFuture">Enable projected 2028–2031 classes</button>` : `<p>The creator can enable this after refreshing; unfinished older fictional drafts remain preserved.</p>`}`;
+      if ($("adoptFuture")) $("adoptFuture").onclick=()=>{
+        overlay("Future draft classes only","Enable classes through 2031?",`<p>Add the 2028–2031 projected classes when their offseason arrives. Existing players, contracts, results and current draft picks are preserved. These are real recruits with projected NFL timing and ratings.</p><button class="btn gold" id="confirmFuture">Enable future classes</button>`);
+        $("confirmFuture").onclick=()=>{closeOv();move({t:"futureClassesUpdate",version:E.FUTURE_CLASSES_VERSION});};
+      };
+    }
     if (which === "search") {
       body.innerHTML = `<div class="field"><label for="playerFind">Search all players</label><input type="search" id="playerFind" placeholder="Player name" autocomplete="off"></div>
         <div class="field"><label for="playerFindGroup">Position</label><select id="playerFindGroup"><option value="ALL">All positions</option>${E.GROUPS.map((g) => `<option value="${g}">${E.GROUP_NAME[g]}</option>`).join("")}</select></div>
@@ -910,7 +930,7 @@
     const d = lg.draft, rookie = d.kind === "rookie";
     const round = Math.floor(d.n / 32) + 1, inRound = (d.n % 32) + 1;
     const realCls = rookie && [...d.pool].some((id) => lg.players[id].rk);
-    head(kick, title, !rookie ? "" : lg.prospectVersion && lg.year === 2027 ? "Real 2027 college prospects with projected OVR/potential and modeled age 22; draft declarations can change. These are not actual NFL draft results. Grades develop through your league's existing rules." : realCls ? (lg.settings.hindsight ? `The real ${lg.year} draft class. Hindsight is on: grades come from how their real careers went.` : `The real ${lg.year} draft class, graded only from where each player was really picked. Grades are what they are now; the ceiling is how good they could get.`)
+    head(kick, title, !rookie ? "" : projectedYear() ? (lg.year === 2027 ? "Real 2027 college prospects with projected OVR/potential and modeled age 22; draft declarations can change. These are not actual NFL draft results. Grades develop through your league's existing rules." : `Real ESPN recruiting-class ${lg.year-3} players, projected into NFL ${lg.year}. Ratings, age 21 and roles are modeled; declarations, schools and development can change.`) : realCls ? (lg.settings.hindsight ? `The real ${lg.year} draft class. Hindsight is on: grades come from how their real careers went.` : `The real ${lg.year} draft class, graded only from where each player was really picked. Grades are what they are now; the ceiling is how good they could get.`)
       : "This year's rookie class is made up (no real class to use). Grades are what they are now; the ceiling is how good they could get.");
     const c = E.countBy(lg, lg.user), mine = team(lg.user).roster.length;
     const needs = E.GROUPS.map((g) => `<span class="${c[g] < E.STARTERS[g] ? "need" : ""}">${g === "ED" ? "Edge" : g} ${c[g]}/${E.TARGET[g]}</span>`).join("");
@@ -929,7 +949,7 @@
           ${[["players", "Available players"], ["roster", `Roster (${mine})`]].map(([key, label]) => `<button type="button" role="tab" id="draftTab-${key}" data-draft-tab="${key}" aria-controls="draftPanel-${key}" aria-selected="${draftTab === key}" tabindex="${draftTab === key ? 0 : -1}" style="color:#fff">${label}</button>`).join("")}
         </div></div>
       <section class="card" style="margin-bottom:14px"><div class="card-b" style="padding:10px 14px">
-        ${lg.prospectVersion && lg.year === 2027 ? `<span>Projected rookie ratings: bubble estimates from current scouting ranks, not published Madden grades or actual draft selections.</span>` : lg.ratingVersion ? `<span>Ratings reference: Madden NFL 27, Week 6. Unmatched players are marked as estimates.</span>`
+        ${projectedYear() ? `<span>Projected rookie ratings: bubble estimates from current scouting ranks, not published Madden grades or actual draft selections.</span>` : lg.ratingVersion ? `<span>Ratings reference: Madden NFL 27, Week 6. Unmatched players are marked as estimates.</span>`
           : lg.year === REF.season ? `<span>This draft uses the old position-relative model. Update ratings for the remaining draft; earlier picks stay recorded.</span>${!ML || (ML.info.owner && ML.info.ratingPolicy === 1) ? ` <button class="btn" id="updateRatings">Use updated ratings</button>` : `<span> The league creator can update after refreshing.</span>`}`
           : `<span>Historical season: Bubble's own model estimates, not current Madden ratings.</span>`}
       </div></section>
@@ -1916,14 +1936,17 @@
     const { data, error } = await c.sb.rpc(fn, args); if (error) throw Object.assign(new Error(error.message), { code: error.code }); return data;
   };
   const leagueGet = async (args) => {
-    for (const name of ["franchise_league_get_v3", "franchise_league_get_v2", "franchise_league_get"]) {
+    for (const name of ["franchise_league_get_v4", "franchise_league_get_v3", "franchise_league_get_v2", "franchise_league_get"]) {
       try { return await rpc(name, args); }
       catch (err) { if (!["PGRST202", "42883"].includes(err.code) || name === "franchise_league_get") throw err; }
     }
   };
-  const partyGet = async (args) => { try { return await rpc("franchise_party_get_v2", args); } catch (err) { if (!["PGRST202", "42883"].includes(err.code)) throw err; return rpc("franchise_party_get", args); } };
-  const partyJoin = async (args) => { try { return await rpc("franchise_party_join_v2", args); } catch (err) { if (!["PGRST202", "42883"].includes(err.code)) throw err; return rpc("franchise_party_join", args); } };
-
+  const versionedParty = async (kind,args) => {
+    const names=["franchise_party_"+kind+"_v3","franchise_party_"+kind+"_v2","franchise_party_"+kind];
+    for(const name of names) {try{return await rpc(name,args);}catch(err){if(!["PGRST202","42883"].includes(err.code)||name===names[2])throw err;}}
+  };
+  const partyGet = (args) => versionedParty("get",args);
+  const partyJoin = (args) => versionedParty("join",args);
   function partySetup() {
     const g = E.nextGame(lg); if (!g) return;
     const opp = oppOf(g);
@@ -2050,7 +2073,7 @@
   // 5 s otherwise). Weeks play once every owner is ready; when a deadline passes, any open browser hands out the
   // defaults (an auto-pick, the suggested re-signings and cuts, the week itself), so a missing friend never stalls it.
   const ORDERLESS = new Set(["inj2", "realRookies", "pilot", "ready", "plan", "depth", "half", "call", "finish", "offer", "decline", "withdraw"]);
-  const TEAM_MOVES = new Set(["prospectsUpdate", "ratingsUpdate", "inj2", "realRookies", "pilot", "pick", "auto", "finish", "depth", "plan", "half", "call", "resign", "cut", "ready", "trade", "offer", "accept", "decline", "withdraw", "sign"]);
+  const TEAM_MOVES = new Set(["futureClassesUpdate", "prospectsUpdate", "ratingsUpdate", "inj2", "realRookies", "pilot", "pick", "auto", "finish", "depth", "plan", "half", "call", "resign", "cut", "ready", "trade", "offer", "accept", "decline", "withdraw", "sign"]);
   const ownerOf = (t) => ML && ML.info.people.find((p) => p.team === t);
   const whoName = (t) => { const p = ownerOf(t); return p ? (p.me ? "You" : p.name) : E.teamName(team(t)); };
   // Choices on the contracts and cuts screens survive the league refreshing underneath them.
@@ -2219,7 +2242,7 @@
     } catch (err) { console.warn(err.message); } finally { M.busy = false; }
   }
   // What the screen depends on; re-render only when it changes, so a half-made choice isn't wiped by a refresh.
-  const viewKey = () => lg ? [lg.year, lg.phase, lg.ratingVersion || "", lg.week, lg.draft ? lg.draft.n : -1, E.waitingOn(lg).join(), lg.playoffs ? lg.playoffs.round : -1,
+  const viewKey = () => lg ? [lg.year, lg.phase, lg.futureClassesV || "", lg.ratingVersion || "", lg.week, lg.draft ? lg.draft.n : -1, E.waitingOn(lg).join(), lg.playoffs ? lg.playoffs.round : -1,
     Object.keys(lg.offers || {}).join(), (lg.tx || []).length, JSON.stringify(lg.pilot || {})].join("|") : ""; // offers and trades/signings redraw the trades screen
   function mlRender() {
     const y = window.scrollY, qf = document.activeElement && document.activeElement.id === "q";
@@ -2264,7 +2287,7 @@
     const clock = lg.draft ? (lg.draft.n !== n0 || !hadDraft ? C.request(lg, M.info.clockPolicy) : null)
       : hadDraft || m.t === "week" || m.t === "offseason" || lg.phase !== ph ? "week" : null;
     try {
-      const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.prospectPolicy === 1 ? `client3/${clock || ""}` : M.info.ratingPolicy === 1 ? `client2/${clock || ""}` : clock });
+      const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.futureClassPolicy === 1 ? `client4/${clock || ""}` : M.info.prospectPolicy === 1 ? `client3/${clock || ""}` : M.info.ratingPolicy === 1 ? `client2/${clock || ""}` : clock });
       if (ML !== M) return false;
       M.next = r.s + 1; M.info.deadline = r.deadline; M.off = r.now - Date.now();
       if (m.t === "pilot") M.info.people.forEach((p) => { if (p.team === m.team) p.ready = m.n > 0; });
@@ -2289,7 +2312,7 @@
     const M = ML; if (!M || (TEAM_MOVES.has(m.t) && m.team !== M.me)) return;
     for (let i = 0; i < 5; i++) {
       try {
-        const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.prospectPolicy === 1 ? "client3/" : M.info.ratingPolicy === 1 ? "client2/" : null });
+        const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.futureClassPolicy === 1 ? "client4/" : M.info.prospectPolicy === 1 ? "client3/" : M.info.ratingPolicy === 1 ? "client2/" : null });
         M.next = r.s + 1;
         if (m.t === "ready") M.info.people.forEach((p) => { if (p.team === m.team) p.ready = true; });
         return;
