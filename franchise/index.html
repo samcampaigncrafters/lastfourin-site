@@ -64,6 +64,7 @@
   .clock { position: sticky; top: 68px; z-index: 12; background: var(--brand); color: #fff; border: 1px solid var(--line-2); border-radius: var(--r); padding: 12px 14px; margin-bottom: 14px;
            display: flex; gap: 10px 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
   .clock .disp { font-size: 24px; }
+  .clock #mlClock { font-size: 18px; color: #fff; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
   .clock small { display: block; color: var(--on-brand-2); font-weight: 700; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
   .needs { display: flex; flex-wrap: wrap; gap: 6px; }
   .needs span { font-size: 12px; font-weight: 800; padding: 3px 7px; border-radius: 4px; background: var(--card-2); border: 1px solid var(--line); color: var(--ink-2); }
@@ -267,7 +268,7 @@
     </div>
   </div>
   <div id="body"><p class="empty">Loading…</p></div>
-  <p class="credit">Player data: <a class="lnk" href="https://nflverse.com" rel="noopener">nflverse</a> (CC-BY 4.0). Grades, rookies and results are bubble's own simulation. Private league for invited friends. Not affiliated with the NFL or any team.</p>
+  <p class="credit">Player data: <a class="lnk" href="https://nflverse.com" rel="noopener">nflverse</a> (CC-BY 4.0). Madden NFL 27 is a ratings reference where noted; unmatched and historical ratings, development and results are bubble's own estimates. Private league for invited friends. Not affiliated with the NFL or any team.</p>
 </main>
 <footer class="foot"></footer>
 
@@ -277,12 +278,16 @@
 
 <script src="/assets/lfi.js"></script>
 <script src="/assets/cloud.js"></script>
-<script src="/franchise/franchise-engine.js"></script>
+<script src="/franchise/franchise-engine.js?v=clock-ratings-20261028"></script>
 <script src="/franchise/sim-tools.js"></script>
+<script src="/franchise/draft-clock.js"></script>
+<script src="/franchise/ratings-2026-10-28.js"></script>
 <script>
 (function () {
   const { $, esc, toast } = LFI;
-  const E = window.FranchiseEngine, S = window.FranchiseSim;
+  const E = window.FranchiseEngine, S = window.FranchiseSim, C = window.FranchiseDraftClock;
+  const REF = window.FranchiseRatingReference;
+  E.registerRatingSet(REF);
   let DATA = null, PACK = null;
   const KEY = "lfi-franchise-v1";
   // Real Rosters data is loaded only when needed: the list of seasons, then one season's file and the drafts.
@@ -588,7 +593,7 @@
     const initials = p.name.split(/\s+/).filter(Boolean).map((x) => x[0]).slice(0, 2).join("");
     return `<span class="pface${small ? " sm" : ""}" aria-hidden="true"><span>${esc(initials)}</span>${valid ? `<img src="${esc(url)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}</span>`;
   }
-  const playerBadge = (p, small = false) => `<span class="player-badge">${playerFace(p, small)}${grade(p.grade, small)}</span>`;
+  const playerBadge = (p, small = false) => `<span class="player-badge" title="${p.ratingReference ? (p.ratingVerified ? "Madden NFL 27 Week 6 reference" : "Estimated rating: no unique Madden match") : "Legacy position-relative model grade"}">${playerFace(p, small)}${grade(p.grade, small)}</span>`;
 
   // ---- Small pieces ----
   const team = (i) => lg.teams[i];
@@ -601,7 +606,7 @@
   const grade = (g, sm) => `<span class="${gcls(g)}${sm ? " sm" : ""}">${ovr(g)}</span>`;
   const posName = (p) => p.pos;
   const realTeam = (code) => { const t = E.TEAMS.find((x) => x.code === code); return t ? E.teamName(t) : ""; };
-  const plabel = (p) => `${esc(posName(p))} · ${p.age.toFixed(0)}${p.real ? ` · was ${esc(realTeam(p.real))}` : p.gen || p.rk ? " · rookie" : ""}${p.inj ? ` · <i>out ${p.inj >= 30 ? "for the season" : p.inj + " wk"}</i>` : p.hold ? " · <i>holding out</i>" : ""}`;
+  const plabel = (p) => `${esc(posName(p))} · ${p.age.toFixed(0)}${p.ratingReference && !p.ratingVerified ? " · estimate" : ""}${p.real ? ` · was ${esc(realTeam(p.real))}` : p.gen || p.rk ? " · rookie" : ""}${p.inj ? ` · <i>out ${p.inj >= 30 ? "for the season" : p.inj + " wk"}</i>` : p.hold ? " · <i>holding out</i>" : ""}`;
   const ord = (n) => { const s = ["th", "st", "nd", "rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
   function overlay(kicker, title, html) {
     $("ovK").textContent = kicker; $("ovH").textContent = title; $("ovB").innerHTML = html; $("ovB").onclick = null;
@@ -734,7 +739,7 @@
         $("goBtn").disabled = true; $("goBtn").textContent = "Loading the rosters…";
         realData(y).then((data) => {
           const seed = Math.random().toString(36).slice(2, 10);
-          lg = E.create(data, { seed, mode: "real", team: pickT, hindsight: $("fHind").checked, lr: 1, cap: 1, inj2: 1, realRookies: 1 });
+          lg = E.create(data, { seed, mode: "real", team: pickT, hindsight: $("fHind").checked, ...(data.season === REF.season ? { ratingVersion: REF.version } : {}), lr: 1, cap: 1, inj2: 1, realRookies: 1 });
           slot = i; tab = "week"; posF = "ALL"; q = ""; persist(); render();
         }, () => { toast("Couldn't load that season's players. Check your connection and try again."); $("goBtn").disabled = false; $("goBtn").textContent = `Start the ${y} season`; });
       };
@@ -764,7 +769,7 @@
       $("goBtn").disabled = true; $("goBtn").textContent = "Setting up…";
       setTimeout(() => {
         const seed = Math.random().toString(36).slice(2, 10);
-        lg = E.create(DATA, { seed, team: pickT, slot: +$("fSlot").value, userRounds: +$("fRounds").value, lr: 1, cap: 1, inj2: 1, realRookies: 1 });
+        lg = E.create(DATA, { seed, team: pickT, slot: +$("fSlot").value, userRounds: +$("fRounds").value, ratingVersion: REF.version, lr: 1, cap: 1, inj2: 1, realRookies: 1 });
         slot = i; tab = "week"; posF = "ALL"; q = ""; persist(); render();
       }, 20);
     };
@@ -830,6 +835,11 @@
     $("body").innerHTML = `
       <div class="clock"><div><small>Round ${round} of ${d.rounds} · pick ${inRound} · ${ord(d.n + 1)} overall</small><div class="disp">${onClock ? "You're on the clock" : ML ? `On the clock: ${esc(whoName(who))}` : "Waiting"}</div>${ML ? `<small id="mlClock"></small>${ownersBar()}` : ""}</div>
         <div class="actbar" style="margin:0"><button class="btn" id="autoBtn" ${ML && !onClock ? "disabled" : ""}>Auto-pick this one</button>${simBtns()}</div></div>
+      <section class="card" style="margin-bottom:14px"><div class="card-b" style="padding:10px 14px">
+        ${lg.ratingVersion ? `<span>Ratings reference: Madden NFL 27, Week 6. Unmatched players are marked as estimates.</span>`
+          : lg.year === REF.season ? `<span>This draft uses the old position-relative model. Update ratings for the remaining draft; earlier picks stay recorded.</span>${!ML || (ML.info.owner && ML.info.ratingPolicy === 1) ? ` <button class="btn" id="updateRatings">Use updated ratings</button>` : `<span> The league creator can update after refreshing.</span>`}`
+          : `<span>Historical season: Bubble's own model estimates, not current Madden ratings.</span>`}
+      </div></section>
       <div class="grid2"><div class="stack">
         <section class="card"><div class="card-b" style="padding-bottom:12px">
           <div class="needs">${needs}</div>
@@ -853,6 +863,7 @@
       else if (b.dataset.sort) { boardSort = b.dataset.sort; render(); }
       else if (b.id === "moreBtn") { showN += 80; render(); }
       else if (b.id === "autoBtn") move({ t: "auto" });
+      else if (b.id === "updateRatings") move({ t: "ratingsUpdate", version: REF.version });
       // Sim buttons ask on the page (tap twice) rather than with confirm(), which some browsers and in-app views block.
       else if (b.id === "finBtn" || b.id === "simAllBtn") {
         if (!b.dataset.sure) { const was = b.textContent; b.dataset.sure = "1"; b.textContent = "Tap again to sim"; setTimeout(() => { if (b.isConnected && !b.disabled) { delete b.dataset.sure; b.textContent = was; } }, 4000); return; }
@@ -1795,7 +1806,11 @@
   const rpc = async (fn, args) => {
     const c = LFI.cloud; if (!c || !c.on) throw new Error("Watch parties need the site's accounts.");
     await c.ready; if (!c.user) throw new Error("Sign in first.");
-    const { data, error } = await c.sb.rpc(fn, args); if (error) throw new Error(error.message); return data;
+    const { data, error } = await c.sb.rpc(fn, args); if (error) throw Object.assign(new Error(error.message), { code: error.code }); return data;
+  };
+  const leagueGet = async (args) => {
+    try { return await rpc("franchise_league_get_v2", args); }
+    catch (err) { if (!["PGRST202", "42883"].includes(err.code)) throw err; return rpc("franchise_league_get", args); }
   };
   function partySetup() {
     const g = E.nextGame(lg); if (!g) return;
@@ -1923,7 +1938,7 @@
   // 5 s otherwise). Weeks play once every owner is ready; when a deadline passes, any open browser hands out the
   // defaults (an auto-pick, the suggested re-signings and cuts, the week itself), so a missing friend never stalls it.
   const ORDERLESS = new Set(["inj2", "realRookies", "pilot", "ready", "plan", "depth", "half", "call", "finish", "offer", "decline", "withdraw"]);
-  const TEAM_MOVES = new Set(["inj2", "realRookies", "pilot", "pick", "auto", "finish", "depth", "plan", "half", "call", "resign", "cut", "ready", "trade", "offer", "accept", "decline", "withdraw", "sign"]);
+  const TEAM_MOVES = new Set(["ratingsUpdate", "inj2", "realRookies", "pilot", "pick", "auto", "finish", "depth", "plan", "half", "call", "resign", "cut", "ready", "trade", "offer", "accept", "decline", "withdraw", "sign"]);
   const ownerOf = (t) => ML && ML.info.people.find((p) => p.team === t);
   const whoName = (t) => { const p = ownerOf(t); return p ? (p.me ? "You" : p.name) : E.teamName(team(t)); };
   // Choices on the contracts and cuts screens survive the league refreshing underneath them.
@@ -1972,8 +1987,10 @@
     stopMl();
     head("Friends league", "New friends league", "You and your friends each run a team in one shared league. The AI runs every other team.");
     $("body").innerHTML = `<p class="empty">Loading…</p>`;
-    let people, R;
+    let people, R, ratingSupport = false;
     try { [people, R] = await Promise.all([rpc("franchise_people", {}), realIndex()]); } catch (err) { toast(err.message); return home(); }
+    try { await rpc("franchise_league_get_v2", { p_league: "", p_since: -1 }); ratingSupport = true; }
+    catch (err) { if (!["PGRST202", "42883"].includes(err.code)) { toast(err.message); return home(); } }
     let mode = "redraft", year = R.years[R.years.length - 1], pickT = -1;
     const inv = new Set((people || []).filter((p) => !p.me).map((p) => p.id));
     const draw = () => {
@@ -1985,9 +2002,10 @@
         <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-top:6px">
           ${mode === "real" ? `<div class="field"><label for="mYear">Season</label><select id="mYear">${R.years.slice().reverse().map((x) => `<option value="${x}" ${x === year ? "selected" : ""}>${x}</option>`).join("")}</select></div>`
             : `<div class="field"><label for="mRounds">Rounds each of you drafts</label><select id="mRounds"><option value="10">First 10, AI does the rest</option><option value="15" selected>First 15, AI does the rest</option><option value="25">First 25</option><option value="53">All 53 rounds</option></select></div>`}
-          <div class="field"><label for="mClock">Draft clock</label><select id="mClock">${SECS.map(([v, l]) => `<option value="${v}" ${v === 120 ? "selected" : ""}>${l} a pick</option>`).join("")}</select></div>
+          <div class="field"><label for="mClock">Round-one draft clock</label><select id="mClock">${SECS.map(([v, l]) => `<option value="${v}" ${v === 120 ? "selected" : ""}>${l}</option>`).join("")}</select></div>
           <div class="field"><label for="mWeek">Each week plays within</label><select id="mWeek">${HOURS.map(([v, l]) => `<option value="${v}" ${v === 24 ? "selected" : ""}>${l}</option>`).join("")}</select></div>
         </div>
+        <p class="empty" id="mClockHint" style="margin:4px 0 12px">Each round you draft gets shorter, reaching 15 seconds a pick in your last round. The selected time is for round one.</p>
         ${mode === "real" ? `<label class="tog" style="margin-top:12px"><input type="checkbox" id="mHind"><span><b>Hindsight rookies</b><span>Off: the real draft classes are graded only from where each player was picked. On: from how their careers went.</span></span></label>` : ""}
         <h3 class="disp" style="margin:18px 0 8px">Invite</h3>
         <div class="invites">${(people || []).filter((p) => !p.me).map((p) => `<label class="chk ${inv.has(p.id) ? "" : "off"}"><input type="checkbox" data-inv="${esc(p.id)}" ${inv.has(p.id) ? "checked" : ""}><span class="pn"><b>${esc(p.name)}</b></span><span class="muted" style="font-weight:700">${inv.has(p.id) ? "Invited" : "Not invited"}</span></label>`).join("") || `<p class="empty">Nobody else is on the list yet.</p>`}</div>
@@ -2009,6 +2027,7 @@
       try {
         const data = mode === "real" ? await realData(year) : DATA;
         const settings = mode === "real" ? { mode: "real", year, hindsight: !!($("mHind") && $("mHind").checked), lr: 1, cap: 1, inj2: 1, realRookies: 1 } : { mode: "redraft", userRounds: +$("mRounds").value, lr: 1, cap: 1, inj2: 1, realRookies: 1 };
+        if (ratingSupport && (mode === "redraft" || year === REF.season)) settings.ratingVersion = REF.version;
         settings.pickSecs = +$("mClock").value; settings.weekHours = +$("mWeek").value;
         const id = await rpc("franchise_league_create", { p_name: $("mName").value.trim() || "Friends league", p_seed: Math.random().toString(36).slice(2, 10),
           p_data: data.built || null, p_settings: settings, p_team: pickT, p_invite: [...inv] });
@@ -2022,7 +2041,7 @@
     stopMl(); stopLive();
     if (!quiet) { head("Friends league", "Loading…", ""); $("body").innerHTML = `<p class="empty">Loading the league…</p>`; }
     try {
-      const info = await rpc("franchise_league_get", { p_league: id, p_since: -1 });
+      const info = await leagueGet({ p_league: id, p_since: -1 });
       if (!info) throw new Error("That league isn't there, or you're not in it.");
       const me = info.people.find((p) => p.me);
       const M = { id: info.id, info, me: me.team, next: info.moves.length ? info.moves[info.moves.length - 1].s + 1 : 0, off: info.now - Date.now(), last: Date.now() };
@@ -2065,7 +2084,7 @@
     if (Date.now() - M.last < every) return;
     M.busy = true; M.last = Date.now();
     try {
-      const info = await rpc("franchise_league_get", { p_league: M.id, p_since: M.next - 1 });
+      const info = await leagueGet({ p_league: M.id, p_since: M.next - 1 });
       if (ML !== M || live) return;
       if (!info) { toast("That league is gone."); return home(); }
       const was = M.info, before = viewKey();
@@ -2088,7 +2107,7 @@
     } catch (err) { console.warn(err.message); } finally { M.busy = false; }
   }
   // What the screen depends on; re-render only when it changes, so a half-made choice isn't wiped by a refresh.
-  const viewKey = () => lg ? [lg.year, lg.phase, lg.week, lg.draft ? lg.draft.n : -1, E.waitingOn(lg).join(), lg.playoffs ? lg.playoffs.round : -1,
+  const viewKey = () => lg ? [lg.year, lg.phase, lg.ratingVersion || "", lg.week, lg.draft ? lg.draft.n : -1, E.waitingOn(lg).join(), lg.playoffs ? lg.playoffs.round : -1,
     Object.keys(lg.offers || {}).join(), (lg.tx || []).length, JSON.stringify(lg.pilot || {})].join("|") : ""; // offers and trades/signings redraw the trades screen
   function mlRender() {
     const y = window.scrollY, qf = document.activeElement && document.activeElement.id === "q";
@@ -2130,10 +2149,10 @@
     const ph = lg.phase, n0 = lg.draft ? lg.draft.n : -1, hadDraft = !!lg.draft;
     if (!E.apply(lg, m)) { if (!opts.quiet) toast("That move isn't allowed right now."); return false; }
     // Restart the clock: the draft clock when the pick moves on, the weekly deadline when a new week or phase starts.
-    const clock = lg.draft ? (lg.draft.n !== n0 || !hadDraft ? "pick" : null)
+    const clock = lg.draft ? (lg.draft.n !== n0 || !hadDraft ? C.request(lg, M.info.clockPolicy) : null)
       : hadDraft || m.t === "week" || m.t === "offseason" || lg.phase !== ph ? "week" : null;
     try {
-      const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: clock });
+      const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.ratingPolicy === 1 ? `client2/${clock || ""}` : clock });
       if (ML !== M) return false;
       M.next = r.s + 1; M.info.deadline = r.deadline; M.off = r.now - Date.now();
       if (m.t === "pilot") M.info.people.forEach((p) => { if (p.team === m.team) p.ready = m.n > 0; });
@@ -2158,13 +2177,13 @@
     const M = ML; if (!M || (TEAM_MOVES.has(m.t) && m.team !== M.me)) return;
     for (let i = 0; i < 5; i++) {
       try {
-        const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: null });
+        const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.ratingPolicy === 1 ? "client2/" : null });
         M.next = r.s + 1;
         if (m.t === "ready") M.info.people.forEach((p) => { if (p.team === m.team) p.ready = true; });
         return;
       } catch (err) {
         if (!/stale/.test(err.message)) { console.warn(err.message); return; }
-        const info = await rpc("franchise_league_get", { p_league: M.id, p_since: M.next - 1 }).catch(() => null);
+        const info = await leagueGet({ p_league: M.id, p_since: M.next - 1 }).catch(() => null);
         if (info && info.moves.length) { M.next = info.moves[info.moves.length - 1].s + 1; M.dirty = true; }
       }
     }
@@ -2186,7 +2205,7 @@
     const d = M.info.deadline; if (d == null) { el.textContent = ""; return; }
     const left = Math.max(0, Math.round((d - (Date.now() + M.off)) / 1000));
     const t = left >= 3600 ? `${Math.floor(left / 3600)}h ${Math.floor((left % 3600) / 60)}m` : `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
-    el.textContent = lg && lg.draft ? `${left ? `${t} left on the clock` : "Time's up: auto-picking"}` : left ? `Plays automatically in ${t}` : "Time's up: playing on";
+    el.textContent = lg && lg.draft ? `${left ? `${t} left on the clock · round ${C.context(lg).round}` : "Time's up: auto-picking"}` : left ? `Plays automatically in ${t}` : "Time's up: playing on";
   }
   function ownersBar(ready) {
     if (!ML) return "";

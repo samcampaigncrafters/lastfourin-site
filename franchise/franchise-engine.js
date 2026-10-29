@@ -32,6 +32,35 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
+  // Immutable references let old saves keep their original draft and AI decisions.
+  const ratingSets = new Map();
+  function registerRatingSet(ref) {
+    if (!ref || !ref.version || !ref.sha256 || !Number.isInteger(ref.season) || !ref.players) throw Error("Invalid rating reference");
+    const old = ratingSets.get(ref.version);
+    if (old && old.sha256 !== ref.sha256) throw Error("A saved rating version cannot change");
+    for (const row of Object.values(ref.players)) {
+      if (!Array.isArray(row) || !Number.isInteger(row[0]) || row[0] < 46 || row[0] > 99 || ![0, 1].includes(row[1])) throw Error("Invalid reference rating");
+    }
+    ratingSets.set(ref.version, ref);
+  }
+  function applyRatingReference(lg, version) {
+    const ref = ratingSets.get(version);
+    if (!ref || lg.year !== ref.season || lg.ratingVersion === version) return false;
+    for (const p of Object.values(lg.players)) {
+      const row = ref.players[p.id]; if (!row) continue;
+      const next = (row[0] - 40) / 6, delta = next - p.grade;
+      p.grade = next; p.ceil = Math.min(10, Math.max(next, p.ceil + delta));
+      p.ratingReference = version; p.ratingVerified = row[1];
+    }
+    lg.ratingVersion = version;
+    return true;
+  }
+  function initialRatingReference(lg, opts) {
+    if (!opts.ratingVersion) return;
+    if (!applyRatingReference(lg, opts.ratingVersion)) throw Error("This save needs its original rating reference");
+    lg.settings.ratingVersion = opts.ratingVersion;
+  }
+
   // ---- Teams. [code, city, conference, division, color, second color]. How they show is set by NAME_MODE / LOGOS below. ----
   const TEAMS = [
     ["BUF", "Buffalo", "AFC", "East", "#00338D", "#C60C30"], ["MIA", "Miami", "AFC", "East", "#008E97", "#FC4C02"],
@@ -191,6 +220,7 @@
       players, moves: [], phase: "redraft", week: 0, games: [], log: [], history: [], stats: {}, lastRank: null,
       fa: [], notes: [], drafts: data.drafts || null,
     };
+    initialRatingReference(lg, opts);
     lrInit(lg);
     // Redraft order: the user's slot (or a random one), the other 31 franchises shuffled.
     const r = rng(seed, "order");
@@ -227,6 +257,7 @@
       lg.players[p.id] = p;
       if (p.team >= 0) lg.teams[p.team].roster.push(p.id); else lg.fa.push(p.id);
     }
+    initialRatingReference(lg, opts);
     for (const t of lg.teams) for (const pid of t.roster) {
       const p = lg.players[pid], r = rng(seed, "deal", pid);
       p.yrs = p.exp <= 3 ? Math.max(1, (p.pick ? 4 : 3) - p.exp) : p.age < 26 ? 2 + r.int(3) : p.age < 30 ? 1 + r.int(3) : 1 + r.int(2);
@@ -286,6 +317,7 @@
     const d = lg.draft, T = actor(lg, m);
     if (T < 0 && !LEAGUE_MOVES.has(m.t)) return false;
     switch (m.t) {
+      case "ratingsUpdate": return !!lg.draft && applyRatingReference(lg, m.version);
       case "pick": { // the user drafts a player
         if (!d || d.seq[d.n] !== T || !d.pool.has(m.p)) return false;
         draftPlayer(lg, T, m.p);
@@ -2255,7 +2287,7 @@
     TEAMS, GROUPS, GROUP_NAME, FIRST_REAL, cityFor, STARTERS, TARGET, MINPOS, MAXPOS, ROSTER, REDRAFT_ROUNDS, ROOKIE_ROUNDS, ROUNDS, M,
     teamName, teamShort, teamLogo, nickFor, NAME_MODE, get LOGOS() { return !!LOGO; }, rng, create, apply, replay, saveOf, units, lineup, standings, divisionTables, seeds, leaders,
     record, userGames, pickOwner, userOnClock, suggestCuts, isHuman, humansOf, waitingOn, countBy, playGame, expectedPoints, startSeason, boardValue,
-    REAL_NAMES, fakeName, setPack, SAVE_V, PLAN0, PM, cleanPlan, aiPlan, planFor, simGame, previewGame, playoffGames, nextGame, short,
+    REAL_NAMES, fakeName, setPack, registerRatingSet, SAVE_V, PLAN0, PM, cleanPlan, aiPlan, planFor, simGame, previewGame, playoffGames, nextGame, short,
     live: { times: liveTimes, at: liveAt, HALF_MS, MS: LIVE_MS },
     moodOf, MOOD_WORD, WHY, moraleEdge, lrOn, setOffField, get OFF_FIELD() { return OFF_FIELD; }, OFF_ABSURD, OFF_DRAMA,
     tradeOpen, signOpen, tradeDeadline, dealOf, tradeVerdict, tradeValue, picksOf, pickName, parsePick, pickHolder, pickYears, releaseSuggest,
