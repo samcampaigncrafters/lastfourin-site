@@ -282,7 +282,9 @@
 
 <script src="/assets/lfi.js"></script>
 <script src="/assets/cloud.js"></script>
-<script src="/franchise/franchise-engine.js?v=future-classes-20261028"></script>
+<script src="/franchise/free-agency.js?v=1"></script>
+<script src="/franchise/trade-market.js?v=historical-market-v1"></script>
+<script src="/franchise/franchise-engine.js?v=league-tools-20261028"></script>
 <script src="/franchise/sim-tools.js"></script>
 <script src="/franchise/team-planning.js?v=20261028"></script>
 <script src="/franchise/draft-clock.js"></script>
@@ -290,7 +292,7 @@
 <script>
 (function () {
   const { $, esc, toast } = LFI;
-  const E = window.FranchiseEngine, S = window.FranchiseSim, C = window.FranchiseDraftClock;
+  const E = window.FranchiseEngine, S = window.FranchiseSim, C = window.FranchiseDraftClock, F = window.FranchiseFreeAgency;
   const REF = window.FranchiseRatingReference;
   E.registerRatingSet(REF);
   let DATA = null, PACK = null;
@@ -351,7 +353,7 @@
         try {
           if (v !== true) { await rpc("franchise_save_delete", { p_seed: seed, p_at: v }); continue; }
           const sv = store.read().slots.find((x) => x && x.seed === seed);
-          if (sv && await rpc("franchise_save_put", { p_save: { ...sv, client: 4 } }) === "full") toast("Your account already holds six franchises, so this one is saved in this browser only. Delete one to make room.");
+          if (sv && await rpc("franchise_save_put", { p_save: { ...sv, client: 5 } }) === "full") toast("Your account already holds six franchises, so this one is saved in this browser only. Delete one to make room.");
         } catch (err) { console.error(err); if (!(seed in sync.q)) sync.q[seed] = v; }
       }
     })();
@@ -364,11 +366,11 @@
   // is lost the first time a browser signs in. Each keeps its slot here where it can; new arrivals take empty slots.
   // Returns true when this browser's slots changed.
   async function savesGet() {
-    try { return await rpc("franchise_saves_get_v4", {}); }
-    catch (err) { if (!/PGRST202|could not find.*function|function.*does not exist/i.test(String(err.message || err))) throw err; return rpc("franchise_saves_get", {}); }
+    try { return await rpc("franchise_saves_get_v5", {}); }
+    catch (err) { if (!/PGRST202|could not find.*function|function.*does not exist/i.test(String(err.message || err))) throw err; try{return await rpc("franchise_saves_get_v4", {});}catch(old){if(!["PGRST202","42883"].includes(old.code))throw old;return rpc("franchise_saves_get", {});} }
   }
-  const upgradeMarkers = (sv) => new Set(((sv && sv.moves) || []).filter((m) => ["prospectsUpdate", "futureClassesUpdate"].includes(m.t)).map((m) => `${m.t}/${m.version}/${m.team == null ? "" : m.team}`));
-  const missingUpgrade = (local, account) => { const known = upgradeMarkers(local); return [...upgradeMarkers(account)].some((key) => !known.has(key)); };
+  const upgradeMarkers = (sv) => new Set(((sv && sv.moves) || []).filter((m) => ["prospectsUpdate", "futureClassesUpdate", "marketUpdate", "coachingUpdate", "freeAgencyUpdate"].includes(m.t)).map((m) => `${m.t}/${m.version}/${m.team == null ? "" : m.team}`));
+  const missingUpgrade = (local, account) => { if(account && ((account.settings||{}).coachingV||0)!==((((local||{}).settings)||{}).coachingV||0))return true; const known = upgradeMarkers(local); return [...upgradeMarkers(account)].some((key) => !known.has(key)); };
   async function syncAccount() {
     const c = LFI.cloud; if (!c || !c.on) return false;
     await c.ready; if (!signedIn()) return false;
@@ -412,7 +414,7 @@
     const s = store.read(), old = s.slots[slot], sv = E.saveOf(lg);
     // Opening a save rewrites it but changes nothing, so it keeps its time (an old copy mustn't look new to the merge).
     const same = old && old.seed === sv.seed && old.v === sv.v && old.moves && old.moves.length === sv.moves.length;
-    s.slots[slot] = { ...sv, client: 4, meta: { ...summary(), updated: same ? savedAt(old) || Date.now() : Date.now() } };
+    s.slots[slot] = { ...sv, client: 5, meta: { ...summary(), updated: same ? savedAt(old) || Date.now() : Date.now() } };
     s.last = slot;
     if (!store.write(s)) toast("Couldn't save in this browser. Download your save to keep it.");
     if (!same) queueSync(sv.seed);
@@ -676,7 +678,18 @@
         <p>OVR, potential, age 21 and future roles are modeled. Transfers, redshirts and reclassification can change timing. School names are known commitments from the source snapshot, not a guarantee of where they will play. The 2026 recruiting table uses a public ESPN-table copy because the original was unavailable during capture.</p>
         ${ready ? `<table class="st"><thead><tr><th>NFL projection</th><th>College class</th><th>Real players</th></tr></thead><tbody>${Object.entries(E.FUTURE_CLASS_VERSIONS).map(([y,v])=>`<tr><td>${y}</td><td>${+y-3}</td><td>${PACK.prospects[v].players.length}</td></tr>`).join("")}</tbody></table>` : `<p>Refresh to load all four projected classes.</p>`}
         <p>Your existing players, contracts, completed games, trades and current draft picks stay as they are. This enables only future classes; it does not restart a draft. Each future class contains 300 ESPN recruits and 20 specialists. After 2031 the league still waits for verified new data.</p>
-        ${lg.futureClassesV ? `<p><b>Enabled for this league.</b></p>` : ready && !lg.pendingRookieDraft && (!ML || ML.info.owner && ML.info.futureClassPolicy === 1) ? `<button class="btn gold" id="adoptFuture">Enable projected 2028–2031 classes</button>` : `<p>The creator can enable this after refreshing; unfinished older fictional drafts remain preserved.</p>`}`;
+        ${lg.futureClassesV ? `<p><b>Enabled for this league.</b></p>` : ready && lg.phase!=="fa-bids" && !lg.pendingRookieDraft && (!ML || ML.info.owner && ML.info.futureClassPolicy === 1) ? `<button class="btn gold" id="adoptFuture">Enable projected 2028–2031 classes</button>` : `<p>The creator can enable this after refreshing; unfinished older fictional drafts remain preserved.</p>`}`;
+      body.insertAdjacentHTML("afterbegin", `<section style="margin-bottom:24px"><h3 class="disp">Trades informed by real NFL deals</h3><p>Values reflect position, talent, age, injury and contract control. Future picks cover three drafts. Core players carry a limited retention premium; there is no blanket top-three-player surcharge. The model uses 23 historical deals as references, with game estimates rather than fitted acceptance odds. OL remains one group, so it cannot price a guard and tackle separately.</p><p>Enabling changes future trade decisions only. Existing deals, picks, players and contracts remain recorded. Finish any current draft and resolve outstanding offers first.</p>${E.marketOn(lg) ? "<b>Enabled.</b>" : (!ML || ML.info.owner && ML.info.marketPolicy===1) && E.tradeOpen(lg) && !lg.draft && !Object.keys(lg.offers||{}).length ? '<button class="btn" id="adoptMarket">Review trade update</button>' : '<p>The creator can enable this outside a draft after outstanding offers are resolved and both pages are refreshed.</p>'}</section>`);
+      const canUpdate=!ML||ML.info.owner;
+      body.insertAdjacentHTML("afterbegin",`<section style="margin-bottom:24px"><h3 class="disp">Three-day free agency</h3><p>Day 1: sealed opening bids. Days 2 and 3: see previous bids from AI and other owners, then revise. Highest annual salary wins after Day 3, with longer term then a seeded draw breaking ties. No taxes.</p><p>Existing contracts and AI re-signings already completed stay intact. If you enable this before contracts finish, this offseason uses bidding; after a rookie draft has begun, bidding starts next offseason. Future expired AI contracts enter the market.</p>${E.freeAgencyOn(lg)?"<b>Enabled.</b>":canUpdate&&E.capOn(lg)&&(["done","resign","rookie","rookie-data","cuts"].includes(lg.phase)||lg.phase==="season"&&lg.week===0)&&(!ML||ML.info.freeAgencyPolicy===1)?'<button class="btn" id="adoptFA">Review free-agency update</button>':'<p>The creator can enable this after the bidding server is ready and both pages are refreshed. Salary-cap leagues only.</p>'}</section>
+        <section style="margin-bottom:24px"><h3 class="disp">Hands-on coaching</h3><p>Choose plays, see an opposing alignment, keep the call, audible or use a timeout. Fourth downs include go, kick or punt with simulated wind and estimated kick range. These are simplified football matchups and simulated conditions.</p>${E.coachingOn(lg)?"<b>Enabled.</b>":canUpdate&&(!ML||ML.info.coachingPolicy===1)&&["done","resign","rookie","rookie-data","cuts"].includes(lg.phase)||canUpdate&&lg.phase==="season"&&lg.week===0&&(!ML||ML.info.coachingPolicy===1)?'<button class="btn" id="adoptCoach">Review coaching update</button>':'<p>The creator can enable this between seasons.</p>'}</section>`);
+      for(const [id,t,title,text,version]of [["adoptFA","freeAgencyUpdate","Enable three-day free agency?","Future expired AI contracts enter bidding. Existing contracts, completed re-signings, roster and current picks stay as they are. Bidding starts after the remaining contract choices, or next offseason if this rookie draft has already begun.",1],["adoptCoach","coachingUpdate","Enable hands-on coaching?","Apply the new coaching choices to upcoming games. Completed results, roster, contracts and draft picks remain recorded.",1]]) if($(id))$(id).onclick=()=>{
+        overlay("Optional league update",title,`<p>${text}</p><button class="btn gold" id="confirmFeature">Enable update</button>`);$("confirmFeature").onclick=()=>{closeOv();move({t,version});};
+      };
+      if ($("adoptMarket")) $("adoptMarket").onclick=()=>{
+        overlay("Future trades only","Enable the new trade values?",`<p>Use the historical reference model for future deals and trade picks from three upcoming drafts. Past trades, contracts and results remain unchanged. Values are game estimates, not a real acceptance probability.</p><button class="btn gold" id="confirmMarket">Enable trade update</button>`);
+        $("confirmMarket").onclick=()=>{closeOv();move({t:"marketUpdate",version:E.MARKET_VERSION});};
+      };
       if ($("adoptFuture")) $("adoptFuture").onclick=()=>{
         overlay("Future draft classes only","Enable classes through 2031?",`<p>Add the 2028–2031 projected classes when their offseason arrives. Existing players, contracts, results and current draft picks are preserved. These are real recruits with projected NFL timing and ratings.</p><button class="btn gold" id="confirmFuture">Enable future classes</button>`);
         $("confirmFuture").onclick=()=>{closeOv();move({t:"futureClassesUpdate",version:E.FUTURE_CLASSES_VERSION});};
@@ -780,6 +793,8 @@
     }, () => { toast("Couldn't load that season's players. Check your connection and try again."); home(); });
   }
 
+  const coachingToggle = (id, supported = true) => `<label class="tog" style="margin:14px 0"><input type="checkbox" id="${id}" ${supported ? "" : "disabled"}><span><b>Hands-on coaching (optional)</b><span>Call offense and defense, read their alignment, audible or use a timeout, and weigh wind on kicks. Off keeps the current rules.${supported ? "" : " Available after the server update."}</span></span></label>`;
+
   // ---- New franchise: pick a mode ----
   function setup(i) {
     head("New franchise", "Pick a mode", "Two ways to build a franchise. Both use actual rookie classes. If the next real class is unavailable, your saved league pauses at that draft.");
@@ -807,6 +822,7 @@
         <div class="field" style="margin-top:0"><label for="fYear">Season</label><select id="fYear">${R.years.slice().reverse().map((x) => `<option value="${x}" ${x === y ? "selected" : ""}>${x}${R.rec[x] && Object.keys(R.rec[x]).length ? "" : " (this season)"}</option>`).join("")}</select></div>
         <div class="teams32">${ts.map((t) => `<button type="button" data-t="${t.i}" aria-pressed="${t.i === pickT}" style="--c:${t.c1};--c2:${t.c2}">${esc(E.teamName(t))}<small>${t.conf} ${t.div}${rec[t.code] ? ` · went ${rec[t.code]}` : ""}</small></button>`).join("")}</div>
         <label class="tog" style="margin-top:14px"><input type="checkbox" id="fHind" ${hind ? "checked" : ""}><span><b>Hindsight rookies</b><span>Off: the real draft classes that follow are graded only from where each player was picked. On: they're graded from how their real careers went.</span></span></label>
+        ${coachingToggle("fCoach")}
         <div class="actbar" style="margin-top:14px"><button class="btn gold big" id="goBtn" ${pickT < 0 ? "disabled" : ""}>Start the ${y} season</button><button class="btn" id="backBtn">Back</button></div>
       </div></section>`;
       $("fYear").onchange = () => realSetup(i, +$("fYear").value, pickT, $("fHind").checked);
@@ -821,7 +837,7 @@
         $("goBtn").disabled = true; $("goBtn").textContent = "Loading the rosters…";
         realData(y).then((data) => {
           const seed = Math.random().toString(36).slice(2, 10);
-          lg = E.create(data, { seed, mode: "real", team: pickT, hindsight: $("fHind").checked, ...(data.season === REF.season ? { ratingVersion: REF.version } : {}), lr: 1, cap: 1, inj2: 1, realRookies: 1 });
+          lg = E.create(data, { seed, mode: "real", team: pickT, hindsight: $("fHind").checked, ...($("fCoach").checked ? { coachingV: 1 } : {}), ...(data.season === REF.season ? { ratingVersion: REF.version } : {}), lr: 1, cap: 1, inj2: 1, realRookies: 1 });
           slot = i; tab = "week"; posF = "ALL"; q = ""; persist(); render();
         }, () => { toast("Couldn't load that season's players. Check your connection and try again."); $("goBtn").disabled = false; $("goBtn").textContent = `Start the ${y} season`; });
       };
@@ -838,6 +854,7 @@
         <div class="field"><label for="fSlot">Your Redraft slot</label><select id="fSlot"><option value="0">Random</option>${Array.from({ length: 32 }, (_, k) => `<option value="${k + 1}">${ord(k + 1)} pick</option>`).join("")}</select></div>
         <div class="field"><label for="fRounds">Rounds you draft</label><select id="fRounds"><option value="10">First 10, AI does the rest</option><option value="15" selected>First 15, AI does the rest</option><option value="25">First 25</option><option value="53">All 53 rounds</option></select></div>
       </div>
+      ${coachingToggle("fCoach")}
       <div class="actbar"><button class="btn gold big" id="goBtn" disabled>Start the Redraft</button><button class="btn" id="backBtn">Back</button></div>
     </div></section>`;
     $("backBtn").onclick = () => setup(i);
@@ -851,7 +868,7 @@
       $("goBtn").disabled = true; $("goBtn").textContent = "Setting up…";
       setTimeout(() => {
         const seed = Math.random().toString(36).slice(2, 10);
-        lg = E.create(DATA, { seed, team: pickT, slot: +$("fSlot").value, userRounds: +$("fRounds").value, ratingVersion: REF.version, lr: 1, cap: 1, inj2: 1, realRookies: 1 });
+        lg = E.create(DATA, { seed, team: pickT, slot: +$("fSlot").value, userRounds: +$("fRounds").value, ...($("fCoach").checked ? { coachingV: 1 } : {}), ratingVersion: REF.version, lr: 1, cap: 1, inj2: 1, realRookies: 1 });
         slot = i; tab = "week"; posF = "ALL"; q = ""; persist(); render();
       }, 20);
     };
@@ -877,6 +894,7 @@
         $("confirmProspects").onclick = () => { closeOv(); move({ t:"prospectsUpdate", version:E.PROSPECT_VERSION }); };
       };
     }
+    else if (lg.phase === "fa-bids") faView();
     else if (lg.phase === "resign") resignView();
     else if (lg.phase === "cuts") cutsView();
     else if (lg.phase === "done") doneView(); else seasonView();
@@ -1370,7 +1388,7 @@
       return `<div class="card-b" style="border-top:1px solid var(--line)"><p style="margin:0 0 8px;font-weight:800">${inc ? `${chip(o.from)} ${esc(whoName(o.from))} offers you a trade` : `To ${chip(o.to)} ${esc(whoName(o.to))}: waiting for an answer`}</p>
         <p style="margin:0 0 4px"><b>You get:</b> ${inc ? dealWords(o.give, o.gp) : dealWords(o.get, o.tp)}</p><p style="margin:0 0 8px"><b>You give:</b> ${inc ? dealWords(o.get, o.tp) : dealWords(o.give, o.gp)}</p>
         ${cut.length ? `<p class="empty" style="margin:0 0 8px">To stay at 53 you'd release ${cut.map((id) => esc(lg.players[id].name)).join(", ")}.</p>` : ""}
-        ${prob ? `<p style="margin:0 0 8px;font-weight:800">🚫 Can't go through now. ${probWords(prob, !inc)}</p>` : ""}${od ? `<p style="margin:0 0 6px;font-weight:700">How likely they say yes: ${od.pct}%</p><div style="margin:0 0 10px">${meter(od.pct)}</div>` : ""}${inc && capOn() && D ? payLine(lg.user, E.dealCap(lg, D, cut).b1).replace("margin:8px 0 0", "margin:0 0 8px") : ""}
+        ${prob ? `<p style="margin:0 0 8px;font-weight:800">🚫 Can't go through now. ${probWords(prob, !inc)}</p>` : ""}${od ? `<p style="margin:0 0 6px">The other owner decides whether to accept.</p>` : ""}${inc && capOn() && D ? payLine(lg.user, E.dealCap(lg, D, cut).b1).replace("margin:8px 0 0", "margin:0 0 8px") : ""}
         <div class="actbar" style="margin:0">${inc ? `<button class="btn gold" data-acc="${esc(o.id)}" ${prob ? "disabled" : ""}>Accept</button><button class="btn" data-dec="${esc(o.id)}">Decline</button>` : `<button class="btn" data-wd="${esc(o.id)}">Withdraw</button>`}</div></div>`;
     };
     return `<section class="card" style="border-top:5px solid var(--accent)"><div class="card-h"><h2 class="disp">🤝 Trade offers</h2></div>${O.in.map((o) => row(o, true)).join("")}${O.out.map((o) => row(o, false)).join("")}</section>`;
@@ -1380,17 +1398,17 @@
     const opts = lg.teams.filter((t) => t.i !== me).sort((a, b) => E.teamName(a).localeCompare(E.teamName(b)))
       .map((t) => `<option value="${t.i}" ${TR && TR.to === t.i ? "selected" : ""}>${esc(E.teamName(t))} (${E.record(lg, t.i)})${ML && ownerOf(t.i) ? ` · ${esc(whoName(t.i))}` : ""}</option>`).join("");
     const top = `<section class="card"><div class="card-h"><h2 class="disp">🔁 Make a trade</h2></div><div class="card-b">
-      <p style="margin:0">${esc(status)}${open ? " Trade players and picks from the next two drafts. Computer teams only say yes to a deal that's good for them." : ""}</p>
+      <p style="margin:0">${esc(status)}${open ? ` Trade players and picks from the next ${E.marketOn(lg) ? "three" : "two"} drafts. Computer teams only say yes to a deal that's good for them.` : ""}</p>
       ${open ? `<div class="field" style="margin-bottom:0"><label for="trTo">Trade with</label><select id="trTo"><option value="">Pick a team</option>${opts}</select></div>` : ""}</div>`;
     if (!open || !TR) return top + `</section>`;
     const human = E.isHuman(lg, TR.to), side = TR.side, pos = TR.pos, reb = !human && E.rebuilding(lg, TR.to), U = !human && side === "get" ? E.untouchables(lg, TR.to) : new Set();
     const t = side === "get" ? TR.to : me, set = side === "get" ? TR.get : TR.give, pset = side === "get" ? TR.tp : TR.gp;
     const seg = `<div class="seg" style="margin:0 0 8px"><button type="button" data-trside="get" aria-pressed="${side === "get"}">They give (${TR.get.size + TR.tp.size})</button><button type="button" data-trside="give" aria-pressed="${side === "give"}">You give (${TR.give.size + TR.gp.size})</button></div>
       <div class="seg">${["ALL", "PK", ...E.GROUPS].map((g) => `<button type="button" data-trpos="${g}" aria-pressed="${pos === g}">${g === "ALL" ? "All" : posLabel(g)}</button>`).join("")}</div>
-      ${reb ? `<p class="empty" style="margin:8px 0 0">📉 They're rebuilding: nobody is untouchable, and they'll move veterans for picks.</p>` : U.size ? `<p class="empty" style="margin:8px 0 0">🔒 Untouchable: their best players. They'll only move one for a lot more.</p>` : ""}`;
+      ${reb ? `<p class="empty" style="margin:8px 0 0">📉 They're rebuilding and will consider veterans for draft picks.</p>` : U.size ? `<p class="empty" style="margin:8px 0 0">${E.marketOn(lg) ? 'Core players carry a limited retention premium based on age, role and contract. A strong enough offer can buy them.' : 'Legacy pricing adds a premium for core players. The creator can review the new model in League updates.'}</p>` : ""}`;
     const rows = pos === "PK" ? E.picksOf(lg, t).map((k) => `<label class="chk ${pset.has(k) ? "" : "off"}"><input type="checkbox" data-tr="${side === "get" ? "tp" : "gp"}" data-id="${esc(k)}" ${pset.has(k) ? "checked" : ""}>${roundBadge(k)}<span class="pn"><b>${esc(E.pickName(lg, k))}</b></span><span></span></label>`)
       : team(t).roster.map((id) => lg.players[id]).filter((p) => pos === "ALL" || p.g === pos).sort((a, b) => b.grade - a.grade)
-        .map((p) => p.yrs >= 1 ? `<label class="chk ${set.has(p.id) ? "" : "off"}"><input type="checkbox" data-tr="${side}" data-id="${esc(p.id)}" ${set.has(p.id) ? "checked" : ""}>${playerBadge(p)}<span class="pn"><b>${esc(p.name)}</b><span>${plabel(p)} · ${yrsTxt(p)}${salTxt(p)}</span></span><span class="muted" style="font-weight:700">${U.has(p.id) ? "🔒 " : ""}${posLabel(p.g)}</span></label>`
+        .map((p) => p.yrs >= 1 ? `<label class="chk ${set.has(p.id) ? "" : "off"}"><input type="checkbox" data-tr="${side}" data-id="${esc(p.id)}" ${set.has(p.id) ? "checked" : ""}>${playerBadge(p)}<span class="pn"><b>${esc(p.name)}</b><span>${plabel(p)} · ${yrsTxt(p)}${salTxt(p)}</span></span><span class="muted" style="font-weight:700">${U.has(p.id) ? E.marketOn(lg) ? "Core · " : "🔒 " : ""}${posLabel(p.g)}</span></label>`
           : `<label class="chk off"><input type="checkbox" disabled>${playerBadge(p)}<span class="pn"><b>${esc(p.name)}</b><span>${plabel(p)} · contract ending</span></span><span class="muted" style="font-weight:700">${posLabel(p.g)}</span></label>`);
     // The deal so far, how they see it, and who you'd release.
     const any = TR.give.size + TR.gp.size + TR.get.size + TR.tp.size, D = any ? E.dealOf(lg, me, trMove()) : null, over = trOver();
@@ -1400,10 +1418,10 @@
       const o = E.tradeOdds(lg, D), pct = o.prob ? 0 : o.pct;
       go = !o.prob && (human || o.ok);
       const words = o.prob ? `🚫 ${probWords(o.prob, true)}`
-        : human ? `${pct >= 65 ? "👍 Looks fair. They'll probably say yes" : pct >= 35 ? "🤔 Could go either way" : "👎 They'll probably say no"}. ${esc(whoName(TR.to))} decides.`
-        : o.ok ? "✅ They'd say yes" : pct >= 70 ? "🤏 Close. They want a bit more" : "❌ Not close. They want a lot more";
-      const un = !o.prob && o.v.untouch.length ? `<p class="empty" style="margin:6px 0 0">🔒 ${o.v.untouch.map((id) => esc(lg.players[id].name)).join(" and ")} ${o.v.untouch.length > 1 ? "are" : "is"} untouchable, so the price is half again higher.</p>` : "";
-      verdict = `<p style="margin:10px 0 6px;font-weight:800">How likely they say yes: ${o.prob ? "no chance" : `${pct}%`}</p>${meter(pct)}<p style="margin:8px 0 0;font-weight:800">${words}</p>${un}${capOn() ? payLine(me, E.dealCap(lg, D).a1) : ""}`;
+        : human ? `${esc(whoName(TR.to))} decides whether to accept this offer.`
+        : o.ok ? "✅ This offer meets their asking value." : "They want more value. Add a stronger player or draft compensation.";
+      const un = !o.prob && o.v.untouch.length ? `<p class="empty" style="margin:6px 0 0">${o.v.untouch.map((id) => esc(lg.players[id].name)).join(" and ")}: ${E.marketOn(lg) ? "limited core-player retention premium" : "legacy retention premium"} included.</p>` : "";
+      verdict = `<p style="margin:8px 0 0;font-weight:800">${words}</p>${!o.prob && !human ? `<p>Offer value: ${o.v.gain.toFixed(1)} · Asking value: ${o.v.need.toFixed(1)}${E.marketOn(lg) ? " (middle first-round pick = 100)" : " (legacy model units)"}. These are game valuations, not acceptance odds.</p>` : ""}${un}${capOn() ? payLine(me, E.dealCap(lg,D).a1) : ""}`;
     } else if (any) verdict = `<p class="empty" style="margin:8px 0 0">${!(TR.get.size + TR.tp.size) || !(TR.give.size + TR.gp.size) ? "Add something to both sides." : over > 0 && TR.cut && TR.cut.size !== over ? `Pick exactly ${over} to release.` : "That deal isn't possible right now."}</p>`;
     let cutHtml = "";
     if (over > 0) {
@@ -1777,16 +1795,32 @@
     return L.pv.asks.find((a) => L.coach.has(a.t) && !answered(a)) || null;
   }
   const ASK_LABEL = { go: "Go for it", punt: "Punt", fg: "Field goal", kick: "Kick the extra point", two: "Go for two", sit: "Sit him", keep: "Keep him in",
-    stay: "Stick with him", bench: "Bring in the backup", run: "Let it run", to: "Call timeout" };
+    stay: "Stick with him", bench: "Bring in the backup", run: "Let it run", to: "Call timeout",
+    auto: "Coach's call", inside: "Inside run", outside: "Outside run", quick: "Quick pass", deep: "Deep pass", screen: "Screen pass",
+    base: "Balanced base", heavy: "Heavy front", nickel: "Nickel look", pressure: "Show pressure" };
+  const COACH_LOOK = { base: "a balanced base front", heavy: "a heavy front crowding the run", nickel: "a nickel look with extra coverage", pressure: "pressure at the line" };
+  const coachingSituation = (a) => `${ord(a.dn)} &amp; ${a.yl + a.tg >= 100 ? "goal" : a.tg} · ${scoreWords(a)} · ${qn(a.q)} ${clk(a.clock)}`;
+  function kickRead(k) {
+    if (!k) return "";
+    const wind = k.indoor ? "Indoors, no wind" : `${k.mph} mph wind: ${Math.abs(k.head)} mph ${k.head >= 0 ? "headwind" : "tailwind"}, ${k.cross} mph crosswind`;
+    const chance = k.probability < 0.01 ? "under 1%" : Math.round(k.probability * 100) + "%";
+    return `<p style="margin:10px 0 0"><b>${k.distance}-yard kick · estimated make chance ${chance}</b><br>${wind}. Kicker's estimated range in these conditions: ${k.range} yards.<br><span class="muted">${esc(k.source)}; model estimates, not a forecast or a guarantee.</span></p>`;
+  }
   function scoreWords(a) {
     const d = a.sc[a.side] - a.sc[1 - a.side];
     return d === 0 ? `tied ${a.sc[0]}-${a.sc[1]}` : `${d > 0 ? "up" : "down"} ${Math.abs(d)}`;
   }
   function askText(a) {
     const g = live.g, pn = (id) => { const p = lg.players[id]; return p ? E.short(p) : "a starter"; }, when = `${qn(a.q)} ${clk(a.clock)}`;
+    if (a.kind === "play") return ["Call the play", `${coachingSituation(a)}. Choose your call, then read their defensive look before the snap.`,
+      { inside: "Attack between the tackles", outside: "Test the edge", quick: "Get the ball out quickly", deep: "More upside, longer protection", screen: "Invite pressure, throw underneath", auto: "Use the game plan" }];
+    if (a.kind === "def") return ["Set your defense", `${coachingSituation(a)}. The offense shows ${esc(a.offense.toLowerCase())}. Choose your look; their actual play stays hidden.`,
+      { base: "Balanced against run and pass", heavy: "Stronger against the run; exposes coverage", nickel: "Extra coverage; lighter against the run", pressure: "Send pressure; risk a big play" }];
+    if (a.kind === "look" || a.kind === "huddle") return [a.kind === "huddle" ? "Timeout: talk it over" : "Read the defense",
+      `${coachingSituation(a)}. Your call: <b>${ASK_LABEL[a.call]}</b>. They show <b>${COACH_LOOK[a.package]}</b>. ${a.left} timeout${a.left === 1 ? "" : "s"} left. ${a.kind === "huddle" ? "Choose the new call. You cannot take another timeout in this same presnap sequence." : "Keep the call, audible, or spend a timeout to regroup."}`, { keep: "Snap the original call", to: "Uses one timeout" }];
     if (a.kind === "4th") {
       const x = a.side === 0 ? a.yl : 100 - a.yl, spot = spotText(x, a.side, g), goal = a.yl + a.tg >= 100;
-      return ["Fourth down", `4th &amp; ${goal ? "goal" : a.tg} at ${esc(spot)}, ${scoreWords(a)}, ${when}.`, { fg: `${117 - a.yl} yards` }];
+      return [a.dn === 4 ? "Fourth down" : "Kick or run a play?", `${a.dn === 4 ? "4th" : ord(a.dn)} &amp; ${goal ? "goal" : a.tg} at ${esc(spot)}, ${scoreWords(a)}, ${when}.${kickRead(a.kick)}`, { fg: `${117 - a.yl} yards`, go: "Choose a play next" }];
     }
     if (a.kind === "2pt") return ["Two-point try?", `Touchdown! You're ${scoreWords(a)} before the try, ${when}.`, {}];
     if (a.kind === "inj") return ["Banged up", `${esc(pn(a.p))} is banged up${a.how ? ` ${esc(a.how)}` : ""} (a one or two week knock). Keep him in and he plays on a step slower, and might aggravate it: out for weeks, sometimes the season. Sit him and the backup comes in.`, { keep: "re-injury risk" }];
@@ -1795,17 +1829,18 @@
   }
   function askBox(a) {
     const L = live, mine = L.coach.has(a.t) && (!L.party || L.party.mine.has(a.t));
-    L.asking = a; L.askLeft = mine ? ASK_SECS : ASK_SECS + 5;
+    L.asking = a; L.askLimit = E.coachingOn(lg) ? 30 : ASK_SECS; L.askLeft = mine ? L.askLimit : L.askLimit + 5;
     const [title, text, sub] = askText(a);
-    const opts = a.opts.map((c) => `<button class="btn${c === a.def ? " gold" : ""}" data-call="${c}" ${mine ? "" : "disabled"}>${ASK_LABEL[c]}<small>${c === a.def ? "default" : sub[c] || "&nbsp;"}</small></button>`).join("");
+    const opts = a.opts.map((c) => `<button class="btn${c === a.def ? " gold" : ""}" data-call="${c}" ${mine ? "" : "disabled"}>${a.kind === "look" && c === "keep" ? "Keep the call" : ASK_LABEL[c]}<small>${c === a.def ? "default" : sub[c] || "&nbsp;"}</small></button>`).join("");
     $("lvBox").innerHTML = `<section class="card ask"><div class="card-h"><h2 class="disp">${title}</h2><small class="muted" id="askN">${L.askLeft}s</small></div><div class="card-b">
       <p style="margin:0">${L.party && !mine ? `Call for ${esc(E.teamName(team(a.t)))}. ` : ""}${text}</p><div class="opts">${opts}</div>
       <div class="bar"><i id="askBar"></i></div><p class="empty" style="margin:6px 0 0">${mine ? "No answer when time runs out = the default." : "Waiting for their coach. No answer = the default."}</p></div></section>`;
+    if (E.coachingOn(lg) && mine) $("lvBox").scrollIntoView({ block: "nearest" });
     clearInterval(L.askT);
     L.askT = setInterval(() => {
       if (live !== L || L.asking !== a) return clearInterval(L.askT);
       L.askLeft--;
-      const n = $("askN"), bar = $("askBar"); if (n) n.textContent = Math.max(0, L.askLeft) + "s"; if (bar) bar.style.width = `${Math.min(1, Math.max(0, L.askLeft) / ASK_SECS) * 100}%`;
+      const n = $("askN"), bar = $("askBar"); if (n) n.textContent = Math.max(0, L.askLeft) + "s"; if (bar) bar.style.width = `${Math.min(1, Math.max(0, L.askLeft) / L.askLimit) * 100}%`;
       if (L.askLeft <= 0) { clearInterval(L.askT); askTimeout(a); }
     }, 1000);
   }
@@ -1855,6 +1890,7 @@
         <div class="bigrec">${rec}</div><p style="font-weight:800;font-size:18px;margin:6px 0 2px">${esc(h.fate)}${h.seed ? ` · ${ord(h.seed)} seed` : ""}</p>
         <p class="empty" style="margin:0">${h.pf} points for, ${h.pa} against.</p>
         <div class="actbar" style="margin:16px 0 0"><button class="btn gold big" id="shareBtn">Share my season</button>${ML ? readyBtn(`the ${h.year + 1} offseason`) : `<button class="btn" id="offBtn">Start the ${h.year + 1} offseason</button>`}${movesBtn()}</div>${ML ? `<small id="mlClock"></small>${ownersBar(true)}` : ""}</div></section>
+      ${!E.coachingOn(lg) ? `<section class="card"><div class="card-b"><h2 class="disp" style="font-size:22px;margin:0 0 8px">Optional: hands-on coaching next season</h2><p>Call plays, read alignments, audible, use timeouts and judge wind on kicks. Completed games and your roster stay recorded. Everyone in a shared league will need the updated page.</p>${!ML || (ML.info.owner && ML.info.coachingPolicy === 1) ? `<button class="btn" id="enableCoach">Review coaching update</button>` : `<p class="empty">The creator can opt in after the server update.</p>`}</div></section>` : ""}
       <section class="card"><div class="card-h"><h2 class="disp">The Final</h2></div>${scoreRow(lg.playoffs.games[lg.playoffs.games.length - 1], { meta: "" })}
         <div class="card-b"><p style="margin:0"><b>Champion:</b> ${esc(E.teamName(team(h.champ)))}</p>
         ${h.mvpName ? `<p style="margin:6px 0 0"><b>Most valuable player:</b> ${esc(h.mvpName)} (${esc(E.teamName(team(h.mvpTeam)))})</p>` : ""}
@@ -1864,6 +1900,10 @@
     $("body").onclick = (e) => {
       const b = e.target.closest("button"); if (!b) return;
       if (b.dataset.g) boxScore(b.dataset.g);
+      if (b.id === "enableCoach") {
+        if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Enable coaching for next season"; return; }
+        move({ t: "coachingUpdate", version: 1 });
+      }
       if (b.id === "offBtn") { tab = "week"; move({ t: "offseason" }); }
       if (b.id === "movesBtn") { movesOpen = true; render(); window.scrollTo(0, 0); }
       if (b.id === "mlReady") { tab = "week"; mlReady(); }
@@ -1876,6 +1916,81 @@
   }
 
   // ---- Offseason: re-sign or let go ----
+  // Current-round bids stay in memory/private RPCs; only closed rounds enter the shared move history.
+  let faDraft=[], faRemote=null, faKey="", faDirty=false, faBusy=false, faError="", faQuery="", faPosition="ALL", faLimit=50, faSearchTimer=null;
+  const canonical = (v) => JSON.stringify(v, (_,x)=>x && !Array.isArray(x) && typeof x==="object" ? Object.fromEntries(Object.keys(x).sort().map(k=>[k,x[k]])) : x);
+  function faContext() {
+    return {version:1,year:lg.year,day:lg.faMarket.day,players:E.freeAgents(lg).filter(p=>p.yrs<=0).map(p=>p.id).sort(),teams:Object.fromEntries(lg.teams.map(t=>{
+      const c=F.commitments(E,lg,t.i);return [t.i,{roster:c.roster,current:c.years.map(y=>y.current)}];}))};
+  }
+  function faInit() {
+    const key=[ML?ML.id:lg.seed,lg.year,lg.faMarket.day].join('/');
+    if(key!==faKey){faKey=key;faRemote=null;faDirty=false;faError="";faDraft=(lg.faMarket.published[lg.user]||[]).map(b=>({...b}));faLimit=50;}
+  }
+  function faStatus() {
+    if(!$("faStatus")) return;
+    $("faStatus").textContent=faError || (!ML ? "Solo league: submitting closes this day with the AI bids." : !faRemote ? "Waiting for the creator to open this bidding day." : `${faRemote.ownReady ? "Your bids are submitted." : "Your draft bids are not submitted."} ${faRemote.readyTeams.length} of ${E.humansOf(lg).length} owners ready. Current-day bids stay sealed until the round closes. Deadline: ${new Date(faRemote.deadline).toLocaleString()}.`);
+    if($("faSubmit"))$("faSubmit").disabled=!!faError||faBusy||!F.validateBids(E,lg,lg.user,faDraft).ok||ML&&(!faRemote||faRemote.ownReady);
+    if($("faRevise"))$("faRevise").hidden=!(ML&&faRemote&&faRemote.ownReady);
+  }
+  async function faRefresh() {
+    if(!ML||!lg||lg.phase!=="fa-bids"||faBusy)return;faInit();const M=ML,key=faKey,wasReady=faRemote&&faRemote.ownReady,wasDraft=canonical(faDraft);let redraw=false;faBusy=true;
+    try{
+      const args={p_league:M.id,p_year:lg.year,p_day:lg.faMarket.day};let r=await rpc("franchise_fa_get",args);
+      if(!r && M.info.owner)r=await rpc("franchise_fa_open",{p_league:M.id,p_seq:M.next,p_context:faContext()});
+      if(ML!==M||key!==faKey)return;
+      if(r && canonical(r.context)!==canonical(faContext()))throw Error("This bidding round does not match your replayed roster and cap. Refresh before bidding; no offers have been changed.");
+      faRemote=r;
+      if(r&&r.closed){M.last=0;faBusy=false;await mlResync();return;}
+      if(r&&(r.ownReady||!faDirty&&r.ownBids.length)){faDraft=r.ownBids.map(b=>({...b}));if(r.ownReady)faDirty=false;}
+      if(r && (r.readyTeams.length===E.humansOf(lg).length || Date.now()+M.off>=r.deadline)) {
+        await rpc("franchise_fa_close",args);faBusy=false;await mlResync();return;
+      }
+      faError="";redraw=!!r&&(wasReady!==r.ownReady||wasDraft!==canonical(faDraft));
+    }catch(err){faError=err.message||"Could not load bidding. Refresh to try again.";}finally{faBusy=false;if(redraw&&ML===M&&lg&&lg.phase==="fa-bids"&&faKey===key)faView();else faStatus();}
+  }
+  function faPublished(p) {
+    const rows=[];for(const [t,bids]of Object.entries(lg.faMarket.published))for(const b of bids)if(b.p===p)rows.push({...b,t:+t});
+    return rows.sort((a,b)=>b.salary-a.salary||b.years-a.years||a.t-b.t).map(b=>`${E.teamShort(team(b.t))}${E.isHuman(lg,b.t)?" (owner)":" (AI)"}: ${E.money(b.salary)}/yr × ${b.years}`).join(" · ")||"No offers in the last closed day.";
+  }
+  function faCompetition(p) {
+    const rows=[];for(const [t,bids]of Object.entries(lg.faMarket.published))for(const b of bids)if(b.p===p)rows.push({...b,t:+t});
+    rows.sort((a,b)=>b.salary-a.salary||b.years-a.years||a.t-b.t);
+    if(!rows.length)return '<p class="empty">No offers in the last closed day.</p>';
+    const line=b=>`${E.teamShort(team(b.t))}${E.isHuman(lg,b.t)?" (owner)":" (AI)"}: ${E.money(b.salary)}/yr × ${b.years}`;
+    return `<p>Published Day ${lg.faMarket.history.length}: highest offer ${esc(line(rows[0]))}</p><details><summary>See all ${rows.length} published bids</summary>${rows.map(b=>`<p>${esc(line(b))}</p>`).join("")}</details>`;
+  }
+  function faRecalc() {
+    const check=F.validateBids(E,lg,lg.user,faDraft),c=F.commitments(E,lg,lg.user,faDraft);
+    if($("faValidation"))$("faValidation").textContent=check.ok?"All current offers fit your cap and offseason roster.":check.error;
+    for(const y of c.years){if($("faReserved"+y.year))$("faReserved"+y.year).textContent=E.money(y.reserved);if($("faRoom"+y.year))$("faRoom"+y.year).textContent=E.money(y.room);}
+    faStatus();
+  }
+  async function faSubmit(ready=true) {
+    if(faBusy)return;clearTimeout(faSearchTimer);const valid=F.validateBids(E,lg,lg.user,faDraft);if(!valid.ok){toast(valid.error);return;}
+    if(!ML){move({t:"faDay",year:lg.year,day:lg.faMarket.day,bids:{[lg.user]:valid.bids}});return;}
+    if(!faRemote||faError){toast(faError||"The creator must open this day first.");return;}
+    faBusy=true;faStatus();try{
+      const M=ML;await rpc("franchise_fa_submit",{p_league:M.id,p_year:lg.year,p_day:lg.faMarket.day,p_bids:valid.bids,p_ready:ready});
+      faDirty=false;faBusy=false;await faRefresh();if(ML===M&&lg.phase==="fa-bids")faView();
+    }catch(err){faBusy=false;toast(err.message);faStatus();}
+  }
+  function faView() {
+    faInit();head(`${E.teamName(team(lg.user))} · ${lg.year} offseason`,`Free agency · Day ${lg.faMarket.day} of 3`,"Everyone can revise their bids each day. Players sign after Day 3.");
+    const check=F.validateBids(E,lg,lg.user,faDraft),c=F.commitments(E,lg,lg.user,faDraft),locked=!!(ML&&faRemote&&faRemote.ownReady),closed=lg.faMarket.history.length;
+    const available=E.freeAgents(lg).filter(p=>p.yrs<=0 &&(faPosition==="ALL"||p.g===faPosition)&&p.name.toLowerCase().includes(faQuery.toLowerCase())).sort((a,b)=>b.grade-a.grade||a.name.localeCompare(b.name));
+    const active=faDraft.map(b=>{const p=lg.players[b.p];return `<div class="card-b" style="border-top:1px solid var(--line)"><b>${esc(p.name)} · ${ovr(p.grade)} OVR · ${posLabel(p.g)}</b>${closed?faCompetition(p.id):"<p>Opening day: other bids remain sealed.</p>"}<div style="display:flex;gap:10px;flex-wrap:wrap"><label>Annual salary ($M)<input aria-label="Annual salary for ${esc(p.name)}" data-fa-salary="${esc(p.id)}" type="number" min="0.9" max="255" step="0.1" value="${b.salary}" ${locked?"disabled":""} style="display:block;width:130px"></label><label>Years<select aria-label="Contract years for ${esc(p.name)}" data-fa-years="${esc(p.id)}" ${locked?"disabled":""} style="display:block">${[1,2,3,4].map(n=>`<option ${n===b.years?"selected":""}>${n}</option>`).join("")}</select></label><button class="btn" data-fa-remove="${esc(p.id)}" ${locked?"disabled":""}>Remove bid</button></div></div>`}).join("");
+    const publicRows=F.dashboard(E,lg,lg.user,faDraft).rows;
+    $("body").innerHTML=`<section class="card"><div class="card-b"><p style="margin-top:0">${esc(F.RULE)} No taxes. Every offer reserves its full annual salary for each covered year. Signing bonuses, guarantees and real NFL cap accounting are not modeled.</p><p>AI teams plan from the previous published day’s offers. They keep $10M plus minimum roster-fill salaries available for rookies and depth. Your upcoming rookie contracts need room too.</p><p id="faStatus" aria-live="polite"></p><div class="actbar"><button class="btn gold" id="faSubmit" ${locked?"disabled":""}>${faDraft.length?"Submit these bids":"Submit no bids / pass"}</button><button class="btn" id="faRevise" ${locked?"":"hidden"}>Revise submitted bids</button></div><p class="empty">Unsubmitted edits stay on this page until you submit. Each day replaces your previous offers. Carried-forward amounts below are drafts until you submit again. At the deadline an owner who has not submitted passes.</p></div></section>
+      <section class="card"><div class="card-h"><h2 class="disp">My active bids (${faDraft.length}/24)</h2></div>${active||'<p class="empty" style="padding:14px">Add a player below, or submit a pass.</p>'}<div class="card-b"><p id="faValidation" aria-live="polite">${check.ok?"All current offers fit your cap and offseason roster.":esc(check.error)}</p><div style="overflow:auto"><table class="st"><thead><tr><th>Year</th><th>Contracts</th><th>Offers</th><th>Room</th></tr></thead><tbody>${c.years.map(y=>`<tr><td>${y.year}</td><td>${E.money(y.current)}</td><td id="faReserved${y.year}">${E.money(y.reserved)}</td><td id="faRoom${y.year}">${E.money(y.room)}</td></tr>`).join("")}</tbody></table></div><p class="empty">${c.rosterIfAllSign}/90 offseason spots if all offers win; cut to 53 after the rookie draft.</p></div></section>
+      <section class="card"><div class="card-h"><h2 class="disp">Available free agents</h2></div><div class="card-b"><p id="faAvailableCount">${available.length} free agents found</p><label for="faSearch">Search players</label><input type="search" id="faSearch" value="${esc(faQuery)}"><label for="faPosition">Position</label><select id="faPosition"><option value="ALL">All positions</option>${E.GROUPS.map(g=>`<option value="${g}" ${g===faPosition?"selected":""}>${E.GROUP_NAME[g]}</option>`).join("")}</select></div>${available.slice(0,faLimit).map(p=>`<div class="card-b" style="border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;justify-content:space-between"><span><b>${esc(p.name)} · ${ovr(p.grade)}</b><br>${posLabel(p.g)} · age ${p.age}${p.inj?" · injured":""}<br>Estimated ask ${E.money(E.askSalary(lg,p))}/yr</span><button class="btn" data-fa-add="${esc(p.id)}" ${locked||faDraft.some(b=>b.p===p.id)||faDraft.length>=24?"disabled":""}>Add bid</button></div>`).join("")}${available.length>faLimit?'<button class="btn block" id="faMore">Show more players</button>':""}</section>
+      <section class="card"><div class="card-h"><h2 class="disp">Published league bids${closed?` · Day ${closed}`:""}</h2></div><div class="card-b">${closed?`<p>All teams’ last closed offers. Current-day revisions stay private.</p><details><summary>See league bid board (${publicRows.length} players)</summary>${publicRows.map(r=>`<p><b>${esc(lg.players[r.p].name)}</b><br>${esc(faPublished(r.p))}</p>`).join("")}</details>`:"No competing offers are public until Day 1 closes."}</div></section>`;
+    $("body").onclick=e=>{const b=e.target.closest("button");if(!b)return;if(b.id==="faSubmit")return faSubmit();if(b.id==="faRevise")return faSubmit(false);if(b.id==="faMore"){faLimit+=50;return faView();}if(locked)return;if(b.dataset.faRemove){faDraft=faDraft.filter(x=>x.p!==b.dataset.faRemove);faDirty=true;faView();}if(b.dataset.faAdd){const p=lg.players[b.dataset.faAdd];faDraft.push({p:p.id,salary:Math.max(E.MIN_SAL,Math.round(E.askSalary(lg,p)*10)/10),years:2});faDirty=true;faView();}};
+    $("body").oninput=e=>{const el=e.target;if(el.id==="faSearch"){faQuery=el.value;clearTimeout(faSearchTimer);faSearchTimer=setTimeout(()=>{if(!lg||lg.phase!=="fa-bids")return;faLimit=50;faView();if($("faSearch")){const n=$("faSearch");n.focus();n.setSelectionRange(n.value.length,n.value.length);}},180);return;}if(locked||!el.dataset.faSalary)return;const b=faDraft.find(x=>x.p===el.dataset.faSalary);if(b){b.salary=Number(el.value);faDirty=true;faRecalc();}};
+    $("body").onchange=e=>{const el=e.target;if(el.id==="faSearch"){clearTimeout(faSearchTimer);faQuery=el.value;faLimit=50;return faView();}if(el.id==="faPosition"){faPosition=el.value;faLimit=50;return faView();}if(locked)return;const id=el.dataset.faSalary||el.dataset.faYears,b=faDraft.find(x=>x.p===id);if(b){if(el.dataset.faSalary){b.salary=Number(el.value);faDirty=true;faRecalc();}else{b.years=Number(el.value);faDirty=true;faView();}}};
+    faStatus();if(ML)faRefresh();
+  }
+
   function resignView() {
     const O = lg.offseason, t = team(lg.user);
     if (ML && !E.waitingOn(lg).includes(lg.user)) return mlWaiting(`${lg.year} offseason`, "Contracts", "Your contracts are done. Waiting on");
@@ -1936,14 +2051,14 @@
     const { data, error } = await c.sb.rpc(fn, args); if (error) throw Object.assign(new Error(error.message), { code: error.code }); return data;
   };
   const leagueGet = async (args) => {
-    for (const name of ["franchise_league_get_v4", "franchise_league_get_v3", "franchise_league_get_v2", "franchise_league_get"]) {
+    for (const name of ["franchise_league_get_v5", "franchise_league_get_v4", "franchise_league_get_v3", "franchise_league_get_v2", "franchise_league_get"]) {
       try { return await rpc(name, args); }
       catch (err) { if (!["PGRST202", "42883"].includes(err.code) || name === "franchise_league_get") throw err; }
     }
   };
   const versionedParty = async (kind,args) => {
-    const names=["franchise_party_"+kind+"_v3","franchise_party_"+kind+"_v2","franchise_party_"+kind];
-    for(const name of names) {try{return await rpc(name,args);}catch(err){if(!["PGRST202","42883"].includes(err.code)||name===names[2])throw err;}}
+    const names=["franchise_party_"+kind+"_v4","franchise_party_"+kind+"_v3","franchise_party_"+kind+"_v2","franchise_party_"+kind];
+    for(const name of names) {try{return await rpc(name,args);}catch(err){if(!["PGRST202","42883"].includes(err.code)||name===names[names.length-1])throw err;}}
   };
   const partyGet = (args) => versionedParty("get",args);
   const partyJoin = (args) => versionedParty("join",args);
@@ -1961,6 +2076,7 @@
       if (b.id !== "pMake") return;
       b.disabled = true;
       try {
+        if (E.coachingOn(lg)) await rpc("franchise_party_get_v4", { p_code: "" });
         const pv = E.previewGame(lg, g), sv = E.saveOf(lg);
         const code = await rpc("franchise_party_create", { p_save: sv, p_game: { wk: g.wk, h: g.h, a: g.a, n: pv.plays.length, sc: pv.sc },
           p_host_team: lg.user, p_guest_team: $("pCoach").checked ? opp : null });
@@ -2073,7 +2189,7 @@
   // 5 s otherwise). Weeks play once every owner is ready; when a deadline passes, any open browser hands out the
   // defaults (an auto-pick, the suggested re-signings and cuts, the week itself), so a missing friend never stalls it.
   const ORDERLESS = new Set(["inj2", "realRookies", "pilot", "ready", "plan", "depth", "half", "call", "finish", "offer", "decline", "withdraw"]);
-  const TEAM_MOVES = new Set(["futureClassesUpdate", "prospectsUpdate", "ratingsUpdate", "inj2", "realRookies", "pilot", "pick", "auto", "finish", "depth", "plan", "half", "call", "resign", "cut", "ready", "trade", "offer", "accept", "decline", "withdraw", "sign"]);
+  const TEAM_MOVES = new Set(["marketUpdate", "freeAgencyUpdate", "futureClassesUpdate", "prospectsUpdate", "coachingUpdate", "ratingsUpdate", "inj2", "realRookies", "pilot", "pick", "auto", "finish", "depth", "plan", "half", "call", "resign", "cut", "ready", "trade", "offer", "accept", "decline", "withdraw", "sign"]);
   const ownerOf = (t) => ML && ML.info.people.find((p) => p.team === t);
   const whoName = (t) => { const p = ownerOf(t); return p ? (p.me ? "You" : p.name) : E.teamName(team(t)); };
   // Choices on the contracts and cuts screens survive the league refreshing underneath them.
@@ -2122,9 +2238,11 @@
     stopMl();
     head("Friends league", "New friends league", "You and your friends each run a team in one shared league. The AI runs every other team.");
     $("body").innerHTML = `<p class="empty">Loading…</p>`;
-    let people, R, ratingSupport = false;
+    let people, R, ratingSupport = false, coachingSupport = false;
     try { [people, R] = await Promise.all([rpc("franchise_people", {}), realIndex()]); } catch (err) { toast(err.message); return home(); }
     try { await rpc("franchise_league_get_v2", { p_league: "", p_since: -1 }); ratingSupport = true; }
+    catch (err) { if (!["PGRST202", "42883"].includes(err.code)) { toast(err.message); return home(); } }
+    try { await rpc("franchise_league_get_v5", { p_league: "", p_since: -1 }); coachingSupport = true; }
     catch (err) { if (!["PGRST202", "42883"].includes(err.code)) { toast(err.message); return home(); } }
     let mode = "redraft", year = R.years[R.years.length - 1], pickT = -1;
     const inv = new Set((people || []).filter((p) => !p.me).map((p) => p.id));
@@ -2142,6 +2260,7 @@
         </div>
         <p class="empty" id="mClockHint" style="margin:4px 0 12px">Each round you draft gets shorter, reaching 15 seconds a pick in your last round. The selected time is for round one.</p>
         ${mode === "real" ? `<label class="tog" style="margin-top:12px"><input type="checkbox" id="mHind"><span><b>Hindsight rookies</b><span>Off: the real draft classes are graded only from where each player was picked. On: from how their careers went.</span></span></label>` : ""}
+        ${coachingToggle("mCoach", coachingSupport)}
         <h3 class="disp" style="margin:18px 0 8px">Invite</h3>
         <div class="invites">${(people || []).filter((p) => !p.me).map((p) => `<label class="chk ${inv.has(p.id) ? "" : "off"}"><input type="checkbox" data-inv="${esc(p.id)}" ${inv.has(p.id) ? "checked" : ""}><span class="pn"><b>${esc(p.name)}</b></span><span class="muted" style="font-weight:700">${inv.has(p.id) ? "Invited" : "Not invited"}</span></label>`).join("") || `<p class="empty">Nobody else is on the list yet.</p>`}</div>
         <h3 class="disp" style="margin:18px 0 8px">Your team</h3>
@@ -2163,6 +2282,7 @@
         const data = mode === "real" ? await realData(year) : DATA;
         const settings = mode === "real" ? { mode: "real", year, hindsight: !!($("mHind") && $("mHind").checked), lr: 1, cap: 1, inj2: 1, realRookies: 1 } : { mode: "redraft", userRounds: +$("mRounds").value, lr: 1, cap: 1, inj2: 1, realRookies: 1 };
         if (ratingSupport && (mode === "redraft" || year === REF.season)) settings.ratingVersion = REF.version;
+        if (coachingSupport && $("mCoach").checked) settings.coachingV = 1;
         settings.pickSecs = +$("mClock").value; settings.weekHours = +$("mWeek").value;
         const id = await rpc("franchise_league_create", { p_name: $("mName").value.trim() || "Friends league", p_seed: Math.random().toString(36).slice(2, 10),
           p_data: data.built || null, p_settings: settings, p_team: pickT, p_invite: [...inv] });
@@ -2239,10 +2359,11 @@
       if (M.stopForNews) { const h = M.stopForNews; delete M.stopForNews; await pilotOff(); toast(h); return; }
       if (viewKey() !== before || JSON.stringify(was.people) !== JSON.stringify(info.people) || JSON.stringify(was.parties) !== JSON.stringify(info.parties)) mlRender();
       await mlDefaults();
+      if (lg && lg.phase === "fa-bids") await faRefresh();
     } catch (err) { console.warn(err.message); } finally { M.busy = false; }
   }
   // What the screen depends on; re-render only when it changes, so a half-made choice isn't wiped by a refresh.
-  const viewKey = () => lg ? [lg.year, lg.phase, lg.futureClassesV || "", lg.ratingVersion || "", lg.week, lg.draft ? lg.draft.n : -1, E.waitingOn(lg).join(), lg.playoffs ? lg.playoffs.round : -1,
+  const viewKey = () => lg ? [lg.year, lg.phase, lg.faV || "", lg.faMarket && lg.faMarket.day || "", lg.faMarket && lg.faMarket.complete || "", lg.marketVersion || "", lg.futureClassesV || "", lg.ratingVersion || "", E.coachingOn(lg) ? 1 : 0, lg.week, lg.draft ? lg.draft.n : -1, E.waitingOn(lg).join(), lg.playoffs ? lg.playoffs.round : -1,
     Object.keys(lg.offers || {}).join(), (lg.tx || []).length, JSON.stringify(lg.pilot || {})].join("|") : ""; // offers and trades/signings redraw the trades screen
   function mlRender() {
     const y = window.scrollY, qf = document.activeElement && document.activeElement.id === "q";
@@ -2287,7 +2408,7 @@
     const clock = lg.draft ? (lg.draft.n !== n0 || !hadDraft ? C.request(lg, M.info.clockPolicy) : null)
       : hadDraft || m.t === "week" || m.t === "offseason" || lg.phase !== ph ? "week" : null;
     try {
-      const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.futureClassPolicy === 1 ? `client4/${clock || ""}` : M.info.prospectPolicy === 1 ? `client3/${clock || ""}` : M.info.ratingPolicy === 1 ? `client2/${clock || ""}` : clock });
+      const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.clientProtocol === 5 ? `client5/${clock || ""}` : M.info.futureClassPolicy === 1 ? `client4/${clock || ""}` : (M.info.coachingPolicy === 1 || M.info.prospectPolicy === 1) ? `client3/${clock || ""}` : M.info.ratingPolicy === 1 ? `client2/${clock || ""}` : clock });
       if (ML !== M) return false;
       M.next = r.s + 1; M.info.deadline = r.deadline; M.off = r.now - Date.now();
       if (m.t === "pilot") M.info.people.forEach((p) => { if (p.team === m.team) p.ready = m.n > 0; });
@@ -2312,7 +2433,7 @@
     const M = ML; if (!M || (TEAM_MOVES.has(m.t) && m.team !== M.me)) return;
     for (let i = 0; i < 5; i++) {
       try {
-        const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.futureClassPolicy === 1 ? "client4/" : M.info.prospectPolicy === 1 ? "client3/" : M.info.ratingPolicy === 1 ? "client2/" : null });
+        const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.clientProtocol === 5 ? "client5/" : M.info.futureClassPolicy === 1 ? "client4/" : (M.info.coachingPolicy === 1 || M.info.prospectPolicy === 1) ? "client3/" : M.info.ratingPolicy === 1 ? "client2/" : null });
         M.next = r.s + 1;
         if (m.t === "ready") M.info.people.forEach((p) => { if (p.team === m.team) p.ready = true; });
         return;

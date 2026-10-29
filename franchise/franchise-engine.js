@@ -32,6 +32,23 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
+  const freeAgencyOn = (lg) => lg.faV === 1;
+  function faModule() {
+    const F=typeof module === "object" && module.exports ? require("./free-agency.js") : globalThis.FranchiseFreeAgency;
+    if (!F || F.VERSION!==1) throw Error("Refresh to load this league's free-agency rounds");return F;
+  }
+  function afterContracts(lg) {
+    if(freeAgencyOn(lg)) { lg.faMarket=faModule().create(API,lg);lg.phase="fa-bids";lg.draft=null;return true; }
+    return startRookieDraft(lg);
+  }
+  const MARKET_VERSION = "historical-market-v1";
+  const marketOn = (lg) => lg.marketVersion === MARKET_VERSION;
+  function marketModule() {
+    const M = typeof module === "object" && module.exports ? require("./trade-market.js") : globalThis.FranchiseTradeMarket;
+    if (!M || M.VERSION !== MARKET_VERSION) throw Error("Refresh to load this league's trade market");
+    return M;
+  }
+  const marketContext = (lg, p) => ({ phase: lg.phase, peak: PEAK, ...(capOn(lg) ? {marketSalary: askSalary(lg,p)} : {}) });
   // Immutable references let old saves keep their original draft and AI decisions.
   const ratingSets = new Map();
   function registerRatingSet(ref) {
@@ -59,6 +76,30 @@
     if (!opts.ratingVersion) return;
     if (!applyRatingReference(lg, opts.ratingVersion)) throw Error("This save needs its original rating reference");
     lg.settings.ratingVersion = opts.ratingVersion;
+  }
+
+  // Coaching v1 is opt-in. Legacy leagues and every move before an adoption marker keep the old game path.
+  const coachingOn = (lg) => lg.settings.coachingV === 1 || lg.coachingV === 1;
+  function coachingOpt(opts) {
+    if (opts.coachingV != null && opts.coachingV !== 1) throw Error("This save needs its original coaching rules");
+    return opts.coachingV === 1 ? { coachingV: 1 } : {};
+  }
+  function coachingWeather(lg, g) {
+    const r = rng(lg.seed, "coaching-weather-v1", lg.year, g.wk, g.h, g.a);
+    // A simulation scenario, not current real-world weather. Explicit indoor fixtures have no wind.
+    const indoor = !!(g.weather && g.weather.indoor);
+    const mph = indoor ? 0 : g.weather && Number.isFinite(g.weather.mph) ? clamp(g.weather.mph, 0, 40) : r.int(26);
+    const bearing = g.weather && Number.isFinite(g.weather.bearing) ? g.weather.bearing : r.int(360);
+    return { indoor, mph, bearing, source: "Simulated game conditions" };
+  }
+  function coachingKick(lg, g, side, quarter, yardline, kickerEdge) {
+    const w = coachingWeather(lg, g), radians = (w.bearing + (side === ((quarter % 2) ? 0 : 1) ? 0 : 180)) * Math.PI / 180;
+    const head = w.mph * Math.cos(radians), cross = Math.abs(w.mph * Math.sin(radians)), distance = 117 - yardline;
+    const range = Math.round(55 + 2 * kickerEdge - 0.22 * head - 0.1 * cross);
+    const base = 0.995 - Math.max(0, distance - 30) * 0.011 - Math.max(0, distance - 46) * 0.02 + 0.02 * kickerEdge;
+    const probability = clamp(base - Math.max(0, head) * 0.004 + Math.max(0, -head) * 0.0015 - cross * 0.001
+      - Math.max(0, distance - range - 3) * 0.04, 0.0005, 0.995);
+    return { ...w, head: Math.round(head), cross: Math.round(cross), distance, range, probability };
   }
 
   // ---- Teams. [code, city, conference, division, color, second color]. How they show is set by NAME_MODE / LOGOS below. ----
@@ -232,7 +273,7 @@
     }
     const lg = {
       v: 1, seed, data: data.built, year: data.season, user: viewer(opts),
-      settings: { team: opts.team | 0, slot: opts.slot | 0, userRounds: clamp(opts.userRounds || 15, 1, REDRAFT_ROUNDS), ...(opts.lr ? { lr: 1 } : {}), ...(opts.inj2 ? { inj2: 1 } : {}), ...(opts.cap ? { cap: 1 } : {}), ...(opts.realRookies ? { realRookies: 1 } : {}), ...(opts.straight ? { straight: 1 } : {}), ...humansOpt(opts) },
+      settings: { team: opts.team | 0, slot: opts.slot | 0, userRounds: clamp(opts.userRounds || 15, 1, REDRAFT_ROUNDS), ...(opts.lr ? { lr: 1 } : {}), ...(opts.inj2 ? { inj2: 1 } : {}), ...(opts.cap ? { cap: 1 } : {}), ...(opts.realRookies ? { realRookies: 1 } : {}), ...(opts.straight ? { straight: 1 } : {}), ...humansOpt(opts), ...coachingOpt(opts) },
       teams: TEAMS.map((t) => ({ ...t, roster: [] })),
       players, moves: [], phase: "redraft", week: 0, games: [], log: [], history: [], stats: {}, lastRank: null,
       fa: [], notes: [], drafts: data.drafts || null,
@@ -260,7 +301,7 @@
     const seed = String(opts.seed || Date.now().toString(36));
     const lg = {
       v: 1, seed, data: data.built, year: data.season, user: viewer(opts),
-      settings: { mode: "real", year: data.season, team: opts.team | 0, hindsight: !!opts.hindsight, ...(opts.lr ? { lr: 1 } : {}), ...(opts.inj2 ? { inj2: 1 } : {}), ...(opts.cap ? { cap: 1 } : {}), ...(opts.realRookies ? { realRookies: 1 } : {}), ...humansOpt(opts) },
+      settings: { mode: "real", year: data.season, team: opts.team | 0, hindsight: !!opts.hindsight, ...(opts.lr ? { lr: 1 } : {}), ...(opts.inj2 ? { inj2: 1 } : {}), ...(opts.cap ? { cap: 1 } : {}), ...(opts.realRookies ? { realRookies: 1 } : {}), ...humansOpt(opts), ...coachingOpt(opts) },
       teams: TEAMS.map((t) => ({ ...t, roster: [] })),
       players: {}, moves: [], phase: "season", week: 0, games: [], log: [], history: [], stats: {}, lastRank: null,
       fa: [], notes: [], drafts: data.drafts || null, realSched: data.sched,
@@ -329,10 +370,11 @@
   const SAVE_V = 2;
   function saveOf(lg) { return { v: SAVE_V, seed: lg.seed, data: lg.data, settings: lg.settings, moves: lg.moves.slice() }; }
 
-  const LEAGUE_MOVES = new Set(["week", "season", "offseason"]); // moves for the whole league, not one team
+  const LEAGUE_MOVES = new Set(["faDay", "week", "season", "offseason"]); // moves for the whole league, not one team
   function step(lg, m) {
     const d = lg.draft, T = actor(lg, m);
     if (T < 0 && !LEAGUE_MOVES.has(m.t)) return false;
+    if (lg.phase==="fa-bids" && m.t!=="faDay") return false;
     switch (m.t) {
       case "futureClassesUpdate": {
         if (m.version !== FUTURE_CLASSES_VERSION || lg.futureClassesV || lg.year > 2031 || lg.pendingRookieDraft) return false;
@@ -347,7 +389,28 @@
         if (cls.players.filter((p) => !lg.players[p.id]).length < 224) return false;
         lg.prospectVersion = m.version; startRookieDraft(lg); return true;
       }
+      case "freeAgencyUpdate":
+        if(m.version!==1 || freeAgencyOn(lg) || !capOn(lg) || !["done","resign","rookie","rookie-data","cuts","season"].includes(lg.phase) || lg.phase==="season" && lg.week!==0) return false;
+        faModule();lg.faV=1;return true;
+      case "faDay": {
+        if(!freeAgencyOn(lg) || lg.phase!=="fa-bids" || m.year!==lg.year || m.day!==lg.faMarket.day) return false;
+        const next=faModule().advance(API,lg,m.bids);
+        lg.faMarket=next.state;
+        for(const a of next.awards) {
+          const p=lg.players[a.p];lg.fa=lg.fa.filter(id=>id!==p.id);p.team=a.t;p.sal=a.salary;p.yrs=a.years;lg.teams[a.t].roster.push(p.id);
+          tx(lg,{k:"sign",t:a.t,p:p.id,sal:a.salary,years:a.years,day:3});
+          news(lg,{k:"sign",t:a.t,p:p.id,pr:3+Math.max(0,p.grade-6),wk:24,h:`${teamName(lg.teams[a.t])} wins the bid for ${p.name}`,b:`${money(a.salary)} per year for ${a.years} years. Three-day free agency.`});
+        }
+        if(next.state.complete) startRookieDraft(lg);
+        return true;
+      }
+      case "marketUpdate":
+        if (m.version !== MARKET_VERSION || marketOn(lg) || lg.draft || Object.keys(lg.offers || {}).length || !tradeOpen(lg)) return false;
+        marketModule(); lg.marketVersion = MARKET_VERSION; return true;
       case "ratingsUpdate": return !!lg.draft && applyRatingReference(lg, m.version);
+      case "coachingUpdate":
+        if (m.version !== 1 || coachingOn(lg) || !["done","resign","rookie","rookie-data","cuts"].includes(lg.phase) && !(lg.phase==="season" && lg.week===0)) return false;
+        lg.coachingV = 1; return true;
       case "pick": { // the user drafts a player
         if (!d || d.seq[d.n] !== T || !d.pool.has(m.p)) return false;
         draftPlayer(lg, T, m.p);
@@ -422,7 +485,7 @@
       }
       case "call": { // a coach decision during this week's game: { k: decision id from simGame's asks, c: choice, team }
         const t = multi(lg) ? T : m.team == null ? lg.user : m.team;
-        if ((lg.phase !== "season" && lg.phase !== "playoffs") || !lg.teams[t] || typeof m.k !== "string" || !CALL_OPTS[m.c]) return false;
+        if ((lg.phase !== "season" && lg.phase !== "playoffs") || !lg.teams[t] || typeof m.k !== "string" || (!CALL_OPTS[m.c] && !(coachingOn(lg) && COACH_OPTS[m.c]))) return false;
         lg.calls = { ...(lg.calls || {}), [t]: { ...((lg.calls && lg.calls[t]) || {}), [m.k]: m.c } };
         return true;
       }
@@ -434,7 +497,7 @@
       case "trade": { // a trade with an AI team: { to, give, get, gp, tp, cut }; it happens only if their value model says yes
         const D = dealOf(lg, T, m);
         if (!D || isHuman(lg, D.to) || dealProblem(lg, D) || !tradeVerdict(lg, D).ok) return false;
-        doTrade(lg, D, D.cut, null);
+        doTrade(lg, D, D.cut, marketOn(lg) ? marketCuts(lg,D) : null);
         return true;
       }
       case "offer": { // friends league: a trade offer to another person's team, { id, to, give, get, gp, tp, cut }
@@ -655,6 +718,7 @@
   const OFF_G = new Set(["QB", "RB", "WR", "TE", "OL"]), SCRIM = new Set(["run", "pass", "inc", "sack", "int", "fum", "2pt"]);
   const HURT_K = new Set([...SCRIM, "ko", "punt", "fg", "xp"]);
   // Coach decisions: the choices each kind of in-game call can take (see "Coach decisions" in simGame).
+  const COACH_OPTS = { auto: 1, inside: 1, outside: 1, quick: 1, deep: 1, screen: 1, base: 1, heavy: 1, nickel: 1, pressure: 1 };
   const CALL_OPTS = { go: 1, punt: 1, fg: 1, kick: 1, two: 1, sit: 1, keep: 1, stay: 1, bench: 1, run: 1, to: 1 };
   const GO2 = new Set([-2, -5, -10, -13, 1, 5, 12]); // after the touchdown, trailing or leading by these: go for two
   function edges(lg, o, d, home, mo) {
@@ -735,7 +799,8 @@
     // engine did before decisions existed, so a game nobody answers is unchanged. A person's answer is a "call" move
     // (lg.calls[team][id]); ids count decision points in order, so everything before an answered call stays identical.
     // asks lists every point (both teams); at = the play index the decision comes before (the viewer pauses there).
-    const asks = [], calls = lg.calls;
+    const asks = [], calls = lg.calls, coachV = coachingOn(lg);
+    let snapCall = "auto", snapDefense = null;
     const ask = (i, kind, def, opts, at, info) => {
       const id = kind + asks.length, mine = calls && calls[S[i].t], c = mine && mine[id];
       const pick = c != null && opts.includes(c) ? c : def;
@@ -880,7 +945,8 @@
     const yds = (y) => (y === 0 ? "no gain" : y < 0 ? `a loss of ${-y}` : `${y} yard${y === 1 ? "" : "s"}`);
 
     function punt() {
-      const P = S[o].L.P[0], net = Math.round(41 + 1.5 * EG[o].P + r.normal() * 6);
+      const P = S[o].L.P[0], wind = coachV ? coachingKick(lg, g, o, q, yl, EG[o].K).head : 0;
+      const net = Math.round(41 + 1.5 * EG[o].P + r.normal() * 6 - (coachV ? wind * 0.25 : 0));
       add(P, "pnt", 1); use(8); endPoss();
       if (r() < 0.003) { newSeries(1 - o, 100); log("punt", `${short(P)} punts, and it's returned for a touchdown!`, { big: 1 }); return touchdown(o, null); }
       let land = yl + net, txt;
@@ -890,12 +956,14 @@
     }
     function fieldGoal() {
       const K = S[o].L.K[0], d = 100 - yl + 17;
-      const p = clamp(0.995 - Math.max(0, d - 30) * 0.011 - Math.max(0, d - 46) * 0.02 + 0.02 * EG[o].K, 0.05, 0.995);
+      const p = coachV ? coachingKick(lg, g, o, q, yl, EG[o].K).probability
+        : clamp(0.995 - Math.max(0, d - 30) * 0.011 - Math.max(0, d - 46) * 0.02 + 0.02 * EG[o].K, 0.05, 0.995);
       add(K, "fga", 1); use(5);
       if (r() < p) { add(K, "fgm", 1); yl = 100; log("fg", `${short(K)} ${d}-yard field goal is good.`, { big: 1 }); score(o, 3, "FG", K); endPoss(); afterScore(o); }
       else { log("fg", `${short(K)} ${d}-yard field goal is no good.`); change(Math.max(20, 107 - yl)); }
     }
-    const fgRange = (side) => 100 - yl + 17 <= 55 + Math.round(2 * EG[side].K) - (S[side].plan.fourth === 0 ? 2 : 0);
+    const fgRange = (side) => 100 - yl + 17 <= (coachV ? coachingKick(lg, g, side, q, yl, EG[side].K).range
+      : 55 + Math.round(2 * EG[side].K)) - (S[side].plan.fourth === 0 ? 2 : 0);
 
     function run(O, D, e, featQB) {
       const L = O.L, b = L.bench;
@@ -924,7 +992,7 @@
     }
     function pass(O, D, e, hail) {
       const L = O.L, b = L.bench, qb = L.QB[0];
-      const blitz = r() < PM.blitz[D.plan.blitz];
+      const blitz = coachV && snapDefense ? snapDefense === "pressure" : r() < PM.blitz[D.plan.blitz];
       T[1 - o].drop++; if (blitz) T[1 - o].blz++;
       T[o].pass++; T[o].plays++;
       const sackP = clamp(PM.sack - PM.sackE * e.prot + (blitz ? PM.blzSack : D.plan.blitz === 0 ? PM.sitSack : 0), 0.015, 0.2);
@@ -943,10 +1011,13 @@
       const list = [[L.WR[0], 0.27], [L.WR[1], 0.2], [L.WR[2], 0.13], [L.TE[0], 0.17], [L.RB[0], 0.11], [b.WR[3], 0.04], [b.TE[1], 0.04], [b.RB[1], 0.04]]
         .filter(([x]) => x && x.id && !O.out.has(x.id)).map(([x, w]) => [x, w * (0.7 + 0.06 * x.grade) * (x.id === O.feat ? 1.6 : 1)]);
       const rc = list.length ? pickW(list) : L.WR[0];
-      const rz = yl >= 80, deep = hail || r() < (rz ? 0.24 : PM.deep) + 0.015 * O.plan.lean;
+      const rz = yl >= 80, deep = hail || (coachV && snapCall === "deep")
+        || (!(coachV && ["quick", "screen"].includes(snapCall)) && r() < (rz ? 0.24 : PM.deep) + 0.015 * O.plan.lean);
       const ee = e.pass + 0.08 * (rc.grade - m[rc.g]);
       let cmp = deep ? (rz ? PM.cmpRz : PM.cmpD) + PM.cmpE * ee : PM.cmpS - (rz ? 0.08 : 0) + PM.cmpE * ee;
       if (blitz) cmp -= 0.05; else if (D.plan.blitz === 0) cmp += deep ? -0.04 : 0.015;
+      if (coachV && snapCall === "quick") cmp += 0.04;
+      if (coachV && snapCall === "screen") cmp += blitz ? 0.08 : 0.035;
       if (hail) cmp = 0.08;
       const intP = (deep ? PM.intD : PM.intS) - PM.intE * ee + (blitz ? 0.004 : 0);
       add(qb, "att", 1); add(rc, "tgt", 1); T[o].touch[rc.id] = (T[o].touch[rc.id] || 0) + 1;
@@ -963,6 +1034,7 @@
       }
       if (x < intP + cmp) {
         let y = deep ? Math.round(PM.deepYds + r.int(10) + expo(r, PM.deepYac) + PM.ydsE * ee) : Math.round(1 + r() * PM.airS * 2 + expo(r, PM.yac) + PM.ydsE * ee);
+        if (coachV && snapCall === "screen") y = Math.round(-1 + r() * 4 + expo(r, blitz ? 8 : 4));
         if (blitz && r() < 0.25) y += Math.round(expo(r, 10));
         y = Math.max(-2, Math.min(y, 100 - yl));
         add(qb, "cmp", 1); add(qb, "py", y); add(rc, "rec", 1); add(rc, "ry", y); T[o].passY += y; T[o].yards += y;
@@ -972,8 +1044,33 @@
       return { y: 0, p: null, txt: `${short(qb)} throws ${how}for ${short(rc)}, incomplete.`, inc: 1 };
     }
 
+    function coachSnap(O, D) {
+      const at = () => plays ? plays.length : 0;
+      const info = { dn, tg, yl, left: tol[o], diff: sc[o] - sc[1 - o] };
+      const menu = ["auto", "inside", "outside", "quick", "deep", "screen"];
+      const call = ask(o, "play", "auto", menu, at(), info);
+      // Personnel is a modeled alignment, not the defense's secret play call or a future outcome.
+      const defaultPackage = tg <= 2 && yl >= 85 ? "heavy" : tg >= 8 ? "nickel" : D.plan.blitz === 2 ? "pressure" : "base";
+      snapDefense = ask(1 - o, "def", defaultPackage, ["base", "heavy", "nickel", "pressure"], at(),
+        { ...info, left: tol[1 - o], offense: ["inside", "outside"].includes(call) ? "Two tight ends" : "Three receivers" });
+      let chosen = ask(o, "look", "keep", ["keep", ...menu.filter((x) => x !== call), ...(tol[o] > 0 ? ["to"] : [])], at(),
+        { ...info, call, package: snapDefense });
+      if (chosen === "to") {
+        tol[o]--; mark(); log("to", `Timeout, offense (${tol[o]} left). The coaches regroup before the snap.`, { side: o });
+        // One timeout, then a fresh huddle; no second timeout on this same dead-ball sequence.
+        chosen = ask(o, "huddle", call, menu, at(), { ...info, left: tol[o], call, package: snapDefense });
+      }
+      snapCall = chosen === "keep" ? call : chosen;
+      return { ...EG[o],
+        run: EG[o].run + (snapDefense === "heavy" ? -0.4 : snapDefense === "nickel" ? 0.25 : snapDefense === "pressure" ? -0.15 : 0)
+          + (snapCall === "outside" ? 0.07 * (O.u.RB - D.u.CB) : snapCall === "inside" ? 0.07 * (O.u.OL - D.u.DL) : 0),
+        pass: EG[o].pass + (snapDefense === "heavy" ? 0.3 : snapDefense === "nickel" ? -0.22 : snapDefense === "pressure" ? 0.1 : 0),
+        prot: EG[o].prot + (snapCall === "quick" ? 0.25 : snapCall === "deep" ? -0.2 : 0) };
+    }
+
     function snap() {
-      const O = S[o], D = S[1 - o], e = EG[o], plan = O.plan, diff = sc[o] - sc[1 - o];
+      const O = S[o], D = S[1 - o], plan = O.plan, diff = sc[o] - sc[1 - o];
+      let e = EG[o]; snapCall = "auto"; snapDefense = null;
       mark();
       const trailingLate = q >= 4 && diff < 0 && clock <= 300, twoMin = q === 2 && clock <= 120;
       // Kneel to run out the clock.
@@ -984,9 +1081,9 @@
       }
       // Fourth down: punt, kick or go for it.
       const inRange = fgRange(o), tieOrWinFG = diff >= -3 && diff <= 0;
-      if (clock <= 8 && inRange && (q === 2 || (q >= 4 && tieOrWinFG))) return fieldGoal();
-      if (otPoss && otPoss[1 - o] && diff === 0 && inRange && (dn >= 3 || clock <= 120)) return fieldGoal();
-      if (dn === 4) {
+      if (!coachV && clock <= 8 && inRange && (q === 2 || (q >= 4 && tieOrWinFG))) return fieldGoal();
+      if (!coachV && otPoss && otPoss[1 - o] && diff === 0 && inRange && (dn >= 3 || clock <= 120)) return fieldGoal();
+      if (dn === 4 || (coachV && clock <= 8 && inRange && (q === 2 || (q >= 4 && tieOrWinFG)))) {
         const a = plan.fourth, need = tg;
         let go;
         if ((q >= 4 && clock <= 300 && diff < 0 && !(tieOrWinFG && inRange)) || (otPoss && otPoss[1 - o] && diff < 0 && !(tieOrWinFG && inRange))) go = true;
@@ -1000,11 +1097,14 @@
         const forced = (q >= 4 && clock <= 300 && diff < 0 && !(tieOrWinFG && inRange)) || (otPoss && otPoss[1 - o] && diff < 0 && !(tieOrWinFG && inRange)) || (q >= 4 && diff > 0 && clock <= 240);
         const close = (need <= 1 && yl >= 40 && yl < 90) || (need === 2 && yl >= 50 && yl < 75) || (need <= 2 && yl >= 95) || (q >= 4 && clock <= 600 && Math.abs(diff) <= 8 && inRange && need <= 4);
         let call = go ? "go" : inRange ? "fg" : "punt";
-        if (!forced && close) call = ask(o, "4th", call, ["go", ...(inRange ? ["fg"] : []), ...(yl < 70 || call === "punt" ? ["punt"] : [])], plays ? plays.length : 0, { dn, tg: need, yl, diff });
+        if (coachV || (!forced && close)) call = ask(o, "4th", call,
+          coachV ? ["go", "fg", "punt"] : ["go", ...(inRange ? ["fg"] : []), ...(yl < 70 || call === "punt" ? ["punt"] : [])],
+          plays ? plays.length : 0, { dn, tg: need, yl, diff, ...(coachV ? { kick: coachingKick(lg, g, o, q, yl, EG[o].K) } : {}) });
         go = call === "go";
-        T[o].d4[1] += go ? 1 : 0;
+        T[o].d4[1] += go && dn === 4 ? 1 : 0;
         if (!go) return call === "fg" ? fieldGoal() : punt();
       }
+      if (coachV) e = coachSnap(O, D);
       if (dn === 3) T[o].d3[1]++;
       // Flags before the snap.
       const pf = r();
@@ -1025,7 +1125,8 @@
       if (twoMin) pp = Math.max(pp, 0.76);
       const hail = clock <= 8 && (q === 2 || (q >= 4 && diff < 0 && diff >= -8)) && yl < 62;
       const featQB = O.feat && O.feat === O.L.QB[0].id && r() < 0.05;
-      const isPass = hail || (!featQB && r() < clamp(pp, 0.1, 0.95));
+      const isPass = coachV && snapCall !== "auto" ? ["quick", "deep", "screen"].includes(snapCall)
+        : hail || (!featQB && r() < clamp(pp, 0.1, 0.95));
       const res = isPass ? pass(O, D, e, hail) : run(O, D, e, featQB);
       if (!res) return; // turnover already handled
       // Flags on the play: offensive holding wipes it out; pass interference gives a big chunk.
@@ -1468,6 +1569,7 @@
       let pay = capOn(lg) ? payroll(lg, t.i) - salOf(lg, exp.map((p) => p.id)) : 0;
       if (capOn(lg)) exp.sort((a, b) => keepValue(b) - keepValue(a));
       for (const p of exp) {
+        if(freeAgencyOn(lg)) { release(lg,p);continue; }
         let keep = p.grade >= 6 || p.age < 26 || rng(lg.seed, "keep", lg.year, p.id)() < 0.35;
         const no = keep && refuses(lg, p); // build B: an unhappy player may walk
         if (no && p.grade >= 7.5) news(lg, { k: "walk", t: t.i, p: p.id, pr: 4 + (p.grade - 7.5), wk: 24, h: `${p.name} won't re-sign with ${teamName(t)}`, b: "He is heading to free agency." });
@@ -1487,7 +1589,7 @@
     lrOffseason(lg);
     lg.phase = "resign";
     // Friends league: every owner with an expiring deal answers for their own team; nobody else waits on them.
-    if (multi(lg)) { O.left = humansOf(lg).filter((t) => (O.exp[t] || []).length); if (!O.left.length) startRookieDraft(lg); }
+    if (multi(lg)) { O.left = humansOf(lg).filter((t) => (O.exp[t] || []).length); if (!O.left.length) afterContracts(lg); }
     return true;
   }
   function newDeal(lg, p) {
@@ -1513,7 +1615,7 @@
     } else
     for (const id of ids) { const p = lg.players[id]; if (p.gone) continue; keep.has(id) && !wont.has(id) ? newDeal(lg, p) : release(lg, p); }
     if (multi(lg)) { O.left = O.left.filter((t) => t !== T); if (O.left.length) return true; }
-    startRookieDraft(lg);
+    afterContracts(lg);
     return true;
   }
   function startRookieDraft(lg) {
@@ -1711,7 +1813,7 @@
   // The next two drafts that haven't started can be traded.
   const pickKey = (y, r, t) => `${y}.${r}.${t}`;
   function parsePick(k) { const m = /^(\d{4})\.([1-7])\.(\d{1,2})$/.exec(String(k)); return m && +m[3] < 32 ? { y: +m[1], r: +m[2], t: +m[3] } : null; }
-  function pickYears(lg) { const y = lg.phase === "resign" ? lg.year : lg.year + 1; return [y, y + 1]; }
+  function pickYears(lg) { const y = lg.phase === "resign" ? lg.year : lg.year + 1; return marketOn(lg) ? [y, y + 1, y + 2] : [y, y + 1]; }
   function pickHolder(lg, k) { const x = parsePick(k); return !x ? -1 : lg.pickOwn && lg.pickOwn[k] != null ? lg.pickOwn[k] : x.t; }
   function picksOf(lg, t) {
     const out = [];
@@ -1749,6 +1851,7 @@
   // room to grow, age past his position's peak, the position itself, a contract about to end, an injury.
   const POS_VAL = { QB: 1.6, RB: 0.8, WR: 1, TE: 0.85, OL: 1, DL: 0.95, ED: 1.15, LB: 0.85, CB: 1.05, S: 0.85, K: 0.35, P: 0.3 };
   function tradeValue(lg, p) {
+    if (marketOn(lg)) return marketModule().playerValue(p, marketContext(lg,p));
     const young = Math.max(0, p.ceil - p.grade) * clamp((26 - p.age) / 5, 0, 1) * 0.5;
     const eff = p.grade + young - Math.max(0, p.age - PEAK[p.g]) * 0.35;
     const hurt = lg.phase !== "season" ? 1 : p.inj >= 30 ? 0.45 : 1 - 0.02 * Math.min(p.inj || 0, 20);
@@ -1770,6 +1873,7 @@
     return (x) => (x.y === first && slot ? slot(x.t) : 16.5);
   }
   function pickValue(lg, k, proj) { // a rookie of the grade and ceiling that pick usually brings, a little less a year out
+    if (marketOn(lg)) { const x=parsePick(k); return marketModule().pickValue({round:x.r,slot:proj(x),yearsAway:x.y-pickYears(lg)[0]}); }
     const x = parsePick(k), n = (x.r - 1) * 32 + proj(x), s = Math.max(0, 1 - Math.log(n) / Math.log(300));
     const g = 2.5 + 4.3 * s, c = Math.min(9.9, g + 1 + 3.6 * s);
     return Math.max(0, g + (c - g) * 0.5 - 4) ** 2 * (x.y > pickYears(lg)[0] ? 0.85 : 1);
@@ -1778,7 +1882,31 @@
   // (a backup quarterback much less), anyone past their position limit hardly at all; their own starters cost a little
   // extra to give up; whoever they'd have to release to stay at 53 counts against it. Yes when what they get beats
   // what they give by 10% plus a little.
+  function marketCuts(lg, D) {
+    const ids = lg.teams[D.to].roster.filter(id=>!D.get.includes(id)).concat(D.give), c=Object.fromEntries(GROUPS.map(g=>[g,0])), cuts=[];
+    for (const id of ids) c[lg.players[id].g]++;
+    while(ids.length-cuts.length>ROSTER) {
+      const candidates=ids.filter(id=>!cuts.includes(id)&&c[lg.players[id].g]>MINPOS[lg.players[id].g]);
+      candidates.sort((a,b)=>keepValue(lg.players[a])-keepValue(lg.players[b]) || a.localeCompare(b));
+      if (!candidates.length) return null;
+      const id=candidates[0];cuts.push(id);c[lg.players[id].g]--;
+    }
+    return cuts;
+  }
+  function marketRetention(lg,t) { const L=lineup(lg,t);return {reb:rebuilding(lg,t),starters:new Set(GROUPS.flatMap(g=>L[g].map(p=>p.id)))}; }
+  function marketCore(lg,p,t,context) {
+    const c=context||marketRetention(lg,t);
+    return marketModule().corePremium(p,{peak:PEAK,rebuilding:c.reb,starter:c.starters.has(p.id)});
+  }
+  function marketVerdict(lg,D) {
+    const proj=pickProj(lg), cuts=marketCuts(lg,D), context=marketRetention(lg,D.to), reb=context.reb;
+    const gain=D.give.reduce((v,id)=>v+tradeValue(lg,lg.players[id]),0)+D.gp.reduce((v,k)=>v+pickValue(lg,k,proj),0);
+    const loss=D.get.reduce((v,id)=>v+tradeValue(lg,lg.players[id])*marketCore(lg,lg.players[id],D.to,context),0)+D.tp.reduce((v,k)=>v+pickValue(lg,k,proj),0)+(cuts||[]).reduce((v,id)=>v+tradeValue(lg,lg.players[id]),0);
+    const need=loss;
+    return {ok:cuts!==null&&gain>=need,gain,loss,need,reb,untouch:D.get.filter(id=>marketCore(lg,lg.players[id],D.to,context)>1),cuts:cuts||[],model:MARKET_VERSION};
+  }
   function tradeVerdict(lg, D) {
+    if (marketOn(lg)) return marketVerdict(lg,D);
     const A = D.to, proj = pickProj(lg), L = lineup(lg, A), starters = new Set(GROUPS.flatMap((g) => L[g].map((p) => p.id)));
     const reb = !isHuman(lg, A) && rebuilding(lg, A), U = untouchables(lg, A);
     const after = lg.teams[A].roster.filter((id) => !D.get.includes(id)).map((id) => lg.players[id]), inc = D.give.map((id) => lg.players[id]);
@@ -1809,6 +1937,7 @@
   // None while it rebuilds, and never on a person's team (people decide for themselves).
   const UNTOUCH = 1.5;
   function untouchables(lg, t) {
+    if (marketOn(lg)) { const c=marketRetention(lg,t);return new Set(isHuman(lg,t) ? [] : lg.teams[t].roster.filter(id=>marketCore(lg,lg.players[id],t,c)>1)); }
     if (isHuman(lg, t) || rebuilding(lg, t)) return new Set();
     const ros = lg.teams[t].roster.map((id) => lg.players[id]).filter((p) => tradeValue(lg, p) >= 6);
     const S = new Set(ros.sort((a, b) => tradeValue(lg, b) - tradeValue(lg, a)).slice(0, 3).map((p) => p.id));
@@ -1826,11 +1955,16 @@
   // cap: "capYou" (D.from) / "capThem" (D.to, checked only when cutB is given: the receiver's own releases count).
   function dealProblem(lg, D, cutB) {
     const v = dealValues(lg, D);
-    if (Math.min(v.give, v.get) + LOP_SLACK < LOP * Math.max(v.give, v.get)) return "lopsided";
+    if (Math.min(v.give, v.get) + (marketOn(lg) ? 2 : LOP_SLACK) < LOP * Math.max(v.give, v.get)) return "lopsided";
     if (!capOn(lg)) return null;
     const c = dealCap(lg, D, cutB || []);
     if (!c.okA) return "capYou";
     if (cutB !== undefined && !c.okB) return "capThem";
+    if (marketOn(lg) && !isHuman(lg,D.to) && cutB===undefined) {
+      const cuts=marketCuts(lg,D); if(!cuts) return "lopsided";
+      const after=c.b1-salOf(lg,cuts)+MIN_SAL*Math.max(0,ROSTER-(lg.teams[D.to].roster.length-D.get.length+D.give.length-cuts.length));
+      if(after>CAP && after>c.b0) return "capThem";
+    }
     return null;
   }
   // Each side's payroll before and after; ok = under the cap afterwards, or no higher than before.
@@ -2329,19 +2463,21 @@
   function waitingOn(lg) {
     if (lg.draft) { const t = pickOwner(lg); return t >= 0 && isHuman(lg, t) ? [t] : []; }
     if (lg.phase === "resign") return multi(lg) ? (lg.offseason.left || []).slice() : [lg.user];
+    if (lg.phase === "fa-bids") return humansOf(lg).slice();
     if (lg.phase === "cuts") return (lg.cutsDue || []).slice();
     return [];
   }
 
-  return {
+  const API = {
     TEAMS, GROUPS, GROUP_NAME, FIRST_REAL, cityFor, STARTERS, TARGET, MINPOS, MAXPOS, ROSTER, REDRAFT_ROUNDS, ROOKIE_ROUNDS, ROUNDS, M,
     teamName, teamShort, teamLogo, nickFor, NAME_MODE, get LOGOS() { return !!LOGO; }, rng, create, apply, replay, saveOf, units, lineup, standings, divisionTables, seeds, leaders,
     record, userGames, pickOwner, userOnClock, suggestCuts, isHuman, humansOf, waitingOn, countBy, playGame, expectedPoints, startSeason, boardValue,
-    REAL_NAMES, fakeName, setPack, registerRatingSet, registerProspectClass, PROSPECT_VERSION, FUTURE_CLASSES_VERSION, FUTURE_CLASS_VERSIONS, SAVE_V, PLAN0, PM, cleanPlan, aiPlan, planFor, simGame, previewGame, playoffGames, nextGame, short,
+    REAL_NAMES, fakeName, setPack, registerRatingSet, registerProspectClass, PROSPECT_VERSION, FUTURE_CLASSES_VERSION, FUTURE_CLASS_VERSIONS, coachingOn, coachingWeather, coachingKick, SAVE_V, PLAN0, PM, cleanPlan, aiPlan, planFor, simGame, previewGame, playoffGames, nextGame, short,
     live: { times: liveTimes, at: liveAt, HALF_MS, MS: LIVE_MS },
     moodOf, MOOD_WORD, WHY, moraleEdge, lrOn, setOffField, get OFF_FIELD() { return OFF_FIELD; }, OFF_ABSURD, OFF_DRAMA,
-    tradeOpen, signOpen, tradeDeadline, dealOf, tradeVerdict, tradeValue, picksOf, pickName, parsePick, pickHolder, pickYears, releaseSuggest,
+    freeAgencyOn, MARKET_VERSION, marketOn, tradeOpen, signOpen, tradeDeadline, dealOf, tradeVerdict, tradeValue, picksOf, pickName, parsePick, pickHolder, pickYears, releaseSuggest,
     freeAgents, offersOf, keepValue, TRADE_MAX,
     CAP, MIN_SAL, capOn, askSalary, faFloor, payroll, money, dealProblem, dealCap, dealValues, tradeOdds, untouchables, rebuilding,
   };
+  return API;
 });
