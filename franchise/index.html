@@ -267,6 +267,10 @@
       <p id="allF" hidden style="margin-top:6px"><a class="lnk" href="/franchise/?new">All my franchises</a></p>
     </div>
   </div>
+  <nav id="teamTools" class="actbar" aria-label="Team tools" hidden style="margin:0 0 14px">
+    <button type="button" class="btn" data-team-tool="roster">My roster</button><button type="button" class="btn" data-team-tool="depth">Depth chart</button>
+    <button type="button" class="btn" data-team-tool="search">Find player</button><button type="button" class="btn" data-team-tool="money">Financials</button>
+  </nav>
   <div id="body"><p class="empty">Loading…</p></div>
   <p class="credit">Player data: <a class="lnk" href="https://nflverse.com" rel="noopener">nflverse</a> (CC-BY 4.0). Madden NFL 27 is a ratings reference where noted; unmatched and historical ratings, development and results are bubble's own estimates. Private league for invited friends. Not affiliated with the NFL or any team.</p>
 </main>
@@ -280,6 +284,7 @@
 <script src="/assets/cloud.js"></script>
 <script src="/franchise/franchise-engine.js?v=clock-ratings-20261028"></script>
 <script src="/franchise/sim-tools.js"></script>
+<script src="/franchise/team-planning.js?v=20261028"></script>
 <script src="/franchise/draft-clock.js"></script>
 <script src="/franchise/ratings-2026-10-28.js"></script>
 <script>
@@ -595,6 +600,17 @@
   }
   const playerBadge = (p, small = false) => `<span class="player-badge" title="${p.ratingReference ? (p.ratingVerified ? "Madden NFL 27 Week 6 reference" : "Estimated rating: no unique Madden match") : "Legacy position-relative model grade"}">${playerFace(p, small)}${grade(p.grade, small)}</span>`;
 
+  // Display wording only: preserve every stored result/seed while calling the championship the Super Bowl.
+  const championshipLabel = (node) => {
+    const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+    let text; while ((text = walker.nextNode())) if (/\b[Tt]he Final\b/.test(text.data)) text.data = text.data.replace(/\b[Tt]he Final\b/g, "Super Bowl");
+  };
+  const labelObserver = new MutationObserver((changes) => { for (const change of changes) {
+    if (change.type === "characterData") { const node = change.target; if (/\b[Tt]he Final\b/.test(node.data)) node.data = node.data.replace(/\b[Tt]he Final\b/g, "Super Bowl"); }
+    else for (const node of change.addedNodes) { if (node.nodeType === Node.TEXT_NODE) { if (/\b[Tt]he Final\b/.test(node.data)) node.data = node.data.replace(/\b[Tt]he Final\b/g, "Super Bowl"); } else if (node.nodeType === Node.ELEMENT_NODE) championshipLabel(node); }
+  } });
+  for (const id of ["body", "titleT", "ovB", "ovH", "lede"]) labelObserver.observe($(id), { childList: true, characterData: true, subtree: true });
+
   // ---- Small pieces ----
   const team = (i) => lg.teams[i];
   const logo = (t, cls) => { const u = E.teamLogo(t); return u ? `<img${cls ? ` class="${cls}"` : ""} src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ""; };
@@ -617,7 +633,53 @@
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("ov").hidden) closeOv(); });
   // The user's team logo beside the title on every in-game screen (Sam 2026-10-28); logos come with the private pack.
   function head(kick, title, lede) { $("kick").textContent = kick; $("titleT").textContent = title;
-    const lu = lg && lg.teams[lg.user] ? E.teamLogo(lg.teams[lg.user]) : ""; $("tlogo").hidden = !lu; if (lu && $("tlogo").getAttribute("src") !== lu) $("tlogo").src = lu; $("lede").textContent = lede || ""; $("lede").hidden = !lede; $("allF").hidden = !lg && !ML; }
+    const lu = lg && lg.teams[lg.user] ? E.teamLogo(lg.teams[lg.user]) : ""; $("tlogo").hidden = !lu; if (lu && $("tlogo").getAttribute("src") !== lu) $("tlogo").src = lu; $("lede").textContent = lede || ""; $("lede").hidden = !lede; $("allF").hidden = !lg && !ML; $("teamTools").hidden = !lg || !!live || !!reveal; }
+
+  // Team tools are read-only overlays: inspecting a team never rebuilds the screen underneath or applies a move.
+  const Planning = window.FranchisePlanning;
+  function depthReadHtml() {
+    const L = E.lineup(lg, lg.user), ros = team(lg.user).roster.map((id) => lg.players[id]);
+    return `<p class="empty" style="margin-top:0">Your current depth chart. Available starters appear first, then backups and unavailable players. This view does not change the lineup.</p>` + E.GROUPS.map((g) => {
+      const unavailable = ros.filter((p) => p.g === g && (p.inj || p.hold)).sort((a, b) => b.grade - a.grade), healthy = L.bench[g];
+      const row = (p, rank) => `<div class="prow">${playerBadge(p)}<div class="pn"><b>${esc(p.name)}</b><span>${plabel(p)} · ${p.yrs > 0 ? p.yrs + " yr left" : "contract ending"}</span></div><span class="muted" style="font-size:12px;font-weight:800">${p.inj || p.hold ? "Unavailable" : rank < E.STARTERS[g] ? "Starter " + (rank + 1) : "Backup"}</span></div>`;
+      return `<section class="card" style="margin:12px 0"><div class="card-h"><h3 class="disp" style="margin:0;font-size:20px">${E.GROUP_NAME[g]}</h3><small>${healthy.length} available</small></div>${healthy.map(row).join("")}${unavailable.map((p) => row(p, 99)).join("")}${healthy.length < E.STARTERS[g] ? `<p class="empty" style="padding:10px;margin:0">${E.STARTERS[g] - healthy.length} starting spot(s) need a healthy player.</p>` : ""}</section>`;
+    }).join("");
+  }
+  function financialsHtml() {
+    const F = Planning.financials(E, lg, lg.user);
+    return `<p style="margin-top:0">${F.enabled ? `Current game payroll: <b>${E.money(F.payroll)}</b> against the <b>${E.money(F.cap)}</b> cap.` : "Salary-cap rules are off in this league; no cap forecast applies."}</p>
+      ${F.enabled ? `<p class="empty">Game-generated contract amounts and terms, not imported NFL deals. Next five seasons use the game's unchanged ${E.money(F.cap)} cap and current flat annual contracts. Excludes future signings, extensions, draft costs and cap-rule changes. Open room still has to pay for unfilled roster spots.</p>
+      <div style="overflow-x:auto"><table class="st"><thead><tr><th>Season</th><th>Cap assumption</th><th>Committed</th><th>Open room</th><th>Signed players</th><th>Deals ending before season</th></tr></thead><tbody>${F.years.map((y) => `<tr><td>${y.year}</td><td>${E.money(y.cap)}</td><td>${E.money(y.committed)}</td><td>${E.money(y.room)}</td><td>${y.signed} / ${E.ROSTER}</td><td>${y.ending}</td></tr>`).join("")}</tbody></table></div>` : ""}
+      <h3 class="disp" style="font-size:22px">Contracts ending</h3><p class="empty">Players in their final year or awaiting renewal. Re-signing happens on the offseason Contracts screen; viewing this list does not make an offer.</p>
+      ${F.ending.map((p) => `<div class="prow">${playerBadge(p)}<div class="pn"><b>${esc(p.name)}</b><span>${esc(p.pos)} · age ${p.age.toFixed(0)} · ${p.yrs > 0 ? "Final year" : "Awaiting renewal"}${F.enabled ? " · now " + E.money(p.sal || 0) : ""}</span></div><span class="muted" style="font-size:12px;font-weight:700">${F.enabled ? "Est. ask " + E.money(E.askSalary(lg, p)) + "/yr" : ""}</span></div>`).join("") || `<p class="empty">No contracts ending this year.</p>`}`;
+  }
+  function teamTool(which) {
+    if (!lg) return;
+    const labels = { roster: "My roster", depth: "Depth chart", search: "Find player", money: "Financials" };
+    overlay(E.teamName(team(lg.user)), labels[which], `<div class="tabs" role="tablist" aria-label="Team views" style="flex-wrap:wrap;overflow:visible">${Object.entries(labels).map(([key, label]) => `<button type="button" role="tab" aria-selected="${which === key}" data-tool-view="${key}">${label}</button>`).join("")}</div><div id="teamToolBody"></div>`);
+    $("ovB").onclick = (e) => { const b = e.target.closest("[data-tool-view]"); if (b) teamTool(b.dataset.toolView); };
+    const body = $("teamToolBody");
+    if (which === "roster") body.innerHTML = draftRosterHtml();
+    if (which === "depth") body.innerHTML = depthReadHtml();
+    if (which === "money") body.innerHTML = financialsHtml();
+    if (which === "search") {
+      body.innerHTML = `<div class="field"><label for="playerFind">Search all players</label><input type="search" id="playerFind" placeholder="Player name" autocomplete="off"></div>
+        <div class="field"><label for="playerFindGroup">Position</label><select id="playerFindGroup"><option value="ALL">All positions</option>${E.GROUPS.map((g) => `<option value="${g}">${E.GROUP_NAME[g]}</option>`).join("")}</select></div>
+        <div class="field"><label for="playerFindWhere">Show</label><select id="playerFindWhere"><option value="all">All teams and free agents</option><option value="mine">My team</option><option value="fa">Free agents</option></select></div><p id="playerFindCount" class="empty" aria-live="polite"></p><div id="playerFindRows"></div><button class="btn block" id="playerFindMore" hidden>Show more players</button>`;
+      let limit = 40;
+      const draw = () => {
+        const ps = Planning.search(E, lg, $("playerFind").value, $("playerFindGroup").value, $("playerFindWhere").value);
+        $("playerFindCount").textContent = `${ps.length} player${ps.length === 1 ? "" : "s"} found`;
+        $("playerFindRows").innerHTML = ps.slice(0, limit).map((p) => `<div class="prow">${playerBadge(p)}<div class="pn"><b>${esc(p.name)}</b><span>${plabel(p)}</span><span>${p.team >= 0 ? esc(E.teamName(team(p.team))) : "Free agent"}${p.team >= 0 ? ` · ${p.yrs} yr left` : ""}${capOn() && p.team >= 0 ? ` · ${E.money(p.sal || 0)}/yr` : ""}</span></div><span></span></div>`).join("") || `<p class="empty">No matching players.</p>`;
+        $("playerFindMore").hidden = ps.length <= limit;
+      };
+      $("playerFind").oninput = () => { limit = 40; draw(); };
+      $("playerFindGroup").onchange = $("playerFindWhere").onchange = () => { limit = 40; draw(); };
+      $("playerFindMore").onclick = () => { limit += 40; draw(); };
+      draw(); $("playerFind").focus();
+    }
+  }
+  $("teamTools").onclick = (e) => { const b = e.target.closest("[data-team-tool]"); if (b) teamTool(b.dataset.teamTool); };
 
   // ---- Start screen: save slots ----
   function home(noSync) {
@@ -1264,7 +1326,14 @@
     const status = open ? (lg.phase === "season" ? `Trades are open until the deadline after week ${dl}.` : "Trades are open for the offseason.")
       : lg.phase === "season" ? `The trade deadline passed after week ${dl}. Trades open again once the season is over.`
       : lg.phase === "playoffs" ? "No trades in the playoffs. They open again once the season is over." : "Trades are closed right now.";
-    return `<div class="grid2"><div class="stack">${offersCard()}${tradeCard(open, status)}</div><div class="side">${faCard(E.signOpen(lg))}${txCard()}</div></div>`;
+    return `${rosterNeedsHtml()}<div class="grid2"><div class="stack">${offersCard()}${tradeCard(open, status)}</div><div class="side">${faCard(E.signOpen(lg))}${txCard()}</div></div>`;
+  }
+  function rosterNeedsHtml() {
+    const needs = Planning.needs(E, lg, lg.user).slice(0, 3), full = team(lg.user).roster.length >= E.ROSTER;
+    return `<section class="card" style="margin-bottom:14px"><div class="card-h"><h2 class="disp">Biggest roster needs</h2></div><div class="card-b"><p class="empty" style="margin-top:0">Priority is based on missing healthy starters, thin depth and current starter OVR. Free agents below are potential upgrades at their estimated ask; future development and fit are uncertain.</p>${capOn() ? payLine(lg.user) : ""}
+      ${needs.map((n, i) => `<div style="padding:12px 0;border-top:1px solid var(--line)"><b>${i + 1}. ${E.GROUP_NAME[n.g]}</b><p style="margin:4px 0">Current starter unit ${ovr(n.unit)} OVR · ${n.healthy} available for ${n.starters} starting spot(s).${n.missing ? ` <b>${n.missing} healthy starter(s) missing.</b>` : n.thin ? " Depth is thin." : ""}</p>
+        <p class="empty" style="margin:4px 0">${n.candidate ? `${esc(n.candidate.name)} (${ovr(n.candidate.grade)} OVR) could improve your weakest starter.${capOn() ? ` Estimated ask ${E.money(n.ask)}/yr fits current cap room before other moves.` : ""}${full ? " A signing still requires releasing a player." : ""}` : n.other ? "An upgrade exists, but its estimated ask exceeds current cap room. Check lower-cost depth, trades or the draft." : "No healthy free agent currently improves the weakest starter here. Consider depth, a trade or the draft."}</p>
+        <button type="button" class="btn" data-need-pos="${n.g}">See ${E.GROUP_NAME[n.g].toLowerCase()} free agents</button></div>`).join("")}</div></section>`;
   }
   function offersCard() {
     if (!ML) return "";
@@ -1380,6 +1449,7 @@
   // Clicks and changes on the trades screen; true when handled.
   function movesClick(b) {
     const me = lg.user;
+    if (b.dataset.needPos) { FAo.pos = b.dataset.needPos; FAo.n = 25; render(); return true; }
     if (b.dataset.trpos) { TR.pos = b.dataset.trpos; render(); }
     else if (b.dataset.trside) { TR.side = b.dataset.trside; render(); }
     else if (b.id === "trClear") { TR = trNew(TR.to); render(); }
