@@ -105,7 +105,22 @@
   // "full" = city plus nickname (from the pack); "city" = "Kansas City", "New York (NFC)".
   const NAME_MODE = "full";
   let NICK = {}, LOGO = "", LOGO_CODE = {};
+  const PROSPECT_VERSION = "prospects-2027-20261028";
+  const PROSPECT_CLASSES = new Map();
+  function registerProspectClass(cls) {
+    if (!cls || cls.version !== PROSPECT_VERSION || cls.year !== 2027 || !cls.projected || !Array.isArray(cls.players) || cls.players.length < 224) throw new Error("Unknown or incomplete projected class");
+    const ids = new Set();
+    for (const p of cls.players) {
+      if (!/^pr27-[a-f0-9]{12}$/.test(p.id) || ids.has(p.id) || !p.name || !GROUPS.includes(p.g) || !Number.isFinite(p.age) || p.ovr < 40 || p.ovr > 85 || p.potential < p.ovr || p.potential > 99) throw new Error("Invalid projected prospect");
+      ids.add(p.id);
+    }
+    const copy = JSON.parse(JSON.stringify(cls));
+    if (PROSPECT_CLASSES.has(cls.version) && JSON.stringify(PROSPECT_CLASSES.get(cls.version)) !== JSON.stringify(copy)) throw new Error("Projected classes are immutable");
+    for (const p of copy.players) Object.freeze(p); Object.freeze(copy.players); Object.freeze(copy);
+    PROSPECT_CLASSES.set(cls.version, copy);
+  }
   function setPack(pack) {
+    if (pack && pack.prospects && pack.prospects[PROSPECT_VERSION]) registerProspectClass(pack.prospects[PROSPECT_VERSION]);
     NICK = (pack && pack.nick) || {}; LOGO = (pack && pack.logo) || ""; LOGO_CODE = (pack && pack.lc) || {};
   }
   // Washington by era: "Football Team" 2020-21; before 2020 we show the city alone (the old name is not used).
@@ -317,6 +332,12 @@
     const d = lg.draft, T = actor(lg, m);
     if (T < 0 && !LEAGUE_MOVES.has(m.t)) return false;
     switch (m.t) {
+      case "prospectsUpdate": {
+        if (m.version !== PROSPECT_VERSION || lg.year !== 2027 || lg.phase !== "rookie-data" || lg.pendingRookieDraft || lg.prospectVersion) return false;
+        const cls = PROSPECT_CLASSES.get(m.version); if (!cls) throw new Error("Reload to load the projected 2027 class before opening this league");
+        if (cls.players.filter((p) => !lg.players[p.id]).length < 224) return false;
+        lg.prospectVersion = m.version; startRookieDraft(lg); return true;
+      }
       case "ratingsUpdate": return !!lg.draft && applyRatingReference(lg, m.version);
       case "pick": { // the user drafts a player
         if (!d || d.seq[d.n] !== T || !d.pool.has(m.p)) return false;
@@ -1546,10 +1567,25 @@
     }
     return ids;
   }
+  function projectedClass(lg) {
+    const cls = PROSPECT_CLASSES.get(lg.prospectVersion); if (!cls) throw new Error("Projected 2027 class needs to load; refresh this page");
+    const ids = [];
+    for (const x of cls.players) {
+      if (lg.players[x.id]) continue;
+      const grade = r1((x.ovr - 40) / 6), ceil = r1((x.potential - 40) / 6);
+      lg.players[x.id] = { id:x.id, name:x.name, g:x.g, pos:x.pos, age:x.age, born:lg.year-x.age, team:-1, real:"", grade, ceil:Math.max(grade,ceil), exp:0,
+        pick:0, projectedRank:x.projectedRank, projected:cls.version, ageEstimated:true, line:`${x.college} · ${x.projectedRank ? "projected board #" + x.projectedRank : "unranked watch-list prospect"} · projected OVR ${x.ovr} · age estimated`, inj:0, yrs:0, rookie:true, rk:true };
+      ids.push(x.id);
+    }
+    return ids;
+  }
   function rookieClass(lg) {
+    // Recorded adoption outranks any later actual draft-data refresh: this class must always replay identically.
+    if (lg.year === 2027 && lg.prospectVersion) return projectedClass(lg);
     const actualOnly = !!(lg.settings.realRookies || lg.realRookies);
     // Redraft saves predating the upgrade must keep their original generated-class replay.
-    const D = (lg.settings.mode === "real" || actualOnly) && lg.drafts && lg.drafts.years[lg.year];
+    // Freeze this engine's completed-class coverage; future actual classes require their own recorded adoption.
+    const D = lg.year <= 2026 && (lg.settings.mode === "real" || actualOnly) && lg.drafts && lg.drafts.years[lg.year];
     if (D && D.length) return realClass(lg, D);
     if (actualOnly) return null; // never invent a missing actual class
     const ids = [], used = new Set(Object.values(lg.players).map((p) => p.name));
@@ -2287,7 +2323,7 @@
     TEAMS, GROUPS, GROUP_NAME, FIRST_REAL, cityFor, STARTERS, TARGET, MINPOS, MAXPOS, ROSTER, REDRAFT_ROUNDS, ROOKIE_ROUNDS, ROUNDS, M,
     teamName, teamShort, teamLogo, nickFor, NAME_MODE, get LOGOS() { return !!LOGO; }, rng, create, apply, replay, saveOf, units, lineup, standings, divisionTables, seeds, leaders,
     record, userGames, pickOwner, userOnClock, suggestCuts, isHuman, humansOf, waitingOn, countBy, playGame, expectedPoints, startSeason, boardValue,
-    REAL_NAMES, fakeName, setPack, registerRatingSet, SAVE_V, PLAN0, PM, cleanPlan, aiPlan, planFor, simGame, previewGame, playoffGames, nextGame, short,
+    REAL_NAMES, fakeName, setPack, registerRatingSet, registerProspectClass, PROSPECT_VERSION, SAVE_V, PLAN0, PM, cleanPlan, aiPlan, planFor, simGame, previewGame, playoffGames, nextGame, short,
     live: { times: liveTimes, at: liveAt, HALF_MS, MS: LIVE_MS },
     moodOf, MOOD_WORD, WHY, moraleEdge, lrOn, setOffField, get OFF_FIELD() { return OFF_FIELD; }, OFF_ABSURD, OFF_DRAMA,
     tradeOpen, signOpen, tradeDeadline, dealOf, tradeVerdict, tradeValue, picksOf, pickName, parsePick, pickHolder, pickYears, releaseSuggest,

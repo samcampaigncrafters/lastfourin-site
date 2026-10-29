@@ -282,7 +282,7 @@
 
 <script src="/assets/lfi.js"></script>
 <script src="/assets/cloud.js"></script>
-<script src="/franchise/franchise-engine.js?v=clock-ratings-20261028"></script>
+<script src="/franchise/franchise-engine.js?v=prospects-20261028"></script>
 <script src="/franchise/sim-tools.js"></script>
 <script src="/franchise/team-planning.js?v=20261028"></script>
 <script src="/franchise/draft-clock.js"></script>
@@ -598,7 +598,7 @@
     const initials = p.name.split(/\s+/).filter(Boolean).map((x) => x[0]).slice(0, 2).join("");
     return `<span class="pface${small ? " sm" : ""}" aria-hidden="true"><span>${esc(initials)}</span>${valid ? `<img src="${esc(url)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}</span>`;
   }
-  const playerBadge = (p, small = false) => `<span class="player-badge" title="${p.ratingReference ? (p.ratingVerified ? "Madden NFL 27 Week 6 reference" : "Estimated rating: no unique Madden match") : "Legacy position-relative model grade"}">${playerFace(p, small)}${grade(p.grade, small)}</span>`;
+  const playerBadge = (p, small = false) => `<span class="player-badge" title="${p.projected ? "Projected rookie rating (bubble estimate)" : p.ratingReference ? (p.ratingVerified ? "Madden NFL 27 Week 6 reference" : "Estimated rating: no unique Madden match") : "Legacy position-relative model grade"}">${playerFace(p, small)}${grade(p.grade, small)}</span>`;
 
   // Display wording only: preserve every stored result/seed while calling the championship the Super Bowl.
   const championshipLabel = (node) => {
@@ -849,8 +849,13 @@
     if (lg.phase === "redraft") draftRoom(name, "The Redraft");
     else if (lg.phase === "rookie") draftRoom(`${name} · ${lg.year} offseason`, "Rookie draft");
     else if (lg.phase === "rookie-data") {
-      head(`${name} · ${lg.year} offseason`, "Real rookie class unavailable", "Your league is saved. It pauses here until the actual rookie data is available, so no fictional players are added.");
-      $("body").innerHTML = `<section class="card"><div class="card-b"><p>The real ${lg.year} class is not available for this league.${lg.pendingRookieDraft ? " Picks already made in the older draft stay recorded; its remaining fictional picks are paused." : ""}</p><p>No generated replacement class will be used.</p><a class="btn" href="/franchise/?new">All my franchises</a></div></section>`;
+      const cls = PACK.prospects && PACK.prospects[E.PROSPECT_VERSION], can = lg.year === 2027 && cls && !lg.pendingRookieDraft;
+      head(`${name} · ${lg.year} offseason`, can ? "Choose your rookie class" : "Real rookie class unavailable", can ? "Your league is saved. The creator can choose the projected class below, or keep waiting for actual NFL draft results." : "Your league is saved. It pauses here until rookie data is available, so no fictional players are added.");
+      $("body").innerHTML = `<section class="card"><div class="card-b"><p>The completed ${lg.year} NFL draft class is not available.${lg.pendingRookieDraft ? " Picks already made in the older draft stay recorded; its remaining fictional picks are paused." : ""}</p>${can ? `<h2 class="disp">Optional: projected 2027 class</h2><p>${cls.players.length} real college prospects, including the official Senior Bowl watch list and Drafttek's current scouting board. OVR and potential are bubble projections. Ages are modeled at 22, not verified birth dates; draft declarations can change. These are not actual NFL draft results.</p><p>This opens only the upcoming rookie draft. Your existing players, contracts, completed games and trades stay as they are.</p>${!ML || ML.info.owner && ML.info.prospectPolicy === 1 ? `<button class="btn gold" id="useProspects">Use projected 2027 class</button>` : `<p>The league creator can choose this after refreshing.</p>`}<p class="empty">Sources: <a class="lnk" href="https://www.seniorbowl.com/top300/" target="_blank" rel="noopener">Senior Bowl</a> · <a class="lnk" href="https://www.drafttek.com/2027-NFL-Draft-Big-Board/Top-NFL-Draft-Prospects-2027-Page-1.asp" target="_blank" rel="noopener">Drafttek</a> · October 28, 2026 snapshot.</p>` : `<p>No fictional replacement class will be used. Refresh for the latest optional class.</p>`}<a class="btn" href="/franchise/?new">All my franchises</a></div></section>`;
+      if ($("useProspects")) $("useProspects").onclick = () => {
+        overlay("Upcoming rookie draft only", "Use projected 2027 class?", `<p>Add ${cls.players.length} verified real college prospects with projected ratings. This choice is recorded once for everyone in your league. Existing rosters, contracts, results and completed transactions are preserved.</p><button class="btn gold" id="confirmProspects">Open projected draft</button>`);
+        $("confirmProspects").onclick = () => { closeOv(); move({ t:"prospectsUpdate", version:E.PROSPECT_VERSION }); };
+      };
     }
     else if (lg.phase === "resign") resignView();
     else if (lg.phase === "cuts") cutsView();
@@ -905,7 +910,7 @@
     const d = lg.draft, rookie = d.kind === "rookie";
     const round = Math.floor(d.n / 32) + 1, inRound = (d.n % 32) + 1;
     const realCls = rookie && [...d.pool].some((id) => lg.players[id].rk);
-    head(kick, title, !rookie ? "" : realCls ? (lg.settings.hindsight ? `The real ${lg.year} draft class. Hindsight is on: grades come from how their real careers went.` : `The real ${lg.year} draft class, graded only from where each player was really picked. Grades are what they are now; the ceiling is how good they could get.`)
+    head(kick, title, !rookie ? "" : lg.prospectVersion && lg.year === 2027 ? "Real 2027 college prospects with projected OVR/potential and modeled age 22; draft declarations can change. These are not actual NFL draft results. Grades develop through your league's existing rules." : realCls ? (lg.settings.hindsight ? `The real ${lg.year} draft class. Hindsight is on: grades come from how their real careers went.` : `The real ${lg.year} draft class, graded only from where each player was really picked. Grades are what they are now; the ceiling is how good they could get.`)
       : "This year's rookie class is made up (no real class to use). Grades are what they are now; the ceiling is how good they could get.");
     const c = E.countBy(lg, lg.user), mine = team(lg.user).roster.length;
     const needs = E.GROUPS.map((g) => `<span class="${c[g] < E.STARTERS[g] ? "need" : ""}">${g === "ED" ? "Edge" : g} ${c[g]}/${E.TARGET[g]}</span>`).join("");
@@ -924,7 +929,7 @@
           ${[["players", "Available players"], ["roster", `Roster (${mine})`]].map(([key, label]) => `<button type="button" role="tab" id="draftTab-${key}" data-draft-tab="${key}" aria-controls="draftPanel-${key}" aria-selected="${draftTab === key}" tabindex="${draftTab === key ? 0 : -1}" style="color:#fff">${label}</button>`).join("")}
         </div></div>
       <section class="card" style="margin-bottom:14px"><div class="card-b" style="padding:10px 14px">
-        ${lg.ratingVersion ? `<span>Ratings reference: Madden NFL 27, Week 6. Unmatched players are marked as estimates.</span>`
+        ${lg.prospectVersion && lg.year === 2027 ? `<span>Projected rookie ratings: bubble estimates from current scouting ranks, not published Madden grades or actual draft selections.</span>` : lg.ratingVersion ? `<span>Ratings reference: Madden NFL 27, Week 6. Unmatched players are marked as estimates.</span>`
           : lg.year === REF.season ? `<span>This draft uses the old position-relative model. Update ratings for the remaining draft; earlier picks stay recorded.</span>${!ML || (ML.info.owner && ML.info.ratingPolicy === 1) ? ` <button class="btn" id="updateRatings">Use updated ratings</button>` : `<span> The league creator can update after refreshing.</span>`}`
           : `<span>Historical season: Bubble's own model estimates, not current Madden ratings.</span>`}
       </div></section>
@@ -1911,9 +1916,14 @@
     const { data, error } = await c.sb.rpc(fn, args); if (error) throw Object.assign(new Error(error.message), { code: error.code }); return data;
   };
   const leagueGet = async (args) => {
-    try { return await rpc("franchise_league_get_v2", args); }
-    catch (err) { if (!["PGRST202", "42883"].includes(err.code)) throw err; return rpc("franchise_league_get", args); }
+    for (const name of ["franchise_league_get_v3", "franchise_league_get_v2", "franchise_league_get"]) {
+      try { return await rpc(name, args); }
+      catch (err) { if (!["PGRST202", "42883"].includes(err.code) || name === "franchise_league_get") throw err; }
+    }
   };
+  const partyGet = async (args) => { try { return await rpc("franchise_party_get_v2", args); } catch (err) { if (!["PGRST202", "42883"].includes(err.code)) throw err; return rpc("franchise_party_get", args); } };
+  const partyJoin = async (args) => { try { return await rpc("franchise_party_join_v2", args); } catch (err) { if (!["PGRST202", "42883"].includes(err.code)) throw err; return rpc("franchise_party_join", args); } };
+
   function partySetup() {
     const g = E.nextGame(lg); if (!g) return;
     const opp = oppOf(g);
@@ -1932,7 +1942,7 @@
         const code = await rpc("franchise_party_create", { p_save: sv, p_game: { wk: g.wk, h: g.h, a: g.a, n: pv.plays.length, sc: pv.sc },
           p_host_team: lg.user, p_guest_team: $("pCoach").checked ? opp : null });
         if (ML) await rpc("franchise_league_party", { p_league: ML.id, p_code: code });
-        const st = await rpc("franchise_party_get", { p_code: code });
+        const st = await partyGet({ p_code: code });
         partyStart(code, true, st);
       } catch (err) { toast(err.message || "Couldn't make the party."); b.disabled = false; }
     };
@@ -1942,7 +1952,7 @@
     head("Watch party", "Joining…", "");
     $("body").innerHTML = `<p class="empty">Loading the game…</p>`;
     try {
-      const st = await rpc("franchise_party_join", { p_code: code });
+      const st = await partyJoin({ p_code: code });
       const sv = st.save, data = sv.settings && sv.settings.mode === "real" ? await realData(sv.settings.year) : DATA;
       lg = E.replay(data, sv, st.host_team); slot = -1; // seen from the host's side, so "next game" is the party's game
       const g = E.nextGame(lg);
@@ -1983,7 +1993,7 @@
     const L = live; if (!L || !L.party || L.party.busy) return;
     const P = L.party, t0 = Date.now(); P.busy = true;
     try {
-      const st = await rpc("franchise_party_get", { p_code: P.code });
+      const st = await partyGet({ p_code: P.code });
       const rtt = Date.now() - t0;
       if (st && rtt <= P.rtt * 1.5 + 50) { P.off = st.now - (t0 + rtt / 2); P.rtt = Math.min(P.rtt, rtt); } // the server's clock, from the quickest replies
       if (live === L) partyTake(st);
@@ -2040,7 +2050,7 @@
   // 5 s otherwise). Weeks play once every owner is ready; when a deadline passes, any open browser hands out the
   // defaults (an auto-pick, the suggested re-signings and cuts, the week itself), so a missing friend never stalls it.
   const ORDERLESS = new Set(["inj2", "realRookies", "pilot", "ready", "plan", "depth", "half", "call", "finish", "offer", "decline", "withdraw"]);
-  const TEAM_MOVES = new Set(["ratingsUpdate", "inj2", "realRookies", "pilot", "pick", "auto", "finish", "depth", "plan", "half", "call", "resign", "cut", "ready", "trade", "offer", "accept", "decline", "withdraw", "sign"]);
+  const TEAM_MOVES = new Set(["prospectsUpdate", "ratingsUpdate", "inj2", "realRookies", "pilot", "pick", "auto", "finish", "depth", "plan", "half", "call", "resign", "cut", "ready", "trade", "offer", "accept", "decline", "withdraw", "sign"]);
   const ownerOf = (t) => ML && ML.info.people.find((p) => p.team === t);
   const whoName = (t) => { const p = ownerOf(t); return p ? (p.me ? "You" : p.name) : E.teamName(team(t)); };
   // Choices on the contracts and cuts screens survive the league refreshing underneath them.
@@ -2254,7 +2264,7 @@
     const clock = lg.draft ? (lg.draft.n !== n0 || !hadDraft ? C.request(lg, M.info.clockPolicy) : null)
       : hadDraft || m.t === "week" || m.t === "offseason" || lg.phase !== ph ? "week" : null;
     try {
-      const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.ratingPolicy === 1 ? `client2/${clock || ""}` : clock });
+      const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.prospectPolicy === 1 ? `client3/${clock || ""}` : M.info.ratingPolicy === 1 ? `client2/${clock || ""}` : clock });
       if (ML !== M) return false;
       M.next = r.s + 1; M.info.deadline = r.deadline; M.off = r.now - Date.now();
       if (m.t === "pilot") M.info.people.forEach((p) => { if (p.team === m.team) p.ready = m.n > 0; });
@@ -2279,7 +2289,7 @@
     const M = ML; if (!M || (TEAM_MOVES.has(m.t) && m.team !== M.me)) return;
     for (let i = 0; i < 5; i++) {
       try {
-        const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.ratingPolicy === 1 ? "client2/" : null });
+        const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.prospectPolicy === 1 ? "client3/" : M.info.ratingPolicy === 1 ? "client2/" : null });
         M.next = r.s + 1;
         if (m.t === "ready") M.info.people.forEach((p) => { if (p.team === m.team) p.ready = true; });
         return;
