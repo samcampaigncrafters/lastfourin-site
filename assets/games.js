@@ -32,7 +32,7 @@
     // Signed in with a finished profile (a handle): what every friend game needs.
     async me() { const c = await cloud(); return c && c.user && c.profile && c.profile.onboarded ? c.profile : null; },
     signInUrl: (next = location.pathname + location.search) => `/signin/?next=${encodeURIComponent(next)}`,
-    link: (kind, code) => `${location.origin}${kind === "weekdraft" ? "/play/gridiron-royale/" : kind === "draft" ? "/drafts/" : kind === "names" ? "/trivia/race.html" : "/grid/"}?g=${code}`,
+    link: (kind, code) => `${location.origin}${kind === "weekdraft" ? "/play/draft-battle/" : kind === "draft" ? "/drafts/" : kind === "names" ? "/trivia/race.html" : "/grid/"}?g=${code}`,
 
     create: (kind, o) => rpc("game_create", { p_kind: kind, p_settings: o.settings || {}, p_secret: o.secret || {}, p_total: o.total,
       p_seconds: o.seconds || null, p_host_first: o.hostFirst !== false, p_invite: o.invite || null, p_title: o.title || null }),
