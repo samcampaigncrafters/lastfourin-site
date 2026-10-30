@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/assets/lfi.css">
-<script src="/assets/theme.js"></script>
+<link rel="stylesheet" href="/assets/lfi.css?v=20261030.site2">
+<script src="/assets/theme.js?v=20261030.daily1"></script>
 </head>
 <body>
 <style>
@@ -153,6 +153,11 @@ main.home { padding-bottom: 64px; }
   .wk-h a { font-size: 13px; letter-spacing: .08em; }
   .wk p.empty { font-size: 15px; margin-top: 8px; }
 }
+
+.t{aspect-ratio:auto;min-height:200px;gap:12px}
+.t .home-game-art{display:block;width:80px;height:80px;object-fit:contain;flex-shrink:0;filter:drop-shadow(0 5px 7px #240b5619)}
+.t.hot .home-game-art{filter:drop-shadow(0 4px 6px #0d082045)}
+@media(max-width:700px){.t .home-game-art{width:64px;height:64px}}
 </style>
 
 <header class="nav" data-active="home"></header>
@@ -181,7 +186,7 @@ main.home { padding-bottom: 64px; }
 <footer class="foot"></footer>
 
 <script src="/assets/cfb-data.js"></script>
-<script src="/assets/lfi.js"></script>
+<script src="/assets/lfi.js?v=20261030.site1"></script>
 <script src="/assets/calendar.js"></script>
 <script src="/assets/apwindow.js"></script>
 <script src="/assets/cloud.js"></script>
@@ -293,23 +298,16 @@ main.home { padding-bottom: 64px; }
 
   // Tiles, in Sam's order. sh = the short phone label.
   const I = (d, sw) => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw || 1.8}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
-  const ICON = {
-    football: '<ellipse cx="12" cy="12" rx="9.5" ry="6" transform="rotate(-40 12 12)"/><path d="M9.5 14.5l5-5M10.2 12.2l1.6 1.6M11.7 10.7l1.6 1.6"/>',
-    flag: '<path d="M5 3v18"/><path d="M5 4.5l14 4.5-14 4.5"/>',
-    ballot: '<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/>',
-    q: '<circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.3a2.8 2.8 0 1 1 3.9 2.6c-.8.4-1.2 1-1.2 1.8v.5"/><path d="M12 17.3v.1"/>',
-    list: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" stroke-width="3.2"/>',
-    baseball: '<circle cx="12" cy="12" r="9.5"/><path d="M6.5 5.2c2 2 2 11.6 0 13.6M17.5 5.2c-2 2-2 11.6 0 13.6"/>',
-    pin: '<path d="M12 21.5s-7-6.2-7-11.5a7 7 0 0 1 14 0c0 5.3-7 11.5-7 11.5z"/><circle cx="12" cy="10" r="2.6"/>',
-    target: '<circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="5"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/>',
-    basketball: '<circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5v19M5.3 5.3c3 3 3 10.4 0 13.4M18.7 5.3c-3 3-3 10.4 0 13.4"/>',
-    hockey: '<path d="M15 3L9 18c-.4 1-1.3 1.5-2.3 1.5H3"/><ellipse cx="17.5" cy="18.5" rx="3.5" ry="1.8"/>',
-  };
+  const HOME_ART={'/pickem/':'nfl-pickem','/college/':'college-pickem','/ap-poll/':'ap-poll','/trivia/rare-air/':'rare-air','/trivia/player-guess/':'player-guess','/trivia/daily-grid/':'daily-nine','/trivia/':'daily-five','/trivia/names.html':'name-them-all','/trivia/pindrop.html':'pin-drop','/mlb/':'mlb-pickem','/money/':'thousand-challenge','/ncaab/':'college-hoops','/nba/':'nba-pickem','/nhl/':'nhl-pickem','/franchise/?new':'league-redraft'};
+  const gameArt=x=>`<img class="home-game-art" src="/assets/game-icons/${HOME_ART[x.url]}.svg?v=20261030.natural1" width="80" height="80" alt="" decoding="async">`;
   const LOCK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
   const TILES = [
     { lg: ["nfl"], cal: "nfl", url: "/pickem/", t: "Bubble NFL Pick'em", d: "Pick every game straight up, every week.", st: "Open", more: " · each pick locks at kickoff", ic: "football" },
     { lg: ["ncaaf"], cal: "cfb", url: "/college/", t: "Bubble College Pick'em", d: "Every game with a Top 25 team, every Saturday.", st: "Open", more: " · each pick locks at kickoff", ic: "flag" },
     { lg: ["ncaaf"], cal: "apPoll", url: "/ap-poll/", t: "Guess the AP Poll", sh: "AP Poll", d: "Guess Sunday's Top 25, just for fun.", st: "Draft", more: " · opens Saturday night", ic: "ballot", id: "ap" },
+    { lg: ["nfl"], url: "/trivia/rare-air/", t: "Bubble Rare Air", d: "Seven prompts. Your deep cuts score more.", st: "New today", ic: "target" },
+    { lg: ["nfl"], url: "/trivia/player-guess/", t: "Bubble NFL Player Guess", sh: "NFL Player Guess", d: "Eight guesses. One NFL mystery player.", st: "New today", ic: "q" },
+    { lg: ["nfl"], url: "/trivia/daily-grid/", t: "Bubble Daily Nine", d: "Nine squares. Find the NFL connections.", st: "New today", ic: "list" },
     { lg: [], url: "/trivia/", t: "Bubble Daily Trivia", d: "Five questions, same for everyone, every day.", st: "New today", ic: "q" },
     { lg: [], url: "/trivia/names.html", t: "Bubble Name Them All", d: "How many can you name?", st: "New today", ic: "list" },
     { lg: [], url: "/trivia/pindrop.html", t: "Bubble Pin Drop", d: "Drop a pin on the map. Closest wins.", st: "New today", ic: "pin" },
@@ -330,10 +328,10 @@ main.home { padding-bottom: 64px; }
     const hot = !x.off && !x.out && x.url === ph.url;
     if (x.off || x.out) {
       const back = x.out ? CAL.backNote(x.cal, NOW) : "";
-      return `<div class="t off">${I(ICON[x.ic])}<span><b>${name(x)}</b>${x.d ? `<span class="ds">${esc(x.d)}</span>` : ""}<span class="st">${LOCK}<span class="lg">${esc(back || "Coming soon")}</span><span class="sh">${esc(back.replace("Back in ", "") || "Soon")}</span></span></span></div>`;
+      return `<div class="t off">${gameArt(x)}<span><b>${name(x)}</b>${x.d ? `<span class="ds">${esc(x.d)}</span>` : ""}<span class="st">${LOCK}<span class="lg">${esc(back || "Coming soon")}</span><span class="sh">${esc(back.replace("Back in ", "") || "Soon")}</span></span></span></div>`;
     }
     const st = hot ? `<span class="lg">${esc(x.st + (x.more || ""))}</span><span class="sh">This week</span>` : `<span class="lg">${esc(x.st + (x.more || ""))}</span><span class="sh">${esc(x.st)}</span>`;
-    const icon = hot ? `<span class="top-row">${I(ICON[x.ic])}<span class="tag"><span class="em" aria-hidden="true">🔥</span> This week</span></span>` : I(ICON[x.ic]);
+    const icon = hot ? `<span class="top-row">${gameArt(x)}<span class="tag"><span class="em" aria-hidden="true">🔥</span> This week</span></span>` : gameArt(x);
     const head = `${icon}<span><b>${name(x)}</b><span class="ds">${esc(x.d)}</span>`;
     const se = hot ? "⚡" : STE[x.st], dot = se ? `<span class="em" aria-hidden="true">${se}</span> ` : "<i></i>"; // status emoji in place of the plain dot
     return `<a class="t${hot ? " hot" : ""}" href="${x.url}">${head}<span class="st">${dot}${st}</span></span></a>`;
@@ -347,7 +345,7 @@ main.home { padding-bottom: 64px; }
 
   // Use the game's server-side invitation check; never infer access from an email or a browser save.
   const cloud = LFI.cloud;
-  cloud.ready.then(() => cloud.onChange(async (c) => {
+  const checkFranchiseAccess = async (c) => {
     const uid = c.user && c.user.id;
     if (uid === franchiseUser) return;
     franchiseUser = uid;
@@ -361,7 +359,11 @@ main.home { padding-bottom: 64px; }
       franchiseAllowed = !error && !!data;
       renderTiles();
     } catch (e) { /* Keep the private tile hidden when the access check is unavailable. */ }
-  }));
+  };
+  cloud.ready.then(() => {
+    cloud.onChange(checkFranchiseAccess);
+    checkFranchiseAccess(cloud);
+  });
 
   // AP tile status: a draft until Saturday's Top 25 games end, open until the poll comes out Sunday, then closed.
   (async () => {

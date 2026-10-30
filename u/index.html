@@ -17,8 +17,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/assets/lfi.css">
-<script src="/assets/theme.js"></script>
+<link rel="stylesheet" href="/assets/lfi.css?v=20261030.site2">
+<script src="/assets/theme.js?v=20261030.daily1"></script>
 <link rel="stylesheet" href="/assets/social.css">
 </head>
 <body>
@@ -75,7 +75,7 @@
           friend: `<button class="btn" type="button" id="fb" data-f="friend">✓ Friends</button>` }[fs] || "";
     const acts = mine ? `<a class="btn" href="/account/#profile">Edit profile</a>${share}`
       : `${fb}${share}${viewer ? `<div class="menu-wrap"><button class="btn" type="button" id="pm" aria-label="More" aria-expanded="false">•••</button></div>` : ""}`;
-    $("prof").innerHTML = `<section class="prof"><div class="prof-cover"></div><div class="prof-in">
+    $("prof").innerHTML = `<section class="prof" data-coin-profile="${esc(p.id)}"><div class="prof-cover"></div><div class="prof-in">
       <div class="prof-top">${av(p, "prof-av")}<div class="prof-acts">${acts}</div></div>
       <h1>${esc(p.display_name || p.username)}</h1>
       <div class="handle">@${esc(p.username)}</div>

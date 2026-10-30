@@ -17,8 +17,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/assets/lfi.css">
-<script src="/assets/theme.js"></script>
+<link rel="stylesheet" href="/assets/lfi.css?v=20261030.site2">
+<script src="/assets/theme.js?v=20261030.daily1"></script>
 <style>
 .modes { display: inline-flex; flex-wrap: wrap; margin-top: 16px; background: var(--card); border: 1px solid var(--line-2); border-radius: 8px; padding: 3px; gap: 3px; }
 .modes button { border: 0; background: none; cursor: pointer; padding: 8px 14px; border-radius: 6px; font-family: var(--f-display); text-transform: uppercase; font-size: 16px; letter-spacing: .03em; color: var(--ink-2); white-space: nowrap; }
@@ -109,6 +109,7 @@ body.drafting .head { display: none; }
 <header class="nav" data-active="drafts"></header>
 
 <main class="page">
+  <div class="go-row" data-free style="margin-bottom:18px"><a class="btn gold" href="/play/online/?kind=draft">Online · ranked</a><span class="note">Or use the private friend controls below.</span></div>
   <div class="head">
     <div>
       <div class="kicker" id="kick"><span class="em" aria-hidden="true">🏈</span> NFL history draft</div>
@@ -287,7 +288,8 @@ body.drafting .head { display: none; }
 
 <script>{ const k = new URLSearchParams(location.search).get("kind"); if (k === "jerseys" || k === "coaches") document.querySelector("header.nav").dataset.active = k; }</script>
 <script src="/assets/lfi.js"></script>
-<script src="/assets/games.js"></script>
+<script src="/assets/games.js?v=20261029-online2"></script>
+<script src="/assets/online.js?v=20261029-online2"></script>
 <script>
 (function () {
   const { $, esc, local, entries, toast } = LFI;
@@ -323,7 +325,7 @@ body.drafting .head { display: none; }
     mode: qs.get("fun") && qs.get("kind") !== "coaches" ? "fun" : "scored", pool: qs.get("pool") || (["jerseys", "coaches"].includes(qs.get("kind")) ? "all" : "first"), name: qs.get("q") || "Chris",
     team: qs.get("t") || "DEN", div: qs.get("d") || "AFC West", conf: qs.get("c") || "AFC",
     val: qs.get("val") || "career", sc: qs.get("sc") || "ppr", lu: qs.get("lu") || "fantasy",
-    opp: "cpu", cpu: qs.get("cpu") || "medium", show: qs.get("show") || "0", first: "me",
+    opp: qs.get("opponent") === "friend" ? "friend" : "cpu", cpu: qs.get("cpu") || "medium", show: qs.get("show") || "0", first: "me",
     cr: qs.get("cr") === "all" ? "all" : "team", // team / division / conference pools: score only the years there, or his whole career
   };
   let meta = null;        // teams + thru of the loaded data
@@ -610,9 +612,10 @@ body.drafting .head { display: none; }
     const them = g && g[g.me === "host" ? "guest" : "host"];
     const oppName = g ? (them ? them.name : "Your friend") : `Computer (${S.cpu[0].toUpperCase() + S.cpu.slice(1)})`;
     const meName = g ? (g[g.me] || {}).name || "You" : "You";
-    const rows = pool.filter((r) => slots.some((s) => fits(s, r.pos)));
+    const rows = pool.filter((r) => slots.some((s) => fits(s, r.pos)))
+      .map((r) => g?.settings?.onlineKeyVersion === 2 ? { ...r, key: `${r.key}|${r.espn}` } : r);
     D = { rows, byId: new Map(rows.map((r) => [r.id, r])), byKey: new Map(rows.map((r) => [r.key, r])), slots, label: poolLabel(), val: valLabel(), kind: S.kind, kname: kindName(), crt: crTitle(),
-          taken: new Set(), n: 0, total: slots.length * 2, game: g ? { id: g.id, role: g.me } : null,
+          taken: new Set(), n: 0, total: slots.length * 2, game: g ? { id: g.id, role: g.me, ranked: !!g.settings.onlineRanked } : null,
           side: [{ name: meName, picks: [] }, { name: oppName, picks: [] }],
           firstSide: meFirst ? 0 : 1, show: S.mode === "fun" || S.show === "1", fun: S.mode === "fun", hide: hideYears(), setup: setupQuery() };
     $("lobby").hidden = true; $("setup").hidden = true; $("result").hidden = true; $("room").hidden = false; document.body.classList.add("drafting");
@@ -753,11 +756,12 @@ body.drafting .head { display: none; }
 
   // ---------- result ----------
   let lastEntry = null;
-  function finish(early) {
+  async function finish(early) {
     if (D.finished) return;
     D.finished = true;
     if (watcher) watcher.stop();
     $("room").hidden = true; $("result").hidden = false;
+    const ranked = D.game?.ranked ? await LFI.games.onlineState(D.game.id).catch(() => null) : null, rr = ranked?.result;
     const [me, op] = D.side, a = teamTotal(me), b = teamTotal(op);
     $("resKick").textContent = `${D.kind === "players" ? "" : D.kname + " · "}${D.label} · ${D.val}`;
     const unit = D.kind === "coaches" ? "wins" : "fantasy points", f = D.kind === "coaches" ? (n) => String(Math.round(n)) : fmt;
@@ -767,10 +771,10 @@ body.drafting .head { display: none; }
         : "No stats go back to 1920, so this one is up to your friends. Send it and let them pick a winner.";
       result = "For fun";
     } else {
-      const win = a > b, tie = Math.abs(a - b) < .05;
+      const win = rr ? rr.winner === ranked.uid : a > b, tie = rr ? !rr.winner : Math.abs(a - b) < .05;
       $("resH").innerHTML = tie ? `Dead even ${em("🤝")}` : win ? `You win ${em("🎉")}` : `${esc(op.name.split(" ")[0])} wins ${em("😬")}`;
-      $("resP").textContent = `${f(a)} to ${f(b)} ${unit}.` + (early ? " The draft ended early, so open spots score zero." : win ? "" : " Run it back?");
-      result = tie ? `Tied at ${f(a)}` : `${win ? "Won" : "Lost"} ${f(a)} to ${f(b)}`;
+      $("resP").textContent = `${f(a)} to ${f(b)} ${unit}.` + (rr?.reason === "forfeit" ? ` ${win ? "Your opponent forfeited." : "You forfeited."}` : early ? " The draft ended early, so open spots score zero." : win ? "" : " Run it back?");
+      result = tie ? `Tied at ${f(a)}` : `${win ? "Won" : "Lost"} ${f(a)} to ${f(b)}${rr?.reason === "forfeit" ? " · forfeit" : ""}`;
     }
     $("resTeams").innerHTML = D.side.map((sd, s) => teamCard(sd, s, true, false)).join("");
     const pack = (sd) => D.slots.map((slot, i) => { const p = sd.picks.find((x) => x.si === i); return p ? [slot === "HC" ? String(i + 1) : slot, p.row.name, p.row.pts == null ? null : Math.round(p.row.pts * 10) / 10] : [slot === "HC" ? String(i + 1) : slot, "", null]; });

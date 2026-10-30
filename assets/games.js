@@ -23,6 +23,9 @@
     return data;
   }
 
+  const rankedCache = new Map();
+  let rankedAccount = null;
+  const signature = g => `${g.status}|${g.moves.length}|${g.guest?.id || ""}|${!!g.result}|${(g.players || []).map(p => p.id + p.left).join()}`;
   const G = {
     cloud,
     // Signed in with a finished profile (a handle): what every friend game needs.
@@ -34,7 +37,22 @@
       p_seconds: o.seconds || null, p_host_first: o.hostFirst !== false, p_invite: o.invite || null, p_title: o.title || null }),
     join: (code) => rpc("game_join", { p_code: code }),
     start: (id, countdown) => rpc("game_start", { p_id: id, p_countdown: countdown ?? 5 }), // names races: the host says go
-    get: (id) => rpc("game_get", { p_id: id }),
+    get: async (id) => {
+      const c = await cloud();
+      const account = c?.profile?.id || null;
+      if (account !== rankedAccount) { rankedCache.clear(); rankedAccount = account; }
+      const prior = rankedCache.get(id);
+      const next = prior ? await rpc("online_poll", { p_id: id, p_signature: signature(prior) }) : await rpc("game_get", { p_id: id });
+      if ((c?.profile?.id || null) !== account) throw new Error("Your account changed. Reopen this game.");
+      const g = next || prior;
+      if (g?.settings?.onlineRanked) { if (rankedCache.size > 20) rankedCache.clear(); rankedCache.set(id, g); }
+      if (g) document.dispatchEvent(new CustomEvent("bubble:game", { detail: g }));
+      return g;
+    },
+    onlineFind: (kind) => rpc("online_find", { p_kind: kind }),
+    onlineState: (id = null) => rpc("online_state", { p_game: id }),
+    onlineCancel: (id) => rpc("online_cancel", { p_game: id }),
+    onlineBoard: (kind) => rpc("online_board", { p_kind: kind }),
     move: (id, item, payload, answer) => rpc("game_move", { p_id: id, p_item: String(item), p_payload: payload || {}, p_answer: answer ?? null }),
     finish: (id, result) => rpc("game_finish", { p_id: id, p_result: result }),
     leave: (id) => rpc("game_leave", { p_id: id }),
@@ -52,20 +70,27 @@
 
     // Follow a game: calls onUpdate(game) whenever anything changes, until it ends or stop() is called.
     // Slower while the tab is hidden; one failed poll is retried, not reported.
-    watch(id, onUpdate, ms = 1100) {
-      let stopped = false, last = "", timer;
+    watch(id, onUpdate, ms = 1100, onConnection = () => {}) {
+      let stopped = false, last = "", timer, running = false, queued = false;
       const tick = async () => {
         if (stopped) return;
+        if (running) { queued = true; return; }
+        running = true;
         try {
           const g = await G.get(id);
+          if (stopped) return;
+          onConnection("connected");
           const sig = `${g.status}|${g.moves.length}|${g.guest && g.guest.id}|${!!g.result}|${(g.players || []).map((p) => p.id + p.left).join()}`;
           if (sig !== last) { last = sig; onUpdate(g); }
-          if (g.status === "done" || g.status === "cancelled") return;
-        } catch (e) { /* network blip: try again */ }
-        timer = setTimeout(tick, document.hidden ? ms * 4 : ms);
+          if (g.status === "done" || g.status === "cancelled") stopped = true;
+        } catch (e) { if (!stopped) onConnection("reconnecting"); }
+        finally {
+          running = false;
+          if (!stopped) { timer = setTimeout(tick, queued ? 0 : document.hidden ? ms * 4 : ms); queued = false; }
+        }
       };
       tick();
-      return { stop() { stopped = true; clearTimeout(timer); }, poke() { clearTimeout(timer); tick(); } };
+      return { stop() { stopped = true; queued = false; clearTimeout(timer); }, poke() { if (stopped) return; clearTimeout(timer); if (running) queued = true; else tick(); } };
     },
 
     // Share a game link: the phone's share sheet where there is one, else copy.

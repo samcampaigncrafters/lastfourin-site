@@ -60,10 +60,10 @@
 .credit a { color: var(--blue); }
 
 /* Game switcher */
-.tabs { display: inline-flex; background: var(--card); border: 1px solid var(--line-2); border-radius: 8px; padding: 3px; gap: 3px; }
+.tabs { display: inline-flex; flex-wrap: wrap; max-width: 100%; background: var(--card); border: 1px solid var(--line-2); border-radius: 8px; padding: 3px; gap: 3px; }
 .tabs a { padding: 8px 14px; border-radius: 6px; text-decoration: none; font-family: var(--f-display); font-weight: 800; font-style: var(--disp-style); text-transform: uppercase; font-size: 16px; letter-spacing: .02em; color: var(--ink-2); white-space: nowrap; }
 .tabs a.on { background: var(--field); color: #fff; }
-.headr { display: grid; gap: 12px; justify-items: end; }
+.headr { min-width: 0; display: grid; gap: 12px; justify-items: end; }
 @media (max-width: 600px) { .headr { justify-items: start; } }
 
 /* Sam (2026-10-27): no score ticker on phones; it eats the top of the screen and everyone already knows the scores */

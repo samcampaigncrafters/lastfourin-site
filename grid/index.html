@@ -17,8 +17,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/assets/lfi.css">
-<script src="/assets/theme.js"></script>
+<link rel="stylesheet" href="/assets/lfi.css?v=20261030.site2">
+<script src="/assets/theme.js?v=20261030.daily1"></script>
 <style>
 .set { display: grid; gap: 18px; }
 .set-row { display: grid; gap: 8px; }
@@ -90,6 +90,7 @@ body.playing .head { display: none; }
 <header class="nav" data-active="grid"></header>
 
 <main class="page">
+  <div class="go-row" data-free style="margin-bottom:18px"><a class="btn gold" href="/play/online/?kind=grid">Online · ranked</a><span class="note">Or use the private friend controls below.</span></div>
   <div class="head">
     <div>
       <div class="kicker"><span class="em" aria-hidden="true">🏈</span> NFL trivia race</div>
@@ -179,14 +180,15 @@ body.playing .head { display: none; }
 <footer class="foot"></footer>
 
 <script src="/assets/lfi.js"></script>
-<script src="/assets/games.js"></script>
+<script src="/assets/games.js?v=20261029-online2"></script>
+<script src="/assets/online.js?v=20261029-online2"></script>
 <script>
 (function () {
   const { $, esc, entries, toast } = LFI;
   const em = (e) => `<span class="em" aria-hidden="true">${e}</span>`;
   const qs = new URLSearchParams(location.search);
   const key = (s) => String(s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const S = { opp: "cpu", cpu: "medium", time: "300", from: +qs.get("from") || 0, to: +qs.get("to") || 0 };
+  const S = { opp: qs.get("opponent") === "friend" ? "friend" : "cpu", cpu: "medium", time: "300", from: +qs.get("from") || 0, to: +qs.get("to") || 0 };
   const CPU_MS = { easy: 30000, medium: 18000, hard: 10000 };
   let BANK = null, ME = null, GAME = null, watcher = null;
 
@@ -361,19 +363,21 @@ body.playing .head { display: none; }
 
   // ---------- the end ----------
   let lastEntry = null;
-  function end(answers, early) {
+  async function end(answers, early) {
     if (!R || R.done) return;
     R.done = true; clearInterval(tick); clearTimeout(cpuT); closeAsk();
     if (watcher) watcher.stop();
     const a = R.own.filter((x) => x === "me").length, b = R.own.filter((x) => x === "them").length;
     $("play").hidden = true; $("result").hidden = false;
+    const ranked = R.game?.ranked ? await LFI.games.onlineState(R.game.id).catch(() => null) : null, rr = ranked?.result;
     let h, p, result;
     if (!R.them) { h = `${a} of 25`; p = a === 25 ? "Every square. Clean sweep. 🔥" : "Send it to a friend and see if they can fill more."; result = `${a} of 25 squares`; }
     else {
       const first = R.them.split(" ")[0];
-      h = a > b ? `You win ${em("🎉")}` : a < b ? `${esc(first)} wins ${em("😬")}` : `Dead even ${em("🤝")}`;
-      p = `${a} squares to ${b}.${early ? ` ${first} left the race.` : ""}`;
-      result = a === b ? `Tied ${a}-${b}` : `${a > b ? "Won" : "Lost"} ${a}-${b}`;
+      const won = rr ? rr.winner === ranked.uid : a > b, tied = rr ? !rr.winner : a === b;
+      h = won ? `You win ${em("🎉")}` : !tied ? `${esc(first)} wins ${em("😬")}` : `Dead even ${em("🤝")}`;
+      p = `${a} squares to ${b}.${rr?.reason === "forfeit" ? ` ${won ? "Your opponent forfeited." : "You forfeited."}` : early ? ` ${first} left the race.` : ""}`;
+      result = tied ? `Tied ${a}-${b}` : `${won ? "Won" : "Lost"} ${a}-${b}${rr?.reason === "forfeit" ? " · forfeit" : ""}`;
     }
     $("resH").innerHTML = h; $("resP").textContent = p;
     const title = R.range ? `Grid Race · ${R.range}` : "Grid Race", yrs = R.range ? ` (${R.range})` : "";
@@ -464,7 +468,7 @@ body.playing .head { display: none; }
     if (!R || !R.game || R.game.id !== g.id) {
       const skew = new Date(g.now) - Date.now();
       const s = g.settings, rq = s.range ? `?from=${s.from}&to=${s.to}` : "";
-      begin(s.cells, { game: { id: g.id }, them: them ? them.name : "Your friend", meName: (g[mine] || {}).name || "You", skew, range: s.range || "", rq,
+      begin(s.cells, { game: { id: g.id, ranked: !!g.settings.onlineRanked }, them: them ? them.name : "Your friend", meName: (g[mine] || {}).name || "You", skew, range: s.range || "", rq,
                                 endAt: g.seconds ? new Date(g.started_at).getTime() + g.seconds * 1000 : null });
       if (g.moves.length === 0) toast(`🏁 ${them ? them.name : "Your friend"} is in. Go!${s.range ? ` Squares from ${s.range}.` : ""}`);
     }

@@ -11,6 +11,15 @@
   // opts: { order(): [ids], setOrder(ids), team(id): {name, abbr, nick, color, sub, line (html)}, pool(): [ids not ranked],
   //         max, cut: { after, label }, right(id, i): html, poolTag(id): text, onAct(act, i, btn): bool, locked(): bool }
   function Ranker(root, opts) {
+    // AP Poll rows and its team picker share the same colored initials badge.
+    const teamMark = (team) => {
+      if (!/^\/ap-poll(?:\/|$)/.test(location.pathname)) return LFI.teamMark(team.abbr, team.nick);
+      const code = String(team.abbr || ""), raw = String(team.color || "");
+      const fill = /^#?[0-9a-f]{6}$/i.test(raw) ? "#" + raw.replace(/^#/, "") : "#6d28d9";
+      const rgb = [1, 3, 5].map(i => parseInt(fill.slice(i, i + 2), 16) / 255).map(c => c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4);
+      const ink = .2126 * rgb[0] + .7152 * rgb[1] + .0722 * rgb[2] > .179 ? "#111827" : "#ffffff";
+      return code ? `<span class="rk-team-badge${code.length > 3 ? " long" : ""}" style="--team-fill:${fill};--team-ink:${ink}">${esc(code)}</span>` : "<span></span>";
+    };
     const max = opts.max || 25;
     let open = -1, target = null, pending = null;
     root.innerHTML = `<ol class="rk-list"></ol>
@@ -34,7 +43,7 @@
         <div class="rk-main">
           <button class="rk-handle" type="button" data-drag aria-label="Move ${esc(t.name)}, now number ${i + 1}. Drag, or use the up and down arrow keys" aria-keyshortcuts="ArrowUp ArrowDown">${HANDLE}</button>
           <span class="rk-n">${i + 1}</span>
-          ${LFI.teamMark(t.abbr, t.nick) || "<span></span>"}
+          ${teamMark(t) || "<span></span>"}
           <span class="rk-name"><b>${esc(t.name)}</b><small>${esc(t.sub || "")}</small>${t.line ? `<small class="rk-line">${t.line}</small>` : ""}</span>
           <span class="rk-right">${opts.right ? opts.right(id, i) : ""}</span>
           <button class="rk-more" type="button" data-more aria-expanded="${i === open}" aria-label="More moves for ${esc(t.name)}">${MORE}</button>
@@ -195,7 +204,7 @@
         k.textContent = "Your Top 25 is full"; h.textContent = `${t.name} replaces…`;
         note.innerHTML = `<div class="sheet-note">Tap the team ${esc(t.name)} takes the spot of. It keeps that team's rank.</div>`;
         search.hidden = true;
-        plist.innerHTML = ids.map((id, i) => [id, i]).reverse().map(([id, i]) => { const x = opts.team(id); return `<li><button type="button" data-rep="${i}">${LFI.teamMark(x.abbr, x.nick)}<span><b>${esc(x.name)}</b><small>${esc(x.sub || "")}</small></span><span class="tag">#${i + 1}</span></button></li>`; }).join("");
+        plist.innerHTML = ids.map((id, i) => [id, i]).reverse().map(([id, i]) => { const x = opts.team(id); return `<li><button type="button" data-rep="${i}">${teamMark(x)}<span><b>${esc(x.name)}</b><small>${esc(x.sub || "")}</small></span><span class="tag">#${i + 1}</span></button></li>`; }).join("");
         return;
       }
       search.hidden = false;
@@ -204,7 +213,7 @@
       else { k.textContent = `${max} of ${max} ranked`; h.textContent = "Swap in a team"; note.innerHTML = `<div class="sheet-note">Pick the team you want in. Next you choose who it replaces.</div>`; }
       const q = search.value.trim().toLowerCase();
       const pool = opts.pool().filter((id) => { const x = opts.team(id); return !q || [x.name, x.nick, x.abbr].join(" ").toLowerCase().includes(q); });
-      plist.innerHTML = pool.map((id) => { const x = opts.team(id); return `<li><button type="button" data-pick="${esc(id)}">${LFI.teamMark(x.abbr, x.nick)}<span><b>${esc(x.name)}</b><small>${esc(x.sub || "")}</small></span><span class="tag">${esc(opts.poolTag ? opts.poolTag(id) : "")}</span></button></li>`; }).join("")
+      plist.innerHTML = pool.map((id) => { const x = opts.team(id); return `<li><button type="button" data-pick="${esc(id)}">${teamMark(x)}<span><b>${esc(x.name)}</b><small>${esc(x.sub || "")}</small></span><span class="tag">${esc(opts.poolTag ? opts.poolTag(id) : "")}</span></button></li>`; }).join("")
         || `<li class="empty">No teams match “${esc(search.value)}”.</li>`;
     }
     search.addEventListener("input", drawSheet);

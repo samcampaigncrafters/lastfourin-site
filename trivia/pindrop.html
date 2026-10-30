@@ -16,8 +16,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="../assets/lfi.css">
-<script src="/assets/theme.js"></script>
+<link rel="stylesheet" href="../assets/lfi.css?v=20261030.site2">
+<script src="/assets/theme.js?v=20261030.daily1"></script>
 <link rel="stylesheet" href="trivia.css">
 <style>
 .mapwrap { position: relative; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--card); overflow: hidden; touch-action: manipulation; }
@@ -71,12 +71,12 @@
 @keyframes rvPop { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .gpin i, .gpin b, .reveal.settled .rv-emo, .reveal.settled .rv-pts { animation: none !important; } }
 </style>
-</head>
-<body>
+<link rel="stylesheet" href="/assets/daily-shell.css?v=20261030.shell1"></head>
+<body class="daily-family">
 
 <header class="nav" data-active="pindrop"></header>
 
-<main class="page">
+<main class="page daily-unified"><nav class="daily-unified-tabs" aria-label="Daily games"><a href="/play/trivia/">← All trivia</a><a href="/trivia/">Daily Five</a><a href="/trivia/rare-air/">Rare Air</a><a href="/trivia/player-guess/">NFL Player Guess</a><a href="/trivia/daily-grid/">Daily Nine</a><a href="/trivia/names.html">Name Them All</a><a href="/trivia/race.html">Race</a><a href="/trivia/pindrop.html" class="on" aria-current="page">Pin Drop</a></nav><div class="daily-panel-content">
   <div class="head">
     <div>
       <div class="kicker" id="kicker">Free daily game</div>
@@ -84,7 +84,7 @@
       <p>Five football places a day: a stadium, a college town, a Super Bowl, where a star played college ball, where a star was born. Drop a pin. The closer you land, the more you score.</p>
     </div>
     <div class="headr">
-      <nav class="tabs" aria-label="Daily games"><a href="./">Daily Five</a><a href="names.html">Name Them All</a><a href="pindrop.html" class="on">Pin Drop</a></nav>
+
       <div class="pips" id="pips" aria-hidden="true"></div>
     </div>
   </div>
@@ -116,12 +116,12 @@
       <p class="credit" id="credit"></p>
     </aside>
   </div>
-</main>
+</div></main>
 
 <footer class="foot"></footer>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="/assets/lfi.js"></script>
+<script src="/assets/lfi.js?v=20261030.site1"></script>
 <script src="/assets/vendor/d3-array.min.js"></script>
 <script src="/assets/vendor/d3-geo.min.js"></script>
 <script src="/assets/vendor/topojson-client.min.js"></script>

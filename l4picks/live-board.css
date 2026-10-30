@@ -64,3 +64,5 @@
 .lb-modal .res.miss { color:#ff6b76; background:rgba(255,107,118,.12); }
 .lb-analysis-pending { color:#d4d4d4; line-height:1.5; }
 @media(max-width:560px) { .lb-modal { width:calc(100% - 20px); max-height:calc(100dvh - 20px); border-radius:14px; } .lb-modal-top { padding:18px 16px 14px; } .lb-modal h2 { font-size:32px; } .lb-modal-score { padding:12px 16px; } .lb-modal-key { padding:0 16px; } .lb-modal-note { margin:10px 16px 16px; } .lb-modal-content { padding:0 12px 18px; } }
+
+.lb-score .tmk{--tmk-size:19px;--badge-size:42px}.lb-score span.tmk>b{font-size:19px}

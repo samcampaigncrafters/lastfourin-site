@@ -50,6 +50,18 @@
   }
   const marketContext = (lg, p) => ({ phase: lg.phase, peak: PEAK, ...(capOn(lg) ? {marketSalary: askSalary(lg,p)} : {}) });
   // Immutable references let old saves keep their original draft and AI decisions.
+  const rosterSets = new Map();
+  function registerRosterSet(ref) {
+    if (!ref || !ref.version || !ref.sha256 || !ref.active || !ref.depth || !Number.isInteger(ref.season)) throw Error("Invalid roster reference");
+    if (rosterSets.has(ref.version) && rosterSets.get(ref.version).sha256 !== ref.sha256) throw Error("A saved roster reference cannot change");
+    rosterSets.set(ref.version, ref);
+  }
+  function rosterReview(lg) {
+    const ref = [...rosterSets.values()].find(r => r.season === lg.year);
+    if (!ref || lg.settings.mode !== "real") return [];
+    const t = lg.teams[lg.user];
+    return (ref.active[t.code] || []).map(id => lg.players[id]).filter(p => p && p.team !== lg.user && !p.gone);
+  }
   const ratingSets = new Map();
   function registerRatingSet(ref) {
     if (!ref || !ref.version || !ref.sha256 || !Number.isInteger(ref.season) || !ref.players) throw Error("Invalid rating reference");
@@ -301,7 +313,7 @@
     const seed = String(opts.seed || Date.now().toString(36));
     const lg = {
       v: 1, seed, data: data.built, year: data.season, user: viewer(opts),
-      settings: { mode: "real", year: data.season, team: opts.team | 0, hindsight: !!opts.hindsight, ...(opts.lr ? { lr: 1 } : {}), ...(opts.inj2 ? { inj2: 1 } : {}), ...(opts.cap ? { cap: 1 } : {}), ...(opts.realRookies ? { realRookies: 1 } : {}), ...humansOpt(opts), ...coachingOpt(opts) },
+      settings: { mode: "real", year: data.season, team: opts.team | 0, hindsight: !!opts.hindsight, ...(opts.rosterVersion ? {rosterVersion:opts.rosterVersion} : {}), ...(opts.lr ? { lr: 1 } : {}), ...(opts.inj2 ? { inj2: 1 } : {}), ...(opts.cap ? { cap: 1 } : {}), ...(opts.realRookies ? { realRookies: 1 } : {}), ...humansOpt(opts), ...coachingOpt(opts) },
       teams: TEAMS.map((t) => ({ ...t, roster: [] })),
       players: {}, moves: [], phase: "season", week: 0, games: [], log: [], history: [], stats: {}, lastRank: null,
       fa: [], notes: [], drafts: data.drafts || null, realSched: data.sched,
@@ -321,8 +333,16 @@
       p.yrs = p.exp <= 3 ? Math.max(1, (p.pick ? 4 : 3) - p.exp) : p.age < 26 ? 2 + r.int(3) : p.age < 30 ? 1 + r.int(3) : 1 + r.int(2);
       if (capOn(lg)) p.sal = p.exp <= 3 && p.pick ? rookieSal(p.pick) : askSalary(lg, p); // still on a rookie deal: the rookie scale
     }
-    for (const t of lg.teams) aiCut(lg, t);
+    const rosterRef = opts.rosterVersion && rosterSets.get(opts.rosterVersion);
+    if (opts.rosterVersion && (!rosterRef || rosterRef.season !== data.season)) throw Error("This save needs its original roster reference");
+    for (const t of lg.teams) aiCut(lg, t, rosterRef ? new Set(rosterRef.active[t.code] || []) : null);
     fillRosters(lg);
+    if (rosterRef) {
+      lg.depth = {};
+      for (const t of lg.teams) for (const [g, ids] of Object.entries(rosterRef.depth[t.code] || {})) {
+        (lg.depth[t.i] ||= {})[g] = ids.filter(id => t.roster.includes(id));
+      }
+    }
     startSeason(lg);
     return lg;
   }
@@ -408,6 +428,16 @@
         if (m.version !== MARKET_VERSION || marketOn(lg) || lg.draft || Object.keys(lg.offers || {}).length || !tradeOpen(lg)) return false;
         marketModule(); lg.marketVersion = MARKET_VERSION; return true;
       case "ratingsUpdate": return !!lg.draft && applyRatingReference(lg, m.version);
+      case "coachingControl":
+        if (m.version !== 1 || !coachingOn(lg) || !Number.isInteger(m.max) || m.max < 0 || m.max > 3) return false;
+        lg.coachingControls = { version: 1, max: m.max }; return true;
+      case "depthOrder": {
+        const ids = m.ids;
+        if (!STARTERS[m.g] || !Array.isArray(ids) || ids.length > ROSTER || new Set(ids).size !== ids.length || ids.some(id => !lg.teams[T].roster.includes(id) || lg.players[id].g !== m.g)) return false;
+        lg.depth ||= {}; lg.depth[T] = {...(lg.depth[T] || {})};
+        if (ids.length) lg.depth[T][m.g] = ids.slice(); else delete lg.depth[T][m.g];
+        return true;
+      }
       case "coachingUpdate":
         if (m.version !== 1 || coachingOn(lg) || !["done","resign","rookie","rookie-data","cuts"].includes(lg.phase) && !(lg.phase==="season" && lg.week===0)) return false;
         lg.coachingV = 1; return true;
@@ -800,9 +830,10 @@
     // (lg.calls[team][id]); ids count decision points in order, so everything before an answered call stays identical.
     // asks lists every point (both teams); at = the play index the decision comes before (the viewer pauses there).
     const asks = [], calls = lg.calls, coachV = coachingOn(lg);
+    let decisionN = 0;
     let snapCall = "auto", snapDefense = null;
-    const ask = (i, kind, def, opts, at, info) => {
-      const id = kind + asks.length, mine = calls && calls[S[i].t], c = mine && mine[id];
+    const ask = (i, kind, def, opts, at, info, fixedId) => {
+      const id = fixedId || kind + decisionN++, mine = calls && calls[S[i].t], c = mine && mine[id];
       const pick = c != null && opts.includes(c) ? c : def;
       asks.push({ id, kind, t: S[i].t, side: i, def, opts, c: pick, at: plays ? at : 0, q, clock, sc: [sc[0], sc[1]], ...info });
       return pick;
@@ -1061,6 +1092,17 @@
         chosen = ask(o, "huddle", call, menu, at(), { ...info, left: tol[o], call, package: snapDefense });
       }
       snapCall = chosen === "keep" ? call : chosen;
+      // The counter has its own ID, so inserting it never remaps an earlier saved decision.
+      // One reply ends the sequence; keeping the package consumes no random draws or time.
+      if (lg.coachingControls && snapCall !== call) {
+        const look = asks.slice().reverse().find(a => a.kind === "look");
+        const response = ask(1-o, "reply", "keep", ["keep","base","heavy","nickel","pressure", ...(tol[1-o]>0 ? ["to"] : [])], at(),
+          {...info, left:tol[1-o], package:snapDefense, offense:["inside","outside"].includes(snapCall)?"Two tight ends":"Three receivers", adjusted:true}, "reply"+look.id.slice(4));
+        if (response === "to") {
+          tol[1-o]--; mark(); log("to", `Timeout, defense (${tol[1-o]} left). The defense talks over the offensive adjustment.`, {side:1-o});
+          snapDefense = ask(1-o,"reset",snapDefense,["base","heavy","nickel","pressure"],at(), {...info,left:tol[1-o],offense:["inside","outside"].includes(snapCall)?"Two tight ends":"Three receivers"},"reset"+look.id.slice(4));
+        } else if (response !== "keep") snapDefense = response;
+      }
       return { ...EG[o],
         run: EG[o].run + (snapDefense === "heavy" ? -0.4 : snapDefense === "nickel" ? 0.25 : snapDefense === "pressure" ? -0.15 : 0)
           + (snapCall === "outside" ? 0.07 * (O.u.RB - D.u.CB) : snapCall === "inside" ? 0.07 * (O.u.OL - D.u.DL) : 0),
@@ -1724,11 +1766,11 @@
 
   // Keep the best 53 by value, never dropping a position below its minimum.
   function keepValue(p) { return p.grade + Math.max(0, 26 - p.age) * 0.12 + (p.ceil - p.grade) * 0.15 - (p.inj >= 30 ? 1.5 : 0); }
-  function aiCut(lg, t) {
+  function aiCut(lg, t, active) {
     while (t.roster.length > ROSTER) {
       const c = countBy(lg, t.i);
       let worst = null, wv = 1e9;
-      for (const id of t.roster) { const p = lg.players[id]; if (c[p.g] <= MINPOS[p.g]) continue; const v = keepValue(p) + (c[p.g] <= STARTERS[p.g] ? 5 : 0); if (v < wv) { wv = v; worst = p; } }
+      for (const id of t.roster) { const p = lg.players[id]; if (c[p.g] <= MINPOS[p.g]) continue; const v = keepValue(p) + (c[p.g] <= STARTERS[p.g] ? 5 : 0) + (active && active.has(id) ? 100 : 0); if (v < wv) { wv = v; worst = p; } }
       if (!worst) break;
       release(lg, worst);
     }
@@ -2472,7 +2514,7 @@
     TEAMS, GROUPS, GROUP_NAME, FIRST_REAL, cityFor, STARTERS, TARGET, MINPOS, MAXPOS, ROSTER, REDRAFT_ROUNDS, ROOKIE_ROUNDS, ROUNDS, M,
     teamName, teamShort, teamLogo, nickFor, NAME_MODE, get LOGOS() { return !!LOGO; }, rng, create, apply, replay, saveOf, units, lineup, standings, divisionTables, seeds, leaders,
     record, userGames, pickOwner, userOnClock, suggestCuts, isHuman, humansOf, waitingOn, countBy, playGame, expectedPoints, startSeason, boardValue,
-    REAL_NAMES, fakeName, setPack, registerRatingSet, registerProspectClass, PROSPECT_VERSION, FUTURE_CLASSES_VERSION, FUTURE_CLASS_VERSIONS, coachingOn, coachingWeather, coachingKick, SAVE_V, PLAN0, PM, cleanPlan, aiPlan, planFor, simGame, previewGame, playoffGames, nextGame, short,
+    REAL_NAMES, fakeName, setPack, registerRatingSet, registerRosterSet, rosterReview, registerProspectClass, PROSPECT_VERSION, FUTURE_CLASSES_VERSION, FUTURE_CLASS_VERSIONS, coachingOn, coachingWeather, coachingKick, SAVE_V, PLAN0, PM, cleanPlan, aiPlan, planFor, simGame, previewGame, playoffGames, nextGame, short,
     live: { times: liveTimes, at: liveAt, HALF_MS, MS: LIVE_MS },
     moodOf, MOOD_WORD, WHY, moraleEdge, lrOn, setOffField, get OFF_FIELD() { return OFF_FIELD; }, OFF_ABSURD, OFF_DRAMA,
     freeAgencyOn, MARKET_VERSION, marketOn, tradeOpen, signOpen, tradeDeadline, dealOf, tradeVerdict, tradeValue, picksOf, pickName, parsePick, pickHolder, pickYears, releaseSuggest,

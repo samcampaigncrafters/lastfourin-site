@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/assets/lfi.css">
-<script src="/assets/theme.js"></script>
+<link rel="stylesheet" href="/assets/lfi.css?v=20261030.site2">
+<script src="/assets/theme.js?v=20261030.daily1"></script>
 <link rel="stylesheet" href="/assets/social.css">
 <style>
   /* Team elements carry the team's colors; everything else stays in the site's purple look. */
@@ -252,6 +252,8 @@
   .stack, .side { grid-template-columns: minmax(0, 1fr); }
   @media (max-width: 980px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
   @media (max-width: 520px) { .page { padding: 16px 12px 72px; } .clock { top: 56px; } .prow, .chk { padding-left: 10px; padding-right: 10px; } }
+  .sb .gtm .lg { --tmk-size:16px;--badge-size:34px; }
+  @media(max-width:520px){.sb .gtm .lg{--tmk-size:12px;--badge-size:26px}}
 </style>
 </head>
 <body>
@@ -280,11 +282,13 @@
   <div class="dlg-h"><div><div class="kicker" id="ovK"></div><h2 class="disp" id="ovH"></h2></div><button class="dlg-x" type="button" data-x aria-label="Close">×</button></div>
   <div class="dlg-b" id="ovB"></div></div></div>
 
-<script src="/assets/lfi.js"></script>
+<script src="/assets/lfi.js?v=20261030.site1"></script>
 <script src="/assets/cloud.js"></script>
 <script src="/franchise/free-agency.js?v=1"></script>
 <script src="/franchise/trade-market.js?v=historical-market-v1"></script>
-<script src="/franchise/franchise-engine.js?v=league-tools-20261028"></script>
+<script src="/franchise/franchise-engine.js?v=coaching-tiers-20261029"></script>
+<script src="/franchise/coaching-controls.js?v=20261029"></script>
+<script src="/franchise/real-roster-2026-10-29.js"></script>
 <script src="/franchise/sim-tools.js"></script>
 <script src="/franchise/team-planning.js?v=20261028"></script>
 <script src="/franchise/draft-clock.js"></script>
@@ -295,6 +299,44 @@
   const E = window.FranchiseEngine, S = window.FranchiseSim, C = window.FranchiseDraftClock, F = window.FranchiseFreeAgency;
   const REF = window.FranchiseRatingReference;
   E.registerRatingSet(REF);
+  const CC = window.FranchiseCoachingControls, ROSTER_REF = window.FranchiseRosterReference;
+  E.registerRosterSet(ROSTER_REF);
+  let coachLevel = 1;
+  try { const n = Number(localStorage.getItem("bubble-coaching-level")); if(localStorage.getItem("bubble-coaching-level")!==null && CC.valid(n)) coachLevel=n; } catch {}
+  const leagueCoachMax = () => lg && lg.coachingControls ? lg.coachingControls.max : 2;
+  const liveCoachLevel = () => live && live.party ? (Math.min(live.party.st.coachMax??2, CC.valid(live.party.clock.involvement) ? live.party.clock.involvement : 1)) : Math.min(coachLevel, ML ? leagueCoachMax() : 3);
+  function coachingSelector() {
+    const L=live, level=liveCoachLevel(), max=L.party?Math.min(leagueCoachMax(),L.party.st.coachMax??2):ML?leagueCoachMax():3;
+    return `<section class="card" style="margin-bottom:12px"><div class="card-b"><div class="field"><label for="coachLevel"><b>Coaching involvement</b></label><select id="coachLevel" ${L.committed||L.party&&!L.party.host?"disabled":""}>${CC.tiers.map((t,i)=>`<option value="${i}" ${i===level?"selected":""} ${i>max||i>=2&&!E.coachingOn(lg)?"disabled":""}>${i+1}. ${t.name}</option>`).join("")}</select></div><p id="coachDetail" style="margin:8px 0 0">${CC.tiers[level].detail}${L.party?" The host sets one shared level for both coaches.":ML&&max<3?" The league creator can enable Full Control in League updates.":" You can change this during the game."}</p></div></section>`;
+  }
+  async function changeCoachLevel(n) {
+    const L=live;if(!L||L.committed||!CC.valid(n))return;
+    if(L.party){
+      if(!L.party.host)return;
+      try { partyTake(await rpc("franchise_party_involvement",{p_code:L.party.code,p_level:n})); } catch(err){toast(err.message);}
+    } else {
+      if(ML&&n>leagueCoachMax())return;
+      if(n===3&&!lg.coachingControls){
+        if(!E.coachingOn(lg))return;
+        if(ML){toast("The creator must enable Full Control in League updates first.");return;}
+        if(!keepMove({t:"coachingControl",version:1,max:3}))return;
+        repreview(L.idx+1,"earlier plays changed after enabling controls");
+      }
+      coachLevel=n;try{localStorage.setItem("bubble-coaching-level",String(n));}catch{}
+    }
+    refreshCoaching();
+  }
+  function refreshCoaching() {
+    const L=live;if(!L)return;
+    const level=liveCoachLevel(),sel=$("coachLevel");if(sel)sel.value=String(level);
+    if($("coachDetail"))$("coachDetail").textContent=CC.tiers[level].detail+(L.party?" The host sets one shared level for both coaches.":" You can change this during the game.");
+    if(L.asking&&!CC.prompts(L.asking,level)){
+      const a=L.asking;endAsk();$("lvBox").innerHTML="";
+      // Suppressed decisions take their existing default; no new move is needed.
+      (L.passed ||= new Set()).add(`${a.t}:${a.id}`);L.paused=false;L.last=performance.now();
+    }
+    if(level===0&&L.inHalf){$("lvBox").innerHTML="";L.inHalf=false;L.paused=false;L.ms=L.times[L.half+1];}
+  }
   let DATA = null, PACK = null;
   const KEY = "lfi-franchise-v1";
   // Real Rosters data is loaded only when needed: the list of seasons, then one season's file and the drafts.
@@ -353,7 +395,7 @@
         try {
           if (v !== true) { await rpc("franchise_save_delete", { p_seed: seed, p_at: v }); continue; }
           const sv = store.read().slots.find((x) => x && x.seed === seed);
-          if (sv && await rpc("franchise_save_put", { p_save: { ...sv, client: 5 } }) === "full") toast("Your account already holds six franchises, so this one is saved in this browser only. Delete one to make room.");
+          if (sv && await rpc("franchise_save_put", { p_save: { ...sv, client: 6 } }) === "full") toast("Your account already holds six franchises, so this one is saved in this browser only. Delete one to make room.");
         } catch (err) { console.error(err); if (!(seed in sync.q)) sync.q[seed] = v; }
       }
     })();
@@ -366,11 +408,11 @@
   // is lost the first time a browser signs in. Each keeps its slot here where it can; new arrivals take empty slots.
   // Returns true when this browser's slots changed.
   async function savesGet() {
-    try { return await rpc("franchise_saves_get_v5", {}); }
+    try { return await rpc("franchise_saves_get_v6", {}); }
     catch (err) { if (!/PGRST202|could not find.*function|function.*does not exist/i.test(String(err.message || err))) throw err; try{return await rpc("franchise_saves_get_v4", {});}catch(old){if(!["PGRST202","42883"].includes(old.code))throw old;return rpc("franchise_saves_get", {});} }
   }
-  const upgradeMarkers = (sv) => new Set(((sv && sv.moves) || []).filter((m) => ["prospectsUpdate", "futureClassesUpdate", "marketUpdate", "coachingUpdate", "freeAgencyUpdate"].includes(m.t)).map((m) => `${m.t}/${m.version}/${m.team == null ? "" : m.team}`));
-  const missingUpgrade = (local, account) => { if(account && ((account.settings||{}).coachingV||0)!==((((local||{}).settings)||{}).coachingV||0))return true; const known = upgradeMarkers(local); return [...upgradeMarkers(account)].some((key) => !known.has(key)); };
+  const upgradeMarkers = (sv) => new Set(((sv && sv.moves) || []).filter((m) => ["prospectsUpdate", "futureClassesUpdate", "marketUpdate", "coachingUpdate", "freeAgencyUpdate", "coachingControl", "depthOrder"].includes(m.t)).map((m) => `${m.t}/${m.version}/${m.team == null ? "" : m.team}/${m.max??""}/${(m.ids||[]).join(",")}`));
+  const missingUpgrade = (local, account) => { if(account && ((account.settings||{}).rosterVersion||"")!==((((local||{}).settings)||{}).rosterVersion||""))return true; if(account && ((account.settings||{}).coachingV||0)!==((((local||{}).settings)||{}).coachingV||0))return true; const known = upgradeMarkers(local); return [...upgradeMarkers(account)].some((key) => !known.has(key)); };
   async function syncAccount() {
     const c = LFI.cloud; if (!c || !c.on) return false;
     await c.ready; if (!signedIn()) return false;
@@ -414,7 +456,7 @@
     const s = store.read(), old = s.slots[slot], sv = E.saveOf(lg);
     // Opening a save rewrites it but changes nothing, so it keeps its time (an old copy mustn't look new to the merge).
     const same = old && old.seed === sv.seed && old.v === sv.v && old.moves && old.moves.length === sv.moves.length;
-    s.slots[slot] = { ...sv, client: 5, meta: { ...summary(), updated: same ? savedAt(old) || Date.now() : Date.now() } };
+    s.slots[slot] = { ...sv, client: 6, meta: { ...summary(), updated: same ? savedAt(old) || Date.now() : Date.now() } };
     s.last = slot;
     if (!store.write(s)) toast("Couldn't save in this browser. Download your save to keep it.");
     if (!same) queueSync(sv.seed);
@@ -683,6 +725,10 @@
       const canUpdate=!ML||ML.info.owner;
       body.insertAdjacentHTML("afterbegin",`<section style="margin-bottom:24px"><h3 class="disp">Three-day free agency</h3><p>Day 1: sealed opening bids. Days 2 and 3: see previous bids from AI and other owners, then revise. Highest annual salary wins after Day 3, with longer term then a seeded draw breaking ties. No taxes.</p><p>Existing contracts and AI re-signings already completed stay intact. If you enable this before contracts finish, this offseason uses bidding; after a rookie draft has begun, bidding starts next offseason. Future expired AI contracts enter the market.</p>${E.freeAgencyOn(lg)?"<b>Enabled.</b>":canUpdate&&E.capOn(lg)&&(["done","resign","rookie","rookie-data","cuts"].includes(lg.phase)||lg.phase==="season"&&lg.week===0)&&(!ML||ML.info.freeAgencyPolicy===1)?'<button class="btn" id="adoptFA">Review free-agency update</button>':'<p>The creator can enable this after the bidding server is ready and both pages are refreshed. Salary-cap leagues only.</p>'}</section>
         <section style="margin-bottom:24px"><h3 class="disp">Hands-on coaching</h3><p>Choose plays, see an opposing alignment, keep the call, audible or use a timeout. Fourth downs include go, kick or punt with simulated wind and estimated kick range. These are simplified football matchups and simulated conditions.</p>${E.coachingOn(lg)?"<b>Enabled.</b>":canUpdate&&(!ML||ML.info.coachingPolicy===1)&&["done","resign","rookie","rookie-data","cuts"].includes(lg.phase)||canUpdate&&lg.phase==="season"&&lg.week===0&&(!ML||ML.info.coachingPolicy===1)?'<button class="btn" id="adoptCoach">Review coaching update</button>':'<p>The creator can enable this between seasons.</p>'}</section>`);
+      if(ML && E.coachingOn(lg)) {
+        body.insertAdjacentHTML("afterbegin",`<section class="card"><div class="card-b"><h3 class="disp">Coaching involvement limit</h3><p>Big Moments is the default viewing level. Each owner can choose less involvement. The creator controls how much is available; a watch party uses one shared level. Full Control enables one defensive counter after an offensive adjustment. Existing results, players and contracts stay recorded.</p><div class="field"><label for="coachMax">Maximum involvement</label><select id="coachMax" ${canUpdate?"":"disabled"}>${CC.tiers.map((t,i)=>`<option value="${i}" ${i===leagueCoachMax()?"selected":""}>${i+1}. ${t.name}</option>`).join("")}</select></div>${canUpdate?'<button class="btn" id="saveCoachMax">Apply coaching limit</button>':"<p>The league creator changes this setting.</p>"}</div></section>`);
+        if($("saveCoachMax"))$("saveCoachMax").onclick=()=>{const max=Number($("coachMax").value);closeOv();move({t:"coachingControl",version:1,max});};
+      }
       for(const [id,t,title,text,version]of [["adoptFA","freeAgencyUpdate","Enable three-day free agency?","Future expired AI contracts enter bidding. Existing contracts, completed re-signings, roster and current picks stay as they are. Bidding starts after the remaining contract choices, or next offseason if this rookie draft has already begun.",1],["adoptCoach","coachingUpdate","Enable hands-on coaching?","Apply the new coaching choices to upcoming games. Completed results, roster, contracts and draft picks remain recorded.",1]]) if($(id))$(id).onclick=()=>{
         overlay("Optional league update",title,`<p>${text}</p><button class="btn gold" id="confirmFeature">Enable update</button>`);$("confirmFeature").onclick=()=>{closeOv();move({t,version});};
       };
@@ -793,7 +839,7 @@
     }, () => { toast("Couldn't load that season's players. Check your connection and try again."); home(); });
   }
 
-  const coachingToggle = (id, supported = true) => `<label class="tog" style="margin:14px 0"><input type="checkbox" id="${id}" ${supported ? "" : "disabled"}><span><b>Hands-on coaching (optional)</b><span>Call offense and defense, read their alignment, audible or use a timeout, and weigh wind on kicks. Off keeps the current rules.${supported ? "" : " Available after the server update."}</span></span></label>`;
+  const coachingToggle = (id, supported = true) => `<label class="tog" style="margin:14px 0"><input type="checkbox" id="${id}" ${supported ? "" : "disabled"}><span><b>Hands-on coaching (optional)</b><span>Starts at Big Moments. During a game choose Watch, Big Moments, Play Calling or Full Control. Full Control includes reads, audibles and defensive counters. Off keeps the current rules.${supported ? "" : " Available after the server update."}</span></span></label>`;
 
   // ---- New franchise: pick a mode ----
   function setup(i) {
@@ -837,7 +883,7 @@
         $("goBtn").disabled = true; $("goBtn").textContent = "Loading the rosters…";
         realData(y).then((data) => {
           const seed = Math.random().toString(36).slice(2, 10);
-          lg = E.create(data, { seed, mode: "real", team: pickT, hindsight: $("fHind").checked, ...($("fCoach").checked ? { coachingV: 1 } : {}), ...(data.season === REF.season ? { ratingVersion: REF.version } : {}), lr: 1, cap: 1, inj2: 1, realRookies: 1 });
+          lg = E.create(data, { seed, mode: "real", ...(data.season===ROSTER_REF.season?{rosterVersion:ROSTER_REF.version}:{}), team: pickT, hindsight: $("fHind").checked, ...($("fCoach").checked ? { coachingV: 1 } : {}), ...(data.season === REF.season ? { ratingVersion: REF.version } : {}), lr: 1, cap: 1, inj2: 1, realRookies: 1 });
           slot = i; tab = "week"; posF = "ALL"; q = ""; persist(); render();
         }, () => { toast("Couldn't load that season's players. Check your connection and try again."); $("goBtn").disabled = false; $("goBtn").textContent = `Start the ${y} season`; });
       };
@@ -1058,6 +1104,7 @@
       else if (b.dataset.pk) setPlan({ [b.dataset.pk]: +b.dataset.pv });
       else if (b.id === "suggestBtn") { const g = E.nextGame(lg); if (g) move({ t: "plan", plan: E.aiPlan(lg, lg.user, g.h === lg.user ? g.a : g.h, g.wk) }); }
       else if (b.id === "resetPlan") move({ t: "plan", plan: E.PLAN0 });
+      else if (b.id === "rosterReview") reviewRoster();
       else if (b.dataset.lp) lineupTap(b.dataset.lg, b.dataset.lp);
       else if (b.dataset.auto) { sel = null; move({ t: "depth", g: b.dataset.auto, ids: [] }); }
       else if (b.dataset.g) boxScore(b.dataset.g);
@@ -1307,13 +1354,18 @@
       const n = E.STARTERS[grp], healthy = L.bench[grp], hurt = ros.filter((p) => p.g === grp && (p.inj || p.hold)).sort((a, b) => b.grade - a.grade);
       const row = (p, i) => `<button type="button" class="lrow ${i < n && !p.inj ? "st" : ""} ${sel && sel.id === p.id ? "sel" : ""} ${p.inj ? "hurt" : ""}" data-lg="${grp}" data-lp="${esc(p.id)}">${playerBadge(p)}
         <span class="pn"><b>${esc(p.name)}</b><span>${esc(p.pos)} · ${p.age.toFixed(0)} · ${face(E.moodOf(lg, p.id))}${p.inj ? ` · <i>out ${p.inj >= 30 ? "for the season" : p.inj + " wk"}</i>` : p.hold ? " · <i>holding out</i>" : ""}</span></span>
-        <small>${p.inj ? "Hurt" : p.hold ? "Holdout" : i < n ? (n > 1 ? `Starter ${i + 1}` : "Starter") : "Backup"}</small></button>`;
+        <small>${p.inj ? "Hurt" : p.hold ? "Holdout" : i < n ? (n > 1 ? `Starter ${i + 1}` : "Starter") : grp === "QB" ? `QB${i+1}` : "Backup"}</small></button>`;
       return `<section class="card" style="margin-top:12px"><div class="card-h"><h2 class="disp" style="font-size:20px">${E.GROUP_NAME[grp]}</h2>${custom[grp] ? `<button class="btn" data-auto="${grp}">Back to best OVR</button>` : `<span class="muted" style="font-weight:700">Best OVR starts</span>`}</div>
         ${healthy.map(row).join("")}${hurt.map((p) => row(p, 99)).join("")}</section>`;
     }).join("");
-    return `<div class="grid2"><div class="stack"><section class="card"><div class="card-b"><p style="margin:0">Tap a player, then tap the one you want to swap him with. Benching a healthy starter hurts his mood (the face after his age). Hurt players can't play; if a starter gets hurt, the best healthy backup steps in.</p></div></section>${cards}</div>
+    return `${E.rosterReview(lg).length?'<section class="card"><div class="card-b"><p>Some players from the original active roster are elsewhere in this simulation. Nothing has been moved automatically.</p><button class="btn" id="rosterReview">Review roster differences</button></div></section>':""}<div class="grid2"><div class="stack"><section class="card"><div class="card-b"><p style="margin:0">Tap a player, then tap the one you want to swap him with. Benching a healthy starter hurts his mood (the face after his age). Hurt players can't play; if a starter gets hurt, the next healthy player on your depth chart steps in.</p></div></section>${cards}</div>
       <div class="side"><section class="card"><div class="card-h"><h2 class="disp">Your injury report</h2></div>${injuryList(lg.user)}</section>
       ${g ? `<section class="card"><div class="card-h"><h2 class="disp">${esc(E.teamName(team(oppOf(g))))} injuries</h2></div>${injuryList(oppOf(g))}</section>` : ""}</div></div>`;
+  }
+  function reviewRoster() {
+    const missing=E.rosterReview(lg);
+    overlay("Read-only roster review","Original roster differences",`<p>This compares the active-roster snapshot with this simulated league. Trades, releases and other valid moves can explain differences. No player will be moved automatically, and players on another team cannot be reclaimed.</p>${missing.map(p=>`<p><b>${esc(p.name)}</b> · ${esc(p.pos)} · ${p.team<0?"Available free agent":esc(E.teamName(team(p.team)))}</p>`).join("")}<p>Use Trades &amp; FA to negotiate a signing or trade. Review any release and cap cost before confirming.</p><button class="btn" id="reviewFA">Open Trades &amp; FA</button>`);
+    $("reviewFA").onclick=()=>{closeOv();tab="moves";FAo.pos="QB";movesOpen=true;render();};
   }
   function lineupTap(grp, id) {
     const p = lg.players[id];
@@ -1324,7 +1376,7 @@
     const order = E.lineup(lg, lg.user).bench[grp].map((x) => x.id), i = order.indexOf(sel.id), j = order.indexOf(id);
     [order[i], order[j]] = [order[j], order[i]];
     sel = null;
-    move({ t: "depth", g: grp, ids: order.slice(0, E.STARTERS[grp]) });
+    move({ t: "depthOrder", g: grp, ids: order });
   }
 
   // ---- Trades and free agents (build 4) ----
@@ -1644,7 +1696,7 @@
     liveView();
   }
   function bugSide(i, h) {
-    const t = team(i), l = logo(t, "lg");
+    const t = team(i), l = LFI.scoreMark(E.teamShort(t), "", "s lg", t.c1);
     const nm = `<div class="nm"><b>${esc(E.teamShort(t))}</b><small>${esc(E.record(lg, i))}</small></div>`;
     return `<div class="gtm${h ? " h" : ""}" style="--c:${t.c1}">${h ? `<b class="sc" id="sH">0</b><i id="pH"></i>${nm}${l}` : `${l}${nm}<i id="pA"></i><b class="sc" id="sA">0</b>`}</div>`;
   }
@@ -1659,7 +1711,7 @@
         ${bugSide(g.h, true)}<div class="flash" id="lvF"></div></div>
       <div class="ctl"><div class="seg" id="spd">${SPEEDS.map(([k, l, v]) => `<button type="button" data-spd="${k}" aria-pressed="${L.speed === v}">${l}</button>`).join("")}<button type="button" data-pause aria-pressed="false">Pause</button><button type="button" data-skip>Skip to end</button></div>
         <button class="btn" id="lvLeave" style="margin-left:auto">Leave</button></div>
-      <div class="pbar" id="pBar"></div><div id="lvBox"></div>
+      ${coachingSelector()}<div class="pbar" id="pBar"></div><div id="lvBox"></div>
       <div class="gcw"><div class="stack" style="display:grid;gap:12px">
         <div class="fld" id="fld">${fieldSvg(g)}</div>
         <section class="card"><div class="card-h"><h2 class="disp" style="font-size:18px">Current drive</h2></div><div class="card-b" style="display:grid;gap:8px">
@@ -1685,6 +1737,7 @@
       else if (b.id === "lvBack") { stopLive(); tab = "week"; afterLive(L); }
       else if (b.dataset.g) boxScore(b.dataset.g);
     };
+    $("coachLevel").onchange=e=>changeCoachLevel(Number(e.target.value));
     L.last = performance.now();
     const loop = (now) => {
       if (live !== L) return;
@@ -1726,7 +1779,7 @@
     if (idx === L.idx) return;
     // Halftime: in a solo game the viewer stops here so you can change your second-half plan.
     const hi = plays.findIndex((p) => p.k === "half");
-    if (!L.sync && !L.party && hi >= 0 && idx >= hi && L.half < 0 && L.idx < hi && L.ms < L.times[L.times.length - 1]) { idx = hi; L.paused = true; L.ms = L.times[hi]; L.inHalf = true; halftime(hi); }
+    if (liveCoachLevel()>0 && !L.skipping && !L.sync && !L.party && hi >= 0 && idx >= hi && L.half < 0 && L.idx < hi && L.ms < L.times[L.times.length - 1]) { idx = hi; L.paused = true; L.ms = L.times[hi]; L.inHalf = true; halftime(hi); }
     L.idx = idx;
     $("feed").innerHTML = feedHtml(plays, g, idx);
     const p = plays[idx], nx = plays[idx + 1];
@@ -1792,7 +1845,7 @@
   const answered = (a) => !!(lg.calls && lg.calls[a.t] && lg.calls[a.t][a.id] != null);
   function pendingAsk() {
     const L = live; if (!L || L.committed || L.skipping || !L.coach) return null;
-    return L.pv.asks.find((a) => L.coach.has(a.t) && !answered(a)) || null;
+    return L.pv.asks.find((a) => L.coach.has(a.t) && !answered(a) && !(L.passed&&L.passed.has(`${a.t}:${a.id}`)) && a.at>L.idx && CC.prompts(a,liveCoachLevel())) || null;
   }
   const ASK_LABEL = { go: "Go for it", punt: "Punt", fg: "Field goal", kick: "Kick the extra point", two: "Go for two", sit: "Sit him", keep: "Keep him in",
     stay: "Stick with him", bench: "Bring in the backup", run: "Let it run", to: "Call timeout",
@@ -1812,8 +1865,10 @@
   }
   function askText(a) {
     const g = live.g, pn = (id) => { const p = lg.players[id]; return p ? E.short(p) : "a starter"; }, when = `${qn(a.q)} ${clk(a.clock)}`;
-    if (a.kind === "play") return ["Call the play", `${coachingSituation(a)}. Choose your call, then read their defensive look before the snap.`,
+    if (a.kind === "play") return ["Call the play", `${coachingSituation(a)}. ${liveCoachLevel()===3?"Choose your call, then read their defensive look before the snap.":"Choose your call; your staff handles the presnap read."}`,
       { inside: "Attack between the tackles", outside: "Test the edge", quick: "Get the ball out quickly", deep: "More upside, longer protection", screen: "Invite pressure, throw underneath", auto: "Use the game plan" }];
+    if (a.kind === "reply") return ["Counter their adjustment", `${coachingSituation(a)}. The offense adjusted and now shows ${esc(a.offense.toLowerCase())}. Keep your package, change it, or use a timeout. Their exact play stays hidden. One counter, then the snap.`,{keep:"Keep the defensive package",to:"Uses one defensive timeout"}];
+    if (a.kind === "reset") return ["Defensive timeout", `${coachingSituation(a)}. Choose the final package after talking it over.`,{}];
     if (a.kind === "def") return ["Set your defense", `${coachingSituation(a)}. The offense shows ${esc(a.offense.toLowerCase())}. Choose your look; their actual play stays hidden.`,
       { base: "Balanced against run and pass", heavy: "Stronger against the run; exposes coverage", nickel: "Extra coverage; lighter against the run", pressure: "Send pressure; risk a big play" }];
     if (a.kind === "look" || a.kind === "huddle") return [a.kind === "huddle" ? "Timeout: talk it over" : "Read the defense",
@@ -1831,7 +1886,7 @@
     const L = live, mine = L.coach.has(a.t) && (!L.party || L.party.mine.has(a.t));
     L.asking = a; L.askLimit = E.coachingOn(lg) ? 30 : ASK_SECS; L.askLeft = mine ? L.askLimit : L.askLimit + 5;
     const [title, text, sub] = askText(a);
-    const opts = a.opts.map((c) => `<button class="btn${c === a.def ? " gold" : ""}" data-call="${c}" ${mine ? "" : "disabled"}>${a.kind === "look" && c === "keep" ? "Keep the call" : ASK_LABEL[c]}<small>${c === a.def ? "default" : sub[c] || "&nbsp;"}</small></button>`).join("");
+    const opts = a.opts.map((c) => `<button class="btn${c === a.def ? " gold" : ""}" data-call="${c}" ${mine ? "" : "disabled"}>${(a.kind === "look" || a.kind === "reply") && c === "keep" ? (a.kind === "reply"?"Keep the package":"Keep the call") : ASK_LABEL[c]}<small>${c === a.def ? "default" : sub[c] || "&nbsp;"}</small></button>`).join("");
     $("lvBox").innerHTML = `<section class="card ask"><div class="card-h"><h2 class="disp">${title}</h2><small class="muted" id="askN">${L.askLeft}s</small></div><div class="card-b">
       <p style="margin:0">${L.party && !mine ? `Call for ${esc(E.teamName(team(a.t)))}. ` : ""}${text}</p><div class="opts">${opts}</div>
       <div class="bar"><i id="askBar"></i></div><p class="empty" style="margin:6px 0 0">${mine ? "No answer when time runs out = the default." : "Waiting for their coach. No answer = the default."}</p></div></section>`;
@@ -2051,13 +2106,13 @@
     const { data, error } = await c.sb.rpc(fn, args); if (error) throw Object.assign(new Error(error.message), { code: error.code }); return data;
   };
   const leagueGet = async (args) => {
-    for (const name of ["franchise_league_get_v5", "franchise_league_get_v4", "franchise_league_get_v3", "franchise_league_get_v2", "franchise_league_get"]) {
+    for (const name of ["franchise_league_get_v6", "franchise_league_get_v5", "franchise_league_get_v4", "franchise_league_get_v3", "franchise_league_get_v2", "franchise_league_get"]) {
       try { return await rpc(name, args); }
       catch (err) { if (!["PGRST202", "42883"].includes(err.code) || name === "franchise_league_get") throw err; }
     }
   };
   const versionedParty = async (kind,args) => {
-    const names=["franchise_party_"+kind+"_v4","franchise_party_"+kind+"_v3","franchise_party_"+kind+"_v2","franchise_party_"+kind];
+    const names=["franchise_party_"+kind+"_v5","franchise_party_"+kind+"_v4","franchise_party_"+kind+"_v3","franchise_party_"+kind+"_v2","franchise_party_"+kind];
     for(const name of names) {try{return await rpc(name,args);}catch(err){if(!["PGRST202","42883"].includes(err.code)||name===names[names.length-1])throw err;}}
   };
   const partyGet = (args) => versionedParty("get",args);
@@ -2126,7 +2181,7 @@
     const L = live; if (!L || !L.party || !st) return;
     const P = L.party; P.st = st; P.clock = st.clock;
     if (L.speed !== st.clock.speed) { L.speed = st.clock.speed; document.querySelectorAll("[data-spd]").forEach((x) => x.setAttribute("aria-pressed", SPEEDS.find((s) => s[0] === x.dataset.spd)[2] === L.speed)); }
-    partyAnswers(st.answers); partyBar();
+    partyAnswers(st.answers); refreshCoaching(); partyBar();
   }
   async function partyPoll() {
     const L = live; if (!L || !L.party || L.party.busy) return;
@@ -2142,7 +2197,7 @@
   function partyAnswers(ans) {
     const L = live; if (!L || !ans) return;
     for (let guard = 0; guard < 40; guard++) {
-      const a = L.pv.asks.find((x) => L.coach.has(x.t) && !answered(x)); if (!a) return;
+      const a = L.pv.asks.find((x) => L.coach.has(x.t) && !answered(x) && (`${x.t}:${x.id}` in ans)); if (!a) return;
       const key = `${a.t}:${a.id}`; if (!(key in ans)) return;
       const c = ans[key] == null || !a.opts.includes(ans[key]) ? a.def : ans[key];
       if (L.asking === a) applyCall(a, c);
@@ -2189,7 +2244,7 @@
   // 5 s otherwise). Weeks play once every owner is ready; when a deadline passes, any open browser hands out the
   // defaults (an auto-pick, the suggested re-signings and cuts, the week itself), so a missing friend never stalls it.
   const ORDERLESS = new Set(["inj2", "realRookies", "pilot", "ready", "plan", "depth", "half", "call", "finish", "offer", "decline", "withdraw"]);
-  const TEAM_MOVES = new Set(["marketUpdate", "freeAgencyUpdate", "futureClassesUpdate", "prospectsUpdate", "coachingUpdate", "ratingsUpdate", "inj2", "realRookies", "pilot", "pick", "auto", "finish", "depth", "plan", "half", "call", "resign", "cut", "ready", "trade", "offer", "accept", "decline", "withdraw", "sign"]);
+  const TEAM_MOVES = new Set(["coachingControl", "depthOrder","marketUpdate", "freeAgencyUpdate", "futureClassesUpdate", "prospectsUpdate", "coachingUpdate", "ratingsUpdate", "inj2", "realRookies", "pilot", "pick", "auto", "finish", "depth", "plan", "half", "call", "resign", "cut", "ready", "trade", "offer", "accept", "decline", "withdraw", "sign"]);
   const ownerOf = (t) => ML && ML.info.people.find((p) => p.team === t);
   const whoName = (t) => { const p = ownerOf(t); return p ? (p.me ? "You" : p.name) : E.teamName(team(t)); };
   // Choices on the contracts and cuts screens survive the league refreshing underneath them.
@@ -2282,6 +2337,7 @@
         const data = mode === "real" ? await realData(year) : DATA;
         const settings = mode === "real" ? { mode: "real", year, hindsight: !!($("mHind") && $("mHind").checked), lr: 1, cap: 1, inj2: 1, realRookies: 1 } : { mode: "redraft", userRounds: +$("mRounds").value, lr: 1, cap: 1, inj2: 1, realRookies: 1 };
         if (ratingSupport && (mode === "redraft" || year === REF.season)) settings.ratingVersion = REF.version;
+        if(mode==="real"&&year===ROSTER_REF.season) {await rpc("franchise_league_get_v6",{p_league:"",p_since:-1});settings.rosterVersion=ROSTER_REF.version;}
         if (coachingSupport && $("mCoach").checked) settings.coachingV = 1;
         settings.pickSecs = +$("mClock").value; settings.weekHours = +$("mWeek").value;
         const id = await rpc("franchise_league_create", { p_name: $("mName").value.trim() || "Friends league", p_seed: Math.random().toString(36).slice(2, 10),
@@ -2363,7 +2419,7 @@
     } catch (err) { console.warn(err.message); } finally { M.busy = false; }
   }
   // What the screen depends on; re-render only when it changes, so a half-made choice isn't wiped by a refresh.
-  const viewKey = () => lg ? [lg.year, lg.phase, lg.faV || "", lg.faMarket && lg.faMarket.day || "", lg.faMarket && lg.faMarket.complete || "", lg.marketVersion || "", lg.futureClassesV || "", lg.ratingVersion || "", E.coachingOn(lg) ? 1 : 0, lg.week, lg.draft ? lg.draft.n : -1, E.waitingOn(lg).join(), lg.playoffs ? lg.playoffs.round : -1,
+  const viewKey = () => lg ? [lg.year, lg.phase, lg.faV || "", lg.faMarket && lg.faMarket.day || "", lg.faMarket && lg.faMarket.complete || "", lg.marketVersion || "", lg.futureClassesV || "", lg.ratingVersion || "", E.coachingOn(lg) ? 1 : 0, JSON.stringify(lg.coachingControls||{}), lg.week, lg.draft ? lg.draft.n : -1, E.waitingOn(lg).join(), lg.playoffs ? lg.playoffs.round : -1,
     Object.keys(lg.offers || {}).join(), (lg.tx || []).length, JSON.stringify(lg.pilot || {})].join("|") : ""; // offers and trades/signings redraw the trades screen
   function mlRender() {
     const y = window.scrollY, qf = document.activeElement && document.activeElement.id === "q";
@@ -2408,7 +2464,7 @@
     const clock = lg.draft ? (lg.draft.n !== n0 || !hadDraft ? C.request(lg, M.info.clockPolicy) : null)
       : hadDraft || m.t === "week" || m.t === "offseason" || lg.phase !== ph ? "week" : null;
     try {
-      const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.clientProtocol === 5 ? `client5/${clock || ""}` : M.info.futureClassPolicy === 1 ? `client4/${clock || ""}` : (M.info.coachingPolicy === 1 || M.info.prospectPolicy === 1) ? `client3/${clock || ""}` : M.info.ratingPolicy === 1 ? `client2/${clock || ""}` : clock });
+      const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.clientProtocol >= 6 ? `client6/${clock || ""}` : M.info.clientProtocol === 5 ? `client5/${clock || ""}` : M.info.futureClassPolicy === 1 ? `client4/${clock || ""}` : (M.info.coachingPolicy === 1 || M.info.prospectPolicy === 1) ? `client3/${clock || ""}` : M.info.ratingPolicy === 1 ? `client2/${clock || ""}` : clock });
       if (ML !== M) return false;
       M.next = r.s + 1; M.info.deadline = r.deadline; M.off = r.now - Date.now();
       if (m.t === "pilot") M.info.people.forEach((p) => { if (p.team === m.team) p.ready = m.n > 0; });
@@ -2433,7 +2489,7 @@
     const M = ML; if (!M || (TEAM_MOVES.has(m.t) && m.team !== M.me)) return;
     for (let i = 0; i < 5; i++) {
       try {
-        const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.clientProtocol === 5 ? "client5/" : M.info.futureClassPolicy === 1 ? "client4/" : (M.info.coachingPolicy === 1 || M.info.prospectPolicy === 1) ? "client3/" : M.info.ratingPolicy === 1 ? "client2/" : null });
+        const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.clientProtocol >= 6 ? "client6/" : M.info.clientProtocol === 5 ? "client5/" : M.info.futureClassPolicy === 1 ? "client4/" : (M.info.coachingPolicy === 1 || M.info.prospectPolicy === 1) ? "client3/" : M.info.ratingPolicy === 1 ? "client2/" : null });
         M.next = r.s + 1;
         if (m.t === "ready") M.info.people.forEach((p) => { if (p.team === m.team) p.ready = true; });
         return;

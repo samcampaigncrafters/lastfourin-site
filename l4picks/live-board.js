@@ -11,6 +11,7 @@
   const signed = value => value == null ? '—' : (value > 0 ? '+' : value < 0 ? '−' : '') + Math.abs(value);
   const quote = side => side && (side.current || side.close || side.open) || {};
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const teamCircle = (code, color) => typeof LFI !== 'undefined' && LFI.scoreMark ? LFI.scoreMark(code, '', 's', color) : `<b>${esc(code)}</b>`;
 
   function read(event) {
     const c = event.competitions && event.competitions[0];
@@ -37,7 +38,7 @@
     const hasScore = state === 'live' || state === 'final';
     const homeMargin = hasScore && hScore != null && aScore != null ? hScore - aScore : null;
     return { id: String(event.id), state, detail: t.shortDetail || t.detail || t.description || 'Status unavailable',
-      date: event.date, home: home.team.abbreviation, away: away.team.abbreviation,
+      date: event.date, home: home.team.abbreviation, away: away.team.abbreviation, hColor: home.team.color, aColor: away.team.color,
       hScore: hasScore ? hScore : null, aScore: hasScore ? aScore : null,
       spread, total: lineTotal, hML: price(moneyline, 'home') ?? number((o.homeTeamOdds || {}).moneyLine),
       aML: price(moneyline, 'away') ?? number((o.awayTeamOdds || {}).moneyLine),
@@ -56,7 +57,7 @@
     const spread = g.spread == null ? 'Unavailable' : `${g.home} ${g.spread === 0 ? 'PK' : signed(g.spread)}`;
     return `<article class="lb-game" data-state="${g.state}">
       <div class="lb-game-head"><span class="lb-state ${g.state}">${g.state === 'live' ? '● Live' : g.state === 'final' ? 'Final' : g.state === 'upcoming' ? 'Upcoming' : 'Not active'}</span><span>${esc(g.detail)}</span></div>
-      <div class="lb-score"><div><b>${esc(g.away)}</b><strong>${score(g.aScore)}</strong></div><span>@</span><div><b>${esc(g.home)}</b><strong>${score(g.hScore)}</strong></div></div>
+      <div class="lb-score"><div>${teamCircle(g.away,g.aColor)}<strong>${score(g.aScore)}</strong></div><span>@</span><div>${teamCircle(g.home,g.hColor)}<strong>${score(g.hScore)}</strong></div></div>
       <div class="lb-quotes">
         <div><span>Pregame spread</span><b>${esc(spread)}</b><small>${g.openSpread == null ? 'Opening quote unavailable' : `Opened ${esc(g.home)} ${signed(g.openSpread)}${change ? ` · moved ${signed(change)} pts` : ''}`}</small></div>
         <div><span>Pregame total</span><b>${g.total == null ? 'Unavailable' : `O/U ${g.total}`}</b><small>${g.openTotal == null ? 'Opening quote unavailable' : `Opened ${g.openTotal}`}</small></div>

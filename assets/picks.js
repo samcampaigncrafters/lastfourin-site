@@ -106,7 +106,7 @@
     const lost = g.winner && g.winner !== ha;
     return `<button class="tm ${ha}${mine ? " pick" : ""}${lost ? " lost" : ""}" style="--tc:${LFI.fillColor(t.color)}" data-g="${g.id}" data-s="${ha}"
        ${open ? "" : "disabled"} aria-pressed="${mine}" aria-label="Pick ${esc(t.city)} ${esc(t.nick)}">
-       ${LFI.teamMark(t.abbr, t.nick, ha === "home" ? "r" : "")}
+       ${LFI.scoreMark(t.abbr, t.nick, ha === "home" ? "r" : "", t.color)}
        <span class="tn"><span class="nick" style="display:block">${t.rank ? `<small>#${t.rank}</small> ` : ""}${esc(t.city)}</span><span class="rec">${esc(t.rec)}</span></span>
        <span class="ts">${showScore ? t.score : ""}</span></button>`;
   }

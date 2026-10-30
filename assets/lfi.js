@@ -6,13 +6,17 @@
   // On phones both become one list. An item marked soon shows in the menu but is not a link yet.
   const TOP = [
     { key: "home", label: "Home", href: "/", sub: "What to play this week" },
-    { label: "Trivia", items: [
+    { key: "triviahub", href: "/play/trivia/", label: "Trivia", sub: "All trivia games", items: [
       ["trivia", "/trivia/", "Daily Five", "Five questions, same for everyone"],
+      ["rareair", "/trivia/rare-air/", "Rare Air", "Seven prompts. The deep cuts score more"],
+      ["playerguess", "/trivia/player-guess/", "NFL Player Guess", "Eight guesses. Follow the clues"],
+      ["dailynine", "/trivia/daily-grid/", "Daily Nine", "Nine squares. Find the player who fits"],
       ["names", "/trivia/names.html", "Name Them All", "How many can you name?"],
       ["pindrop", "/trivia/pindrop.html", "Pin Drop", "Drop a pin on the map, closest wins"],
       ["grid", "/grid/", "Grid Race", "Race a friend for 25 squares"],
+      ["race", "/trivia/race.html", "Name Them All Race", "Name players before your friends do"],
     ] },
-    { label: "Pick'em", items: [
+    { key: "pickemhub", href: "/play/pickem/", label: "Pick'em", sub: "All prediction games", items: [
       ["nfl", "/pickem/", "NFL Pick'em", "Pick every game straight up"],
       ["cfb", "/college/", "College Pick'em", "Every game with a Top 25 team"],
       ["nba", "/nba/", "NBA Pick'em", "Every NBA game, every night"],
@@ -24,13 +28,14 @@
       ["ap", "/ap-poll/", "Predict the AP Poll", "Call Sunday's Top 25"],
       ["bracket", "/bracket/", "CFP Bracket Builder", "Build and share your field"],
     ] },
-    { label: "Multiplayer", items: [
+    { key: "multiplayerhub", href: "/play/multiplayer/", label: "Multiplayer", sub: "Online or with friends", items: [
+      ["online", "/play/online/", "Online ranked", "Find an opponent and climb the rankings"],
       ["challenges", "/challenges/", "Challenges", "Take on your friends"],
       ["grid", "/grid/", "Grid Race", "Race a friend for 25 squares"],
       ["race", "/trivia/race.html", "Name Them All Race", "Race friends live, first to name it claims it"],
       ["drafts", "/drafts/", "Draft a Friend", "Snake-draft NFL history, live"],
     ] },
-    { label: "Drafts", items: [
+    { key: "draftshub", href: "/play/drafts/", label: "Drafts", sub: "Every way to draft", items: [
       ["drafts", "/drafts/", "Drafts", "Draft any slice of NFL history"],
       ["jerseys", "/drafts/?kind=jerseys", "Jersey Draft", "Best player to wear each number"],
       ["coaches", "/drafts/?kind=coaches", "Coaches' Draft", "Draft head coaches by wins"],
@@ -156,7 +161,8 @@
   function header() {
     const h = document.querySelector("header.nav");
     if (!h) return;
-    const active = h.dataset.active || "";
+    const pageActive = h.dataset.active || "";
+    const active = TOP.find(t=>t.href&&t.items?.some(([k])=>k===pageActive))?.key || pageActive;
     const name = myName();
     const item = ([k, href, label, sub]) => `<a href="${href}"${k === active ? ' class="on" aria-current="page"' : ""}><b>${em(k)}${label}</b><span>${sub}</span></a>`;
     const dd = (g, id) => {
@@ -164,10 +170,10 @@
       return `<div class="dd${on ? " on" : ""}"><button type="button" class="dd-btn" aria-expanded="false" aria-controls="${id}">${LEAGUES.includes(g) ? em(g.label) : ""}${g.label}${CARET}</button>
         <div class="dd-panel" id="${id}" hidden>${g.items.map(item).join("")}</div></div>`;
     };
-    const top = TOP.map((t, i) => t.items ? dd(t, `dd${i}`)
+    const top = TOP.map((t, i) => t.items && !t.href ? dd(t, `dd${i}`)
       : t.soon ? `<span class="nav-home nav-soon" title="Coming soon">${t.label}<small>Soon</small></span>`
       : `<a class="nav-home${t.key === active ? " on" : ""}" href="${t.href}">${t.label}</a>`).join("");
-    const mmTop = TOP.map((t) => t.items ? `<div class="mm-group"><div class="mm-lbl">${em(t.label)}${t.label}</div>${t.items.map(item).join("")}</div>`
+    const mmTop = TOP.map((t) => t.items && !t.href ? `<div class="mm-group"><div class="mm-lbl">${em(t.label)}${t.label}</div>${t.items.map(item).join("")}</div>`
       : t.soon ? `<span class="mm-home mm-soon"><b>${t.label} <i class="mm-badge">Soon</i></b><span>${t.sub}</span></span>`
       : `<a class="mm-home${t.key === active ? " on" : ""}" href="${t.href}"><b>${em(t.key)}${t.label}</b><span>${t.sub}</span></a>`).join("");
     h.innerHTML = `<div class="nav-in">
@@ -186,6 +192,8 @@
       </div>
       <div class="mmenu" id="mmenu" hidden>
           ${mmTop}
+          <a class="mm-home" href="/scores/"><b>Live scores</b><span>Every game, all six leagues</span></a>
+          <a class="mm-home" href="/coins/"><b>Coins + shop</b><span>Earn coins and customize your profile</span></a>
           ${LEAGUES.map((g) => `<div class="mm-group"><div class="mm-lbl">${em(g.label)}${g.label}</div>${g.items.map(item).join("")}</div>`).join("")}
           <a class="mm-home${active === "account" ? " on" : ""}" href="/account/"><b><span class="em" aria-hidden="true">📋</span> My picks</b><span>Everything you've submitted</span></a>
           ${me && me.onboarded ? `<a class="mm-home${active === "profile" ? " on" : ""}" href="/u/?h=${encodeURIComponent(me.username)}"><b><span class="em" aria-hidden="true">👤</span> My profile</b><span>@${esc(me.username)}</span></a>`
@@ -196,7 +204,8 @@
       </div>`;
     let lg = $("navlg");
     if (!lg) { lg = document.createElement("nav"); lg.id = "navlg"; lg.className = "nav-leagues"; lg.setAttribute("aria-label", "Leagues"); h.after(lg); }
-    lg.innerHTML = `<div class="nav-lg-in">${LEAGUES.map((g, i) => dd(g, `lg${i}`)).join("")}</div>`;
+    lg.innerHTML = `<div class="nav-lg-in"><a class="coin-nav-link" href="/scores/">Scores</a><a class="coin-nav-link" href="/coins/">Coins + shop</a>${LEAGUES.map((g, i) => dd(g, `lg${i}`)).join("")}</div>`;
+    document.dispatchEvent(new CustomEvent("bubble:header"));
     if (h.dataset.bound) return;
     h.dataset.bound = "1";
 
@@ -302,6 +311,26 @@
   // cls "r" right-aligns it (right-hand sides); "s" drops the nickname where the name already sits beside it.
   const teamMark = (abbr, nick, cls = "") => abbr
     ? `<span class="tmk${cls ? " " + cls : ""}"><b>${esc(abbr)}</b>${nick && !/\bs\b/.test(cls) ? `<small>${esc(nick)}</small>` : ""}</span>` : "";
+  // Initial circles use supplied team colors; unknown colors get a stable, readable fallback.
+  const circlePalette = ["#6d28d9", "#0369a1", "#be123c", "#047857", "#b45309", "#4338ca", "#0e7490", "#9d174d"];
+  const badgeColor = (color, code = "") => {
+    const fromCollege = window.CFB && Object.values(window.CFB.teams).find(t => t.abbr === code);
+    const raw = color || (fromCollege && fromCollege.c);
+    if (/^#?[0-9a-f]{6}$/i.test(raw || "")) return "#" + raw.replace(/^#/, "");
+    let h = 0; for (const c of String(code)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return circlePalette[h % circlePalette.length];
+  };
+  const badgeInk = color => {
+    const hex = badgeColor(color), rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
+    const c = rgb.map(x => x <= .04045 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4);
+    return .2126*c[0] + .7152*c[1] + .0722*c[2] > .179 ? "#111827" : "#ffffff";
+  };
+  // cls "r" right-aligns; "s" hides a nickname that already appears alongside.
+  const scoreMark = (abbr, nick, cls = "", color = "") => {
+    if (!abbr) return "";
+    const fill = badgeColor(color, abbr);
+    return `<span class="tmk score-mark${cls ? " " + cls : ""}${String(abbr).length > 3 ? " long" : ""}" style="--team-fill:${fill};--team-ink:${badgeInk(fill)}"><b>${esc(abbr)}</b>${nick && !/\bs\b/.test(cls) ? `<small>${esc(nick)}</small>` : ""}</span>`;
+  };
   // College team by ESPN id, from cfb-data.js when the page loads it.
   const cfbTeam = (id) => (window.CFB && id && Object.values(window.CFB.teams).find((x) => x.id === String(id))) || null;
   // Older saved picks kept a logo address instead of a code (…/nfl/500-dark/det.png or …/ncaa/500/333.png).
@@ -515,14 +544,14 @@
       const top = g.status === "in" ? `<span class="live">● ${esc(g.detail)}</span>` : g.status === "pre" ? esc(fmtShort(g.kickoff)) : esc(g.detail);
       const row = (ha) => {
         const t = g[ha], lose = g.winner && g.winner !== ha && g.winner !== "tie";
-        return `<div class="sg-row${lose ? " lose" : ""}"><span>${t.rank ? `<small class="muted">${t.rank}</small> ` : ""}<b>${esc(t.abbr)}</b> <small class="nk">${esc(t.nick)}</small>${mine[g.id] === ha ? '<i class="mine" title="Your pick"></i>' : ""}</span><span class="sc">${g.status === "pre" ? esc(t.rec) : t.score ?? ""}</span></div>`;
+        return `<div class="sg-row${lose ? " lose" : ""}"><span>${t.rank ? `<small class="muted">${t.rank}</small> ` : ""}${scoreMark(t.abbr, "", "s", t.color)} <small class="nk">${esc(t.nick)}</small>${mine[g.id] === ha ? '<i class="mine" title="Your pick"></i>' : ""}</span><span class="sc">${g.status === "pre" ? esc(t.rec) : t.score ?? ""}</span></div>`;
       };
       return `<a class="sg" href="${g.href || "#g" + g.id}"><div class="sg-top">${top}<span>${esc(g.tv)}</span></div>${row("away")}${row("home")}</a>`;
     }).join("");
   }
 
-  window.LFI = { $, esc, now, local, selectionDay, countdown, toast, entries, renderEntry, share, shareUrl, readShare, copyText,
-                 KIND, teamMark, cfbTeam, scoreboard, thisWeek, fillColor, firstRankedKickoff, stripHTML, fmtTime, fmtShort, normalize,
+  window.LFI = { playCategories: TOP.filter(t=>t.items&&t.href), $, esc, now, local, selectionDay, countdown, toast, entries, renderEntry, share, shareUrl, readShare, copyText,
+                 KIND, teamMark, scoreMark, cfbTeam, scoreboard, thisWeek, fillColor, firstRankedKickoff, stripHTML, fmtTime, fmtShort, normalize,
                  setMe(p) { me = p; header(); countChallenges(); }, me: () => me, countChallenges, CONTACT };
 
   paintThemeColor();
@@ -533,4 +562,10 @@
   if (!document.querySelector('script[src="/assets/cloud.js"]')) {
     const s = document.createElement("script"); s.src = "/assets/cloud.js"; document.head.appendChild(s);
   }
+  for (const [part,needed] of [["rewards",true]]) {
+    if (needed && ![...document.scripts].some(s=>s.src.split("?")[0].endsWith("/assets/"+part+".js"))) {
+      const s=document.createElement("script");s.src="/assets/"+part+".js?v="+(part==="rewards"?"20261029.ready2":"20261029");document.head.appendChild(s);
+    }
+  }
+
 })();

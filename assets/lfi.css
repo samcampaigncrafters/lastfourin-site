@@ -48,13 +48,13 @@ button { cursor: pointer; }
 .disp { font-family: var(--f-display); font-weight: var(--disp-weight); font-style: var(--disp-style); text-transform: uppercase; letter-spacing: .01em; line-height: .95; }
 
 /* Score strip */
-.strip { background: var(--card); border-bottom: 1px solid var(--line); display: flex; align-items: stretch; height: 64px; }
+.strip { background: var(--card); border-bottom: 1px solid var(--line); display: flex; align-items: stretch; min-height: 84px; }
 .strip-lbl { flex: none; display: flex; flex-direction: column; justify-content: center; padding: 0 16px; border-right: 1px solid var(--line); font-family: var(--f-display); font-weight: 700; text-transform: uppercase; line-height: 1.05; }
 .strip-lbl b { font-size: 15px; letter-spacing: .04em; }
 .strip-lbl span { font-size: 12px; color: var(--muted); letter-spacing: .08em; }
 .strip-games { flex: 1; display: flex; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
 .strip-games::-webkit-scrollbar { display: none; }
-.sg { flex: none; width: 168px; padding: 7px 12px; border-right: 1px solid var(--line); display: grid; gap: 1px; text-decoration: none; scroll-snap-align: start; }
+.sg { flex: none; width: 168px; padding: 7px 12px; border-right: 1px solid var(--line); display: grid; grid-template-rows:14px 26px 26px; gap: 2px; text-decoration: none; scroll-snap-align: start; }
 .sg:hover { background: var(--card-2); }
 .sg-top { display: flex; justify-content: space-between; font-size: 10.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .sg-top .live { color: var(--loss); }
@@ -831,3 +831,57 @@ main:focus { outline: none; } /* the skip link moves focus here; the page itself
 .foot .foot-links { display: block; margin-top: 6px; }
 .foot .foot-links a { display: inline-block; padding: 5px 0; } /* bigger tap targets on phones */
 .sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; } /* screen readers only */
+
+/* Colored initials are limited to score displays. Other team marks and game logos keep their design. */
+span.tmk.score-mark > b { text-shadow:none;display:grid;place-items:center;box-sizing:border-box;width:var(--badge-size,calc(var(--tmk-size,22px)*1.75));height:var(--badge-size,calc(var(--tmk-size,22px)*1.75));flex:none;border-radius:50%;background:var(--team-fill,#6d28d9);color:var(--team-ink,#fff);border:2px solid #ffffff8c;box-shadow:0 0 0 1px #1118271a;font-size:var(--tmk-size,22px);line-height:1; }
+span.tmk.score-mark.long > b { font-size:calc(var(--tmk-size,22px)*.72); }
+.sg-row .score-mark { --tmk-size:12px;--badge-size:25px;vertical-align:middle;margin-right:4px; }
+
+/* Keep the frame still while the two real tab screens slide side by side. */
+.bubble-app-bar{view-transition-name:bubble-app-header}
+.bubble-tabs{view-transition-name:bubble-app-tabs;background:var(--app-navy,#10233f);backdrop-filter:none}
+html[data-tab-motion]::view-transition-group(root){animation-duration:260ms;animation-timing-function:cubic-bezier(.22,.8,.25,1)}
+html[data-tab-motion]::view-transition-old(root),html[data-tab-motion]::view-transition-new(root){animation-duration:260ms;animation-timing-function:cubic-bezier(.22,.8,.25,1);animation-fill-mode:both;mix-blend-mode:normal;opacity:1}
+html[data-tab-motion="forward"]::view-transition-old(root){animation-name:bubble-tab-out-left}
+html[data-tab-motion="forward"]::view-transition-new(root){animation-name:bubble-tab-in-right}
+html[data-tab-motion="back"]::view-transition-old(root){animation-name:bubble-tab-out-right}
+html[data-tab-motion="back"]::view-transition-new(root){animation-name:bubble-tab-in-left}
+html[data-tab-motion]::view-transition-old(lfi-nav),html[data-tab-motion]::view-transition-old(bubble-app-header),html[data-tab-motion]::view-transition-old(bubble-app-tabs){display:none}
+html[data-tab-motion]::view-transition-group(lfi-nav),html[data-tab-motion]::view-transition-group(bubble-app-header),html[data-tab-motion]::view-transition-group(bubble-app-tabs),html[data-tab-motion]::view-transition-new(lfi-nav),html[data-tab-motion]::view-transition-new(bubble-app-header),html[data-tab-motion]::view-transition-new(bubble-app-tabs){animation:none}
+html[data-tab-motion-last] main{animation:none}
+@keyframes bubble-tab-out-left{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+@keyframes bubble-tab-in-right{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes bubble-tab-out-right{from{transform:translateX(0)}to{transform:translateX(100%)}}
+@keyframes bubble-tab-in-left{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+@media(prefers-reduced-motion:reduce){
+  @view-transition{navigation:none}
+  html[data-tab-motion]::view-transition-group(*),html[data-tab-motion]::view-transition-old(*),html[data-tab-motion]::view-transition-new(*){animation:none!important}
+}
+
+/* Menus and dialogs enter with movement, keeping their content fully visible. */
+@keyframes bubble-surface-in{from{transform:translateY(12px)}to{transform:translateY(0)}}
+@keyframes lfi-drop{from{transform:translateY(-8px)}to{transform:translateY(0)}}
+@keyframes lfi-pop{from{transform:translateY(18px)}to{transform:translateY(0)}}
+@keyframes lfi-sheet{from{transform:translateY(24px)}to{transform:translateY(0)}}
+.ov:not([hidden]) .dlg,.bubble-app .dlg{animation:bubble-surface-in 180ms cubic-bezier(.22,.8,.25,1) both}
+.dd-panel:not([hidden]),.mmenu:not([hidden]),.menu:not([hidden]){animation:lfi-drop 160ms cubic-bezier(.22,.8,.25,1) both}
+@media(prefers-reduced-motion:reduce){.ov:not([hidden]) .dlg,.bubble-app .dlg,.dd-panel:not([hidden]),.mmenu:not([hidden]),.menu:not([hidden]){animation:none!important}}
+
+/* The four category buttons and page frame stay put; only their game grid slides. */
+html[data-tab-panel="games"] #gameCards{view-transition-name:bubble-game-cards}
+html[data-tab-panel="games"]::view-transition-old(root){display:none;animation:none}
+html[data-tab-panel="games"]::view-transition-new(root){animation:none}
+html[data-tab-panel="games"]::view-transition-group(bubble-game-cards){animation-duration:260ms;animation-timing-function:cubic-bezier(.22,.8,.25,1)}
+html[data-tab-panel="games"]::view-transition-image-pair(bubble-game-cards){overflow:clip;isolation:isolate}
+html[data-tab-panel="games"]::view-transition-old(bubble-game-cards),html[data-tab-panel="games"]::view-transition-new(bubble-game-cards){animation-duration:260ms;animation-timing-function:cubic-bezier(.22,.8,.25,1);animation-fill-mode:both;mix-blend-mode:normal}
+html[data-tab-panel="games"][data-tab-motion="forward"]::view-transition-old(bubble-game-cards){animation-name:bubble-tab-out-left}
+html[data-tab-panel="games"][data-tab-motion="forward"]::view-transition-new(bubble-game-cards){animation-name:bubble-tab-in-right}
+html[data-tab-panel="games"][data-tab-motion="back"]::view-transition-old(bubble-game-cards){animation-name:bubble-tab-out-right}
+html[data-tab-panel="games"][data-tab-motion="back"]::view-transition-new(bubble-game-cards){animation-name:bubble-tab-in-left}
+@media(prefers-reduced-motion:reduce){html[data-tab-panel="games"]::view-transition-old(bubble-game-cards),html[data-tab-panel="games"]::view-transition-new(bubble-game-cards){animation:none!important}}
+
+/* AP Poll team initials, including the add/swap picker. */
+.rk-team-badge{display:grid;place-items:center;flex:none;width:42px;height:42px;box-sizing:border-box;border-radius:50%;background:var(--team-fill,#6d28d9);color:var(--team-ink,#fff);border:1px solid #ffffff80;box-shadow:0 0 0 1px #11182714;font-family:var(--f-display);font-size:17px;line-height:1;letter-spacing:.01em;text-shadow:none}
+.rk-team-badge.long{font-size:13px}
+.pick-list .rk-team-badge{width:36px;height:36px;font-size:15px}
+.pick-list .rk-team-badge.long{font-size:11px}
