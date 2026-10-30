@@ -25,7 +25,7 @@
 
   const rankedCache = new Map();
   let rankedAccount = null;
-  const signature = g => `${g.status}|${g.moves.length}|${g.guest?.id || ""}|${!!g.result}|${(g.players || []).map(p => p.id + p.left).join()}`;
+  const signature = g => `${g.overtime?.revision ?? ""}|${g.status}|${g.moves.length}|${g.guest?.id || ""}|${!!g.result}|${(g.players || []).map(p => p.id + p.left).join()}`;
   const G = {
     cloud,
     // Signed in with a finished profile (a handle): what every friend game needs.
@@ -49,10 +49,11 @@
       if (g) document.dispatchEvent(new CustomEvent("bubble:game", { detail: g }));
       return g;
     },
-    onlineFind: (kind) => rpc("online_find", { p_kind: kind }),
+    onlineFind: (kind) => rpc("online_find_v2", { p_kind: kind }),
     onlineState: (id = null) => rpc("online_state", { p_game: id }),
+    overtimeMove: (id, round, item = null, answer = null) => rpc("online_overtime_move", { p_game: id, p_round: round, p_item: item, p_answer: answer }),
     onlineCancel: (id) => rpc("online_cancel", { p_game: id }),
-    onlineBoard: (kind) => rpc("online_board", { p_kind: kind }),
+    onlineBoard: (kind) => rpc("online_board_v2", { p_kind: kind }),
     move: (id, item, payload, answer) => rpc("game_move", { p_id: id, p_item: String(item), p_payload: payload || {}, p_answer: answer ?? null }),
     finish: (id, result) => rpc("game_finish", { p_id: id, p_result: result }),
     leave: (id) => rpc("game_leave", { p_id: id }),
@@ -80,7 +81,7 @@
           const g = await G.get(id);
           if (stopped) return;
           onConnection("connected");
-          const sig = `${g.status}|${g.moves.length}|${g.guest && g.guest.id}|${!!g.result}|${(g.players || []).map((p) => p.id + p.left).join()}`;
+          const sig = `${g.overtime?.revision ?? ""}|${g.status}|${g.moves.length}|${g.guest && g.guest.id}|${!!g.result}|${(g.players || []).map((p) => p.id + p.left).join()}`;
           if (sig !== last) { last = sig; onUpdate(g); }
           if (g.status === "done" || g.status === "cancelled") stopped = true;
         } catch (e) { if (!stopped) onConnection("reconnecting"); }

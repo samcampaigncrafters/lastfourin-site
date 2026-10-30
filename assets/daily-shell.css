@@ -15,25 +15,17 @@
 .daily-family .daily-unified .btn{border-width:1px;border-radius:8px;box-shadow:none}
 .daily-family .daily-unified .btn:hover,.daily-family .daily-unified .btn:active{box-shadow:none}
 @media(max-width:800px){.daily-unified-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}.daily-family .daily-unified :is(.grid2,.daily-layout){grid-template-columns:minmax(0,1fr)}.daily-family .daily-unified :is(.head,.daily-head){gap:12px;flex-wrap:wrap}.daily-family .daily-unified .headr{width:100%}}
-@media(prefers-reduced-motion:no-preference){
- html[data-tab-panel="daily"] .daily-unified-tabs{view-transition-name:bubble-daily-tabs}
- html[data-tab-panel="daily"] .daily-unified-tabs a.on{view-transition-name:bubble-daily-selection}
- html[data-tab-panel="daily"] .daily-panel-content{view-transition-name:bubble-daily-content}
- html[data-tab-panel="daily"]::view-transition-old(root){animation:none!important;opacity:0!important}
- html[data-tab-panel="daily"]::view-transition-new(root){animation:none!important;opacity:1!important}
- html[data-tab-panel="daily"]::view-transition-group(bubble-daily-tabs){animation:none!important}
- html[data-tab-panel="daily"]::view-transition-old(bubble-daily-tabs),html[data-tab-panel="daily"]::view-transition-new(bubble-daily-tabs){animation:none!important;mix-blend-mode:normal}
- html[data-tab-panel="daily"]::view-transition-group(bubble-daily-content),html[data-tab-panel="daily"]::view-transition-group(bubble-daily-selection){animation-duration:420ms;animation-timing-function:cubic-bezier(.42,0,.22,1)}
- html[data-tab-panel="daily"]::view-transition-old(bubble-daily-selection),html[data-tab-panel="daily"]::view-transition-new(bubble-daily-selection){animation:none!important;mix-blend-mode:normal}
- html[data-tab-panel="daily"]::view-transition-image-pair(bubble-daily-content){overflow:clip;isolation:isolate}
- html[data-tab-panel="daily"]::view-transition-old(bubble-daily-content){animation:daily-content-out 420ms cubic-bezier(.42,0,.22,1) both;mix-blend-mode:normal}
- html[data-tab-panel="daily"]::view-transition-new(bubble-daily-content){animation:daily-content-in 420ms cubic-bezier(.42,0,.22,1) both;mix-blend-mode:normal}
- @keyframes daily-content-out{to{transform:translateX(-100%)}}
- @keyframes daily-content-in{from{transform:translateX(100%)}}
- html[data-tab-panel="daily"][data-tab-motion="back"]::view-transition-old(bubble-daily-content){animation-name:daily-content-out-back}
- html[data-tab-panel="daily"][data-tab-motion="back"]::view-transition-new(bubble-daily-content){animation-name:daily-content-in-back}
- @keyframes daily-content-out-back{to{transform:translateX(100%)}}
- @keyframes daily-content-in-back{from{transform:translateX(-100%)}}
-}
 
+@view-transition{navigation:none}
+.daily-family main.daily-unified{overflow-x:clip}
+.daily-family .daily-unified>.tabs.modes{display:inline-flex;margin:0 0 24px;position:relative}
+@media(prefers-reduced-motion:no-preference){
+ html[data-tab-panel="daily"] .daily-panel-content{animation:daily-entry-forward 280ms cubic-bezier(.22,.8,.25,1) both}
+ html[data-tab-panel="daily"][data-tab-motion="back"] .daily-panel-content{animation-name:daily-entry-back}
+ @keyframes daily-entry-forward{from{transform:translateX(36px)}to{transform:translateX(0)}}
+ @keyframes daily-entry-back{from{transform:translateX(-36px)}to{transform:translateX(0)}}
+ .daily-unified-tabs a,.tabs.modes a{transition:background-color .18s,color .18s}
+}
 @media(max-width:520px){.daily-family main.daily-unified{padding:20px 14px 40px}.daily-unified-tabs a{font-size:12px}}
+
+.daily-unified-tabs,.daily-unified>.tabs.modes{isolation:isolate}.daily-slider{position:absolute;z-index:-1;border-radius:8px;background:#5b17ff;pointer-events:none;transform-origin:top left}.daily-unified-tabs.has-slider a.on,.daily-unified>.tabs.modes.has-slider a.on{background:transparent!important;color:#fff}.daily-unified-tabs.has-slider a,.daily-unified>.tabs.modes.has-slider a{position:relative;z-index:1}

@@ -68,9 +68,18 @@
     </article>`;
   }
 
-  function mount(el) {
+  function mount(el, options = {}) {
     if (!el || el.dataset.mounted) return;
     el.dataset.mounted = 'true';
+    if(options.embedded){
+      let busy=false,timer;
+      const update=async()=>{if(busy||document.hidden)return;busy=true;const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
+        try{const response=await fetch(ENDPOINT,{cache:'no-store',signal:controller.signal});if(!response.ok)throw Error();const data=await response.json();if(!Array.isArray(data.events))throw Error();const games=data.events.map(read).filter(Boolean);options.onUpdate?.(games);el.textContent='Scores and game clocks refresh every 30 seconds · Last received '+new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'. Odds shown are pregame lines.';}
+        catch(_){el.textContent='Score update unavailable. Showing the last scores received; retrying automatically.';}finally{clearTimeout(timeout);busy=false;}
+      };
+      const start=()=>{if(!timer)timer=setInterval(update,REFRESH_MS);update();};start();window.addEventListener('pagehide',()=>{clearInterval(timer);timer=null;});window.addEventListener('pageshow',e=>{if(e.persisted)start();});document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});return;
+    }
+
     const snapshot = new URLSearchParams(location.search).get('review') === '1';
     el.innerHTML = `<div class="lb-heading"><div><div class="kicker">🏈 Scores + lines</div><h2 class="disp">Game tracker</h2></div><button type="button" class="btn" data-refresh>Refresh scores</button></div>
       <p class="lb-explain">Scores and game clock update while this page is open. Opening and latest pregame quotes sit beside each game. In-game odds are not connected.</p>

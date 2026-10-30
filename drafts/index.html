@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/assets/lfi.css?v=20261030.site2">
-<script src="/assets/theme.js?v=20261030.daily1"></script>
+<script src="/assets/theme.js?v=20261030.motion3"></script>
 <style>
 .modes { display: inline-flex; flex-wrap: wrap; margin-top: 16px; background: var(--card); border: 1px solid var(--line-2); border-radius: 8px; padding: 3px; gap: 3px; }
 .modes button { border: 0; background: none; cursor: pointer; padding: 8px 14px; border-radius: 6px; font-family: var(--f-display); text-transform: uppercase; font-size: 16px; letter-spacing: .03em; color: var(--ink-2); white-space: nowrap; }
@@ -102,9 +102,11 @@ body.drafting .head { display: none; }
 .friend-pick { display: flex; flex-wrap: wrap; gap: 6px; }
 .friend-pick button { border: 1px solid var(--line-2); background: var(--card-2); border-radius: 999px; padding: 7px 13px; font: 700 14px var(--f-body); color: var(--ink); cursor: pointer; }
 .friend-pick button:disabled { opacity: .5; cursor: default; }
+
+#kind .draft-kind-link{display:block;text-decoration:none;border:1px solid var(--line-2);background:var(--card-2);border-radius:6px;padding:9px 13px;font:700 14px var(--f-body);color:var(--ink-2);min-height:42px;box-sizing:border-box}#kind .draft-kind-link small{display:block;font-weight:600;font-size:11.5px;opacity:.8}#kind .draft-kind-link:focus-visible{outline:3px solid var(--accent);outline-offset:3px}#draftTypePanel{min-width:0}
 </style>
-</head>
-<body>
+<link rel="stylesheet" href="/assets/friend-arena.css?v=20261030.friend1"></head>
+<body class="friend-arena">
 
 <header class="nav" data-active="drafts"></header>
 
@@ -119,8 +121,6 @@ body.drafting .head { display: none; }
         <button type="button" data-mode="scored" aria-pressed="true">Scored · 1999 on</button>
         <button type="button" data-mode="fun" aria-pressed="false">For fun · everyone since 1920</button>
       </nav>
-      <p style="margin:10px 0 0;font-size:14.5px"><a href="classes.html"><span class="em" aria-hidden="true">🎓</span> Mock or redraft a real draft class →</a></p>
-      <p style="margin:6px 0 0;font-size:14.5px"><a href="/redraft/"><span class="em" aria-hidden="true">🔁</span> Redraft the whole NFL into 32 new teams →</a></p>
     </div>
   </div>
 
@@ -134,9 +134,12 @@ body.drafting .head { display: none; }
           <button type="button" data-v="players" aria-pressed="true">Players <span class="em" aria-hidden="true">🏈</span><small>Build a lineup</small></button>
           <button type="button" data-v="jerseys" aria-pressed="false">Jersey numbers <span class="em" aria-hidden="true">👕</span><small>Best player in each number</small></button>
           <button type="button" data-v="coaches" aria-pressed="false">Head coaches <span class="em" aria-hidden="true">🧢</span><small>Most wins</small></button>
+          <a class="draft-kind-link" href="/drafts/classes.html">Historic mock draft <span aria-hidden="true">🎓</span><small>Replay a real draft class</small></a>
+          <a class="draft-kind-link" href="/redraft/">Redraft the NFL <span aria-hidden="true">🔁</span><small>Build 32 new teams</small></a>
         </div>
       </div>
 
+      <div id="draftTypePanel" class="set">
       <div class="set-row">
         <div class="set-lbl">Pool</div>
         <div class="seg" id="poolKind">
@@ -239,6 +242,7 @@ body.drafting .head { display: none; }
         <button class="btn gold big" type="button" id="startBtn" disabled>Start the draft <span class="em" aria-hidden="true">🚀</span></button>
         <span class="pool-count" id="startNote"></span>
       </div>
+      </div>
     </div>
   </section>
 
@@ -287,9 +291,9 @@ body.drafting .head { display: none; }
 <footer class="foot"></footer>
 
 <script>{ const k = new URLSearchParams(location.search).get("kind"); if (k === "jerseys" || k === "coaches") document.querySelector("header.nav").dataset.active = k; }</script>
-<script src="/assets/lfi.js"></script>
-<script src="/assets/games.js?v=20261029-online2"></script>
-<script src="/assets/online.js?v=20261029-online2"></script>
+<script src="/assets/lfi.js?v=20261030.beta3"></script>
+<script src="/assets/games.js?v=20261030-trophies2"></script>
+<script src="/assets/online.js?v=20261030-trophies3"></script>
 <script>
 (function () {
   const { $, esc, local, entries, toast } = LFI;
@@ -443,10 +447,21 @@ body.drafting .head { display: none; }
   }
 
   // ---------- setup screen ----------
+  let draftTypeRevision=0,draftTypeAnimation=null;
   function seg(id, key, onChange) {
     const el = $(id);
     const paint = () => el.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === S[key])));
-    el.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b || b.disabled) return; S[key] = b.dataset.v; paint(); onChange && onChange(); refresh(); });
+    el.addEventListener("click", (e) => {
+      const b=e.target.closest("button");if(!b||b.disabled||S[key]===b.dataset.v)return;
+      const order=['players','jerseys','coaches'],previous=S[key],ticket=id==='kind'?++draftTypeRevision:0;
+      S[key]=b.dataset.v;paint();onChange&&onChange();
+      Promise.resolve(refresh()).then(()=>{
+        if(id!=='kind'||ticket!==draftTypeRevision||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+        draftTypeAnimation?.cancel();
+        const direction=order.indexOf(S[key])<order.indexOf(previous)?-1:1;
+        draftTypeAnimation=$('draftTypePanel').animate([{transform:`translateX(${direction*24}px)`},{transform:'translateX(0)'}],{duration:240,easing:'cubic-bezier(.22,.8,.25,1)'});
+      });
+    });
     paint();
     return paint;
   }
@@ -615,7 +630,7 @@ body.drafting .head { display: none; }
     const rows = pool.filter((r) => slots.some((s) => fits(s, r.pos)))
       .map((r) => g?.settings?.onlineKeyVersion === 2 ? { ...r, key: `${r.key}|${r.espn}` } : r);
     D = { rows, byId: new Map(rows.map((r) => [r.id, r])), byKey: new Map(rows.map((r) => [r.key, r])), slots, label: poolLabel(), val: valLabel(), kind: S.kind, kname: kindName(), crt: crTitle(),
-          taken: new Set(), n: 0, total: slots.length * 2, game: g ? { id: g.id, role: g.me, ranked: !!g.settings.onlineRanked } : null,
+          taken: new Set(), n: 0, total: slots.length * 2, game: g ? { id: g.id, role: g.me, ranked: !!g.settings.onlineRanked,uid:g.uid,rulesVersion:g.settings.onlineRulesVersion } : null,
           side: [{ name: meName, picks: [] }, { name: oppName, picks: [] }],
           firstSide: meFirst ? 0 : 1, show: S.mode === "fun" || S.show === "1", fun: S.mode === "fun", hide: hideYears(), setup: setupQuery() };
     $("lobby").hidden = true; $("setup").hidden = true; $("result").hidden = true; $("room").hidden = false; document.body.classList.add("drafting");
@@ -757,24 +772,28 @@ body.drafting .head { display: none; }
   // ---------- result ----------
   let lastEntry = null;
   async function finish(early) {
-    if (D.finished) return;
+    if (D.finished || D.finishing) return;
+    D.finishing = true;
+    const ranked = D.game?.ranked ? await LFI.games.onlineState(D.game.id).catch(() => null) : null, rr = ranked?.result || D.serverResult;
+    D.finishing = false;
+    if (D.game?.ranked && (ranked?.state === 'matched' || (!rr && !D.serverVoid && (D.serverStatus!=='done' || D.game.rulesVersion===2)))) { watcher?.poke(); return; }
     D.finished = true;
     if (watcher) watcher.stop();
     $("room").hidden = true; $("result").hidden = false;
-    const ranked = D.game?.ranked ? await LFI.games.onlineState(D.game.id).catch(() => null) : null, rr = ranked?.result;
     const [me, op] = D.side, a = teamTotal(me), b = teamTotal(op);
     $("resKick").textContent = `${D.kind === "players" ? "" : D.kname + " · "}${D.label} · ${D.val}`;
     const unit = D.kind === "coaches" ? "wins" : "fantasy points", f = D.kind === "coaches" ? (n) => String(Math.round(n)) : fmt;
     let result;
-    if (D.fun) {
+    if (D.serverVoid) { $("resH").textContent="Match closed"; $("resP").textContent="Both players disconnected. No winner or trophy change."; result="Closed · no award"; }
+    else if (D.fun) {
       $("resH").innerHTML = `Draft complete ${em("✅")}`; $("resP").textContent = D.kind === "jerseys" ? "Nothing is scored in the for-fun jersey draft, so this one is up to your friends. Send it and let them pick a winner."
         : "No stats go back to 1920, so this one is up to your friends. Send it and let them pick a winner.";
       result = "For fun";
     } else {
-      const win = rr ? rr.winner === ranked.uid : a > b, tie = rr ? !rr.winner : Math.abs(a - b) < .05;
+      const win = rr ? rr.winner === (ranked?.uid || D.game.uid) : a > b, tie = rr ? !rr.winner : Math.abs(a - b) < .05;
       $("resH").innerHTML = tie ? `Dead even ${em("🤝")}` : win ? `You win ${em("🎉")}` : `${esc(op.name.split(" ")[0])} wins ${em("😬")}`;
-      $("resP").textContent = `${f(a)} to ${f(b)} ${unit}.` + (rr?.reason === "forfeit" ? ` ${win ? "Your opponent forfeited." : "You forfeited."}` : early ? " The draft ended early, so open spots score zero." : win ? "" : " Run it back?");
-      result = tie ? `Tied at ${f(a)}` : `${win ? "Won" : "Lost"} ${f(a)} to ${f(b)}${rr?.reason === "forfeit" ? " · forfeit" : ""}`;
+      $("resP").textContent = `${f(a)} to ${f(b)} ${unit}.` + (rr?.reason === "overtime" ? ` ${win ? "You won" : "Your opponent won"} in overtime; totals above are regulation.` : rr?.reason === "forfeit" ? ` ${win ? "Your opponent forfeited." : "You forfeited."}` : early ? " The draft ended early, so open spots score zero." : win ? "" : " Run it back?");
+      result = tie ? `Tied at ${f(a)}` : `${win ? "Won" : "Lost"} ${f(a)} to ${f(b)}${rr?.reason === "forfeit" ? " · forfeit" : rr?.reason === "overtime" ? " · overtime" : ""}`;
     }
     $("resTeams").innerHTML = D.side.map((sd, s) => teamCard(sd, s, true, false)).join("");
     const pack = (sd) => D.slots.map((slot, i) => { const p = sd.picks.find((x) => x.si === i); return p ? [slot === "HC" ? String(i + 1) : slot, p.row.name, p.row.pts == null ? null : Math.round(p.row.pts * 10) / 10] : [slot === "HC" ? String(i + 1) : slot, "", null]; });
@@ -874,6 +893,7 @@ body.drafting .head { display: none; }
   }
   // Bring the board up to date with the server's list of picks.
   function applyMoves(g) {
+    D.serverResult=g.ranked_result;D.serverVoid=!!g.ranked_void;D.serverStatus=g.status;
     for (const m of g.moves.slice(D.n)) {
       const row = D.byKey.get(m.item);
       const side = m.by === D.game.role ? 0 : 1;

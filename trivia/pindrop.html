@@ -10,6 +10,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta property="og:description" content="Stadiums, Super Bowls, college towns and hometowns. Drop a pin, see how many miles off you were.">
 <meta property="og:url" content="https://playbubble.app/trivia/pindrop.html">
+<link rel="preload" as="script" href="/assets/vendor/globe.gl-2.46.2.min.js">
+<link rel="preload" as="image" href="/trivia/img/earth-4k.jpg">
 <meta name="theme-color" content="#0d0820">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Crect width='34' height='34' rx='8' fill='%230d0820'/%3E%3Cpath d='M5 9h7v16H5M12 17h5' fill='none' stroke='%23fff' stroke-width='3.6'/%3E%3Ccircle cx='23.5' cy='17' r='6.8' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="/assets/icon-180.png">
@@ -17,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="../assets/lfi.css?v=20261030.site2">
-<script src="/assets/theme.js?v=20261030.daily1"></script>
+<script src="/assets/theme.js?v=20261030.motion3"></script>
 <link rel="stylesheet" href="trivia.css">
 <style>
 .mapwrap { position: relative; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--card); overflow: hidden; touch-action: manipulation; }
@@ -49,6 +51,7 @@
 @media (max-width: 560px) { .globe { aspect-ratio: 1 / 1; max-height: 62vh; } .hero .globe { aspect-ratio: 16 / 11; } }
 .gload { aspect-ratio: 4 / 3; max-height: 66vh; display: grid; place-items: center; color: var(--on-brand-2); font-weight: 600; font-size: 14px; }
 .hero .gload { aspect-ratio: 16 / 10; }
+@media(max-width:560px){.gload{aspect-ratio:1/1;max-height:62vh}.hero .gload{aspect-ratio:16/11}}
 .sky .zoom button { background: rgba(13, 8, 32, .72); border-color: rgba(255, 255, 255, .22); color: #fff; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .skycredit { position: absolute; left: 10px; bottom: 9px; font-size: 10.5px; color: rgba(255, 255, 255, .55); pointer-events: none; }
 /* map pins: the tip sits exactly on the spot */
@@ -71,7 +74,7 @@
 @keyframes rvPop { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .gpin i, .gpin b, .reveal.settled .rv-emo, .reveal.settled .rv-pts { animation: none !important; } }
 </style>
-<link rel="stylesheet" href="/assets/daily-shell.css?v=20261030.shell1"></head>
+<link rel="stylesheet" href="/assets/daily-shell.css?v=20261030.shell3"></head>
 <body class="daily-family">
 
 <header class="nav" data-active="pindrop"></header>
@@ -121,7 +124,7 @@
 <footer class="foot"></footer>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="/assets/lfi.js?v=20261030.site1"></script>
+<script src="/assets/lfi.js?v=20261030.beta3"></script>
 <script src="/assets/vendor/d3-array.min.js"></script>
 <script src="/assets/vendor/d3-geo.min.js"></script>
 <script src="/assets/vendor/topojson-client.min.js"></script>
@@ -238,12 +241,19 @@
   }
   let useGlobe = hasWebGL() && !/[?&]flat=1/.test(location.search);
   let globe = null, stage = null, revealing = false, finishReveal = null, raf = 0, timers = [];
+  // Build the GPU scene after the entry slide, while script/texture download in parallel.
+  const entryReady = new Promise(resolve=>{
+    let done=false;const finish=()=>{if(!done){done=true;resolve();}};
+    window.addEventListener('pagereveal',event=>{if(event.viewTransition)event.viewTransition.finished.then(finish,finish);else finish();},{once:true});
+    window.addEventListener('pageshow',()=>{if(!document.documentElement.dataset.tabMotion)finish();},{once:true});
+    setTimeout(finish,1200);
+  });
   const globeReady = !useGlobe ? Promise.resolve() : new Promise((ok, no) => {
     const s = document.createElement("script");
     s.src = "/assets/vendor/globe.gl-2.46.2.min.js";
     s.onload = ok; s.onerror = no;
     document.head.appendChild(s);
-  }).then(makeGlobe).catch(() => { useGlobe = false; globe = null; render(); }); // no globe after all: back to the flat map
+  }).then(()=>entryReady).then(makeGlobe).catch(() => { useGlobe = false; globe = null; render(); }); // no globe after all: back to the flat map
 
   const aspect = () => (stage && stage.clientHeight ? stage.clientWidth / stage.clientHeight : 4 / 3);
   // camera height (in globe radii) that fits an arc of `ang` radians across the narrower side of the panel

@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="../assets/lfi.css?v=20261030.site2">
-<script src="/assets/theme.js?v=20261030.daily1"></script>
+<script src="/assets/theme.js?v=20261030.motion3"></script>
 <link rel="stylesheet" href="trivia.css">
 <style>
 .prompt { font-family: var(--f-display); font-weight: 800; font-size: clamp(26px, 3.6vw, 38px); line-height: 1.05; margin: 0 0 6px; }
@@ -84,8 +84,8 @@
 /* two slots a row on phones, so more of the list (and who's claiming it) stays in view */
 @media (max-width: 560px) { .slots { grid-template-columns: 1fr 1fr; gap: 5px; } .slot { padding: 6px 8px; min-height: 48px; } .slot span { font-size: 15.5px; } .slot small { font-size: 10.5px; } }
 </style>
-<link rel="stylesheet" href="/assets/daily-shell.css?v=20261030.shell1"></head>
-<body class="daily-family">
+<link rel="stylesheet" href="/assets/friend-arena.css?v=20261030.friend1"><link rel="stylesheet" href="/assets/daily-shell.css?v=20261030.shell3"></head>
+<body class="daily-family friend-arena">
 
 <header class="nav" data-active="race"></header>
 
@@ -112,7 +112,7 @@
             <li>Open a race room and send the link. Up to 7 friends can join.</li>
             <li>When everyone's in, the host presses start. A short countdown, then the same list and the same clock for everyone.</li>
             <li>Type a full name, or a last name once only one open name has it. Get there first and the name is yours, in your colour on every screen.</li>
-            <li>Most names wins. In private rooms, a tie goes to whoever got their last one first. Equal scores in ranked games are a draw. Lists come from the sandbox, so races never touch your daily record or streak.</li>
+            <li>Most names wins. In private rooms, a tie goes to whoever got their last one first. New ranked trophy games use a fresh sudden-death prompt when regulation ends level. Lists come from the sandbox, so races never touch your daily record or streak.</li>
           </ol>
         </div>
       </section>
@@ -124,9 +124,9 @@
 <footer class="foot"></footer>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="/assets/lfi.js?v=20261030.site1"></script>
-<script src="/assets/games.js?v=20261029-online2"></script>
-<script src="/assets/online.js?v=20261029-online2"></script>
+<script src="/assets/lfi.js?v=20261030.beta3"></script>
+<script src="/assets/games.js?v=20261030-trophies2"></script>
+<script src="/assets/online.js?v=20261030-trophies3"></script>
 <script>
 (function () {
   const { $, esc, toast } = LFI;
@@ -178,20 +178,17 @@
     if (!PICK) PICK = POOL[Math.floor(Math.random() * POOL.length)];
     view(`<div class="set">
       <div class="pick">
-        <div class="chip">${esc(PICK.cat)}</div>
-        <h2 class="prompt">${esc(PICK.prompt)}</h2>
-        <p class="note" style="margin:0">${PICK.a.length} names · ${mmss(PICK.seconds)} on the clock${PICK.note ? ` · ${esc(PICK.note)}` : ""}</p>
+        <img class="friend-game-art" src="/assets/game-icons/names-race.svg" width="88" height="88" alt=""><div class="kicker">PRIVATE MATCH</div><h2 class="prompt">Ready. Set. Race.</h2><p class="note" style="margin:0">The mystery list stays hidden until the clock starts. Everyone gets the same reveal.</p>
       </div>
-      <div class="go-row"><button class="btn gold big" type="button" id="open">Open a race room <span class="em" aria-hidden="true">🏁</span></button><button class="btn" type="button" id="other">Different list <span class="em" aria-hidden="true">🔀</span></button></div>
+      <div class="go-row"><button class="btn gold big" type="button" id="open">Open a race room <span class="em" aria-hidden="true">🏁</span></button></div>
       <p class="note" style="margin:0">You get a link to send. Up to 7 friends can join, then you start it when everyone's in.</p>
     </div>`);
-    $("other").onclick = () => { PICK = POOL[Math.floor(Math.random() * POOL.length)]; setup(); };
     $("open").onclick = async () => {
       $("open").disabled = true;
       const l = PICK;
       try {
         const r = await LFI.games.create("names", {
-          settings: { title: `Name Them All: ${l.prompt}`.slice(0, 120), key: l.key, cat: l.cat, prompt: l.prompt, note: l.note, a: l.a, max: 8 },
+          settings: { title: "Name Race", key: l.key, cat: l.cat, prompt: l.prompt, note: l.note, a: l.a, max: 8 },
           secret: secretFor(l), total: l.a.length, seconds: l.seconds,
         });
         history.replaceState(null, "", `?g=${r.code}`);
@@ -226,8 +223,7 @@
     view(`<div class="set">
       <div class="pick" style="background:transparent">
         <div class="kicker">Race room · ${ps.length} of ${s.max || 8}</div>
-        <div class="chip" style="margin-top:8px">${esc(s.cat || "")}</div>
-        <h2 class="prompt">${esc(s.prompt || "")}</h2>
+        <h2 class="prompt">Your arena is ready.</h2><p class="note">The mystery list unlocks when the race begins.</p>
         <p class="note" style="margin:0">${g.total} names · ${mmss(g.seconds)} on the clock</p>
       </div>
       <div><div class="set-lbl"><span class="em" aria-hidden="true">👥</span> In the room</div><div class="roster">${ps.map((p) => `<span><i style="background:${p.color}"></i>${esc(p.name)}${p.me ? " <small>you</small>" : ""}${p.id === g.host.id ? " <small>host</small>" : ""}</span>`).join("")}</div></div>
@@ -240,7 +236,7 @@
       : `<div class="go-row"><span class="note" style="margin:0">Waiting for ${esc(firstName(g.host))} to start the race. This page updates by itself.</span><button class="btn" type="button" id="lbLeave">Leave</button></div>`}
     </div>`);
     if (!host) { $("lbLeave").onclick = async () => { try { await LFI.games.leave(g.id); } catch (e) {} location.href = "race.html"; }; return; }
-    $("lbShare").onclick = () => LFI.games.shareLink(url, `Race me in Name Them All on PlayBubble: ${s.prompt}`);
+    $("lbShare").onclick = () => LFI.games.shareLink(url, `Race me in Name Them All on PlayBubble.`);
     $("lbCopy").onclick = async () => toast((await LFI.copyText(url)) ? "🔗 Link copied" : "Couldn't copy the link here");
     $("lbCancel").onclick = async () => { try { await LFI.games.leave(g.id); } catch (e) {} history.replaceState(null, "", "race.html"); setup(); };
     $("lbGo").onclick = async () => {
@@ -256,7 +252,7 @@
       $("lbFrList").onclick = async (e) => {
         const b = e.target.closest("button[data-h]"); if (!b) return;
         b.disabled = true;
-        try { await LFI.games.challenge(b.dataset.h, "names", "Name Them All race", `/trivia/race.html?g=${g.code}`, s.prompt); b.textContent = "✓ " + b.textContent; toast("📨 Invite sent"); }
+        try { await LFI.games.challenge(b.dataset.h, "names", "Name Them All race", `/trivia/race.html?g=${g.code}`, "A mystery list. One shared clock."); b.textContent = "✓ " + b.textContent; toast("📨 Invite sent"); }
         catch (err) { toast(err.message); b.disabled = false; }
       };
     });
@@ -295,9 +291,9 @@
       R.keys[i] = [k.n, ...k.ln];
     });
     view(`
-      <div class="chip" style="margin-bottom:10px">${esc(s.cat || "")}</div>
+      <div id="racePrompt" hidden><div class="chip" style="margin-bottom:10px">${esc(s.cat || "")}</div>
       <h2 class="prompt">${esc(s.prompt)}</h2>
-      <p class="note">${esc(s.note || "")}</p>
+      <p class="note">${esc(s.note || "")}</p></div>
       <p class="note race-help">One shared list for everyone — every column is yours to answer. Type any correct name; the first player to claim it gets the point. Full names work, and a unique last name works too. <a href="/grid/">Looking for the 25-square Grid Race?</a></p>
       <div class="play">
         <input id="guess" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Type a name" aria-label="Type a name">
@@ -307,8 +303,8 @@
       <p class="race-feedback" id="raceFeedback" role="status" aria-live="polite"></p>
       <p class="note" id="syncState" role="status" aria-live="polite"></p>
       <div class="board" id="board"></div>
-      <div class="slots" id="slots">${s.a.map(([, hint], i) => `<div class="slot" id="s${i}"><small>${esc(hint)}</small><span></span><em></em></div>`).join("")}</div>
-      <div class="cdown" id="count" hidden><div><span><span class="em" aria-hidden="true">🚦</span> Get ready</span><b id="countN"></b><span id="countP">${esc(s.prompt)}</span></div></div>`);
+      <div class="slots" id="slots" hidden>${s.a.map(([, hint], i) => `<div class="slot" id="s${i}"><small>${esc(hint)}</small><span></span><em></em></div>`).join("")}</div>
+      <div class="cdown" id="count" hidden><div><span><span class="em" aria-hidden="true">🚦</span> Get ready</span><b id="countN"></b><span id="countP">The list unlocks at GO</span></div></div>`);
     document.querySelector(".play").style.top = document.querySelector(".nav").offsetHeight + "px";
     const inp = $("guess");
     inp.addEventListener("input", () => tryGuess(false));
@@ -330,6 +326,7 @@
     const t = now();
     const pre = R.startAt - t;
     $("count").hidden = pre <= 0;
+    $("racePrompt").hidden = pre > 0; $("slots").hidden = pre > 0;
     $("guess").disabled = pre > 0;
     if (pre > 0) { $("countN").textContent = Math.ceil(pre / 1000); $("clock").querySelector("b").textContent = mmss(R.g.seconds); return; }
     if (document.activeElement !== $("guess") && !R.focused) { R.focused = true; $("guess").focus({ preventScroll: true }); }
@@ -428,26 +425,27 @@
       el.className = "slot missed";
       el.querySelector("span").textContent = (answers[i] && answers[i][0]) || a[0];
     });
-    const ranked = g.settings?.onlineRanked ? await LFI.games.onlineState(g.id).catch(() => null) : null, rr = ranked?.result;
+    const ranked = g.settings?.onlineRanked ? await LFI.games.onlineState(g.id).catch(() => null) : null, rr = ranked?.result || g.ranked_result;
     const st = standings();
     if (rr?.winner) st.sort((a, b) => Number(b.id === rr.winner) - Number(a.id === rr.winner));
     const win = st[0], mine = st.find((p) => p.me) || { n: 0 }, place = st.indexOf(mine) + 1;
     const claimed = R.own.filter((o) => o != null).length;
     const ord = (k) => k + (["th", "st", "nd", "rd"][(k % 100 > 10 && k % 100 < 14) ? 0 : k % 10] || "th");
-    const draw = rr ? !rr.winner : g.settings?.onlineRanked && st.length > 1 && st[0].n === st[1].n;
-    const head = draw ? "Draw" : !win.n && !rr?.winner ? "Nobody scored" : win.me ? "You won!" : `${esc(firstName(win))} won`;
+    const closed=!!g.ranked_void;
+    const draw = !closed && (rr ? !rr.winner : g.settings?.onlineRanked && st.length > 1 && st[0].n === st[1].n);
+    const head = closed ? "Match closed" : draw ? "Draw" : !win.n && !rr?.winner ? "Nobody scored" : win.me ? "You won!" : `${esc(firstName(win))} won`;
     document.querySelector(".play").outerHTML = `<div class="endline">
       <div class="kicker" style="color:#fff;opacity:.8"><span class="em" aria-hidden="true">🏁</span> Race over</div>
       <div class="disp">${head} <span class="em" aria-hidden="true">${draw ? "🤝" : !win.n ? "🤷" : win.me ? "🏆" : "👏"}</span></div>
-      <p>${claimed} of ${R.N} named between you. You got ${mine.n}, ${draw ? "tied" : `${ord(place)} of ${st.length}`}.${rr?.reason === "forfeit" ? " Ranked result decided by forfeit." : ""}${claimed < R.N ? " The ones in red got away." : ""}</p>
-      <ol class="standings">${st.map((p, k) => `<li><b>${draw ? 1 : k + 1}</b><i style="background:${p.color}"></i><span>${p.me ? "You" : esc(p.name)}${p.left ? " (left)" : ""}</span><b>${p.n}</b></li>`).join("")}</ol>
+      <p>${closed ? "Both players disconnected. No winner or trophy change." : `${claimed} of ${R.N} named between you. You got ${mine.n}, ${draw ? "tied" : `${ord(place)} of ${st.length}`}.${closed ? " Both players disconnected. No winner or trophy change." : rr?.reason === "forfeit" ? " Ranked result decided by forfeit." : rr?.reason === "overtime" ? " Ranked result decided in overtime; name totals are regulation." : ""}${claimed < R.N ? " The ones in red got away." : ""}`}</p>
+      <ol class="standings" ${closed ? 'style="display:none!important"' : ""}>${st.map((p, k) => `<li><b>${draw ? 1 : k + 1}</b><i style="background:${p.color}"></i><span>${p.me ? "You" : esc(p.name)}${p.left ? " (left)" : ""}</span><b>${p.n}</b></li>`).join("")}</ol>
       <div class="go-row"><button class="btn gold" id="shareR">Share result <span class="em" aria-hidden="true">📣</span></button><a class="btn" href="race.html">New race <span class="em" aria-hidden="true">🔁</span></a></div>
     </div>`;
     if (!g.result && g.me === "host") LFI.games.finish(g.id, { winner: win.n ? win.name : null, scores: st.map((p) => [p.handle, p.n]) }).catch(() => {});
     const e = LFI.entries.put({
       id: `trivia-race-${g.code}`, kind: "trivia", title: "Name Them All Race", sub: R.list.prompt, url: "/trivia/race.html",
-      result: draw ? "Draw" : `${ord(place)} of ${st.length}`, data: { score: `${mine.n}/${R.N}` },
-      shareText: `🏁 PlayBubble · Name Them All Race\n${R.list.prompt}\n${draw ? "Draw" : `${ord(place)} of ${st.length}`} with ${mine.n}/${R.N}`,
+      result: closed ? "Closed · no award" : draw ? "Draw" : `${ord(place)} of ${st.length}`, data: { score: `${mine.n}/${R.N}` },
+      shareText: `🏁 PlayBubble · Name Them All Race\n${R.list.prompt}\n${closed ? "Closed · no award" : draw ? "Draw" : `${ord(place)} of ${st.length}`} with ${mine.n}/${R.N}`,
     });
     $("shareR").onclick = () => LFI.share(e, {
       kicker: "🏁 Race result", note: "Send it around. Or challenge a friend to play the same list on their own clock.",

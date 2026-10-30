@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/assets/lfi.css?v=20261030.site2">
-<script src="/assets/theme.js?v=20261030.daily1"></script>
+<script src="/assets/theme.js?v=20261030.motion3"></script>
 <style>
 .set { display: grid; gap: 18px; }
 .set-row { display: grid; gap: 8px; }
@@ -84,8 +84,8 @@ body.playing .head { display: none; }
 .credit { margin-top: 26px; font-size: 12.5px; color: var(--muted); }
 .credit a { color: inherit; }
 </style>
-</head>
-<body>
+<link rel="stylesheet" href="/assets/friend-arena.css?v=20261030.friend1"></head>
+<body class="friend-arena">
 
 <header class="nav" data-active="grid"></header>
 
@@ -179,9 +179,9 @@ body.playing .head { display: none; }
 </div>
 <footer class="foot"></footer>
 
-<script src="/assets/lfi.js"></script>
-<script src="/assets/games.js?v=20261029-online2"></script>
-<script src="/assets/online.js?v=20261029-online2"></script>
+<script src="/assets/lfi.js?v=20261030.beta3"></script>
+<script src="/assets/games.js?v=20261030-trophies2"></script>
+<script src="/assets/online.js?v=20261030-trophies3"></script>
 <script>
 (function () {
   const { $, esc, entries, toast } = LFI;
@@ -369,15 +369,17 @@ body.playing .head { display: none; }
     if (watcher) watcher.stop();
     const a = R.own.filter((x) => x === "me").length, b = R.own.filter((x) => x === "them").length;
     $("play").hidden = true; $("result").hidden = false;
-    const ranked = R.game?.ranked ? await LFI.games.onlineState(R.game.id).catch(() => null) : null, rr = ranked?.result;
+    const ranked = R.game?.ranked ? await LFI.games.onlineState(R.game.id).catch(() => null) : null, rr = ranked?.result || R.rankedResult;
     let h, p, result;
+    if (R.rankedVoid) { h="Match closed"; p="Both players disconnected. No winner or trophy change."; result="Closed · no award"; }
+    else
     if (!R.them) { h = `${a} of 25`; p = a === 25 ? "Every square. Clean sweep. 🔥" : "Send it to a friend and see if they can fill more."; result = `${a} of 25 squares`; }
     else {
       const first = R.them.split(" ")[0];
-      const won = rr ? rr.winner === ranked.uid : a > b, tied = rr ? !rr.winner : a === b;
+      const won = rr ? rr.winner === (ranked?.uid || R.game.uid) : a > b, tied = rr ? !rr.winner : a === b;
       h = won ? `You win ${em("🎉")}` : !tied ? `${esc(first)} wins ${em("😬")}` : `Dead even ${em("🤝")}`;
-      p = `${a} squares to ${b}.${rr?.reason === "forfeit" ? ` ${won ? "Your opponent forfeited." : "You forfeited."}` : early ? ` ${first} left the race.` : ""}`;
-      result = tied ? `Tied ${a}-${b}` : `${won ? "Won" : "Lost"} ${a}-${b}${rr?.reason === "forfeit" ? " · forfeit" : ""}`;
+      p = `${a} squares to ${b}.${rr?.reason === "overtime" ? ` ${won ? "You won" : "Your opponent won"} in overtime; the square totals are from regulation.` : rr?.reason === "forfeit" ? ` ${won ? "Your opponent forfeited." : "You forfeited."}` : early ? ` ${first} left the race.` : ""}`;
+      result = tied ? `Tied ${a}-${b}` : `${won ? "Won" : "Lost"} ${a}-${b}${rr?.reason === "forfeit" ? " · forfeit" : rr?.reason === "overtime" ? " · overtime" : ""}`;
     }
     $("resH").innerHTML = h; $("resP").textContent = p;
     const title = R.range ? `Grid Race · ${R.range}` : "Grid Race", yrs = R.range ? ` (${R.range})` : "";
@@ -468,10 +470,11 @@ body.playing .head { display: none; }
     if (!R || !R.game || R.game.id !== g.id) {
       const skew = new Date(g.now) - Date.now();
       const s = g.settings, rq = s.range ? `?from=${s.from}&to=${s.to}` : "";
-      begin(s.cells, { game: { id: g.id, ranked: !!g.settings.onlineRanked }, them: them ? them.name : "Your friend", meName: (g[mine] || {}).name || "You", skew, range: s.range || "", rq,
+      begin(s.cells, { game: { id: g.id, ranked: !!g.settings.onlineRanked, uid:g.uid }, them: them ? them.name : "Your friend", meName: (g[mine] || {}).name || "You", skew, range: s.range || "", rq,
                                 endAt: g.seconds ? new Date(g.started_at).getTime() + g.seconds * 1000 : null });
       if (g.moves.length === 0) toast(`🏁 ${them ? them.name : "Your friend"} is in. Go!${s.range ? ` Squares from ${s.range}.` : ""}`);
     }
+    R.rankedResult=g.ranked_result;R.rankedVoid=!!g.ranked_void;
     for (const m of g.moves) if (!R.own[+m.item]) claim(+m.item, m.by === mine ? "me" : "them", (m.payload && m.payload.a) || "");
     // Ended early = someone left (the server's own clock says so, not this browser's).
     if (g.status === "done") end(g.answers, g.moves.length < 25 && (!g.seconds || new Date(g.finished_at) < new Date(g.started_at).getTime() + g.seconds * 1000 - 1500));

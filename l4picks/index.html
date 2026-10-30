@@ -20,7 +20,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/assets/lfi.css?v=20261030.site2">
 <link rel="stylesheet" href="/l4picks/live-board.css?v=20261029.score-circles1">
-<script src="/assets/theme.js?v=20261030.daily1"></script>
+<script src="/assets/theme.js?v=20261030.motion3"></script>
 <style>
 .fun { display: flex; gap: 12px; align-items: flex-start; background: var(--card); border: 1px solid var(--accent-line); border-left: 4px solid var(--accent); border-radius: 12px; padding: 12px 14px; margin: 0 0 20px; font-size: 14px; color: var(--ink-2); }
 .fun b { color: var(--ink); }
@@ -169,7 +169,7 @@
     <div><b>For fun, not betting advice.</b> Bubble AI is a free computer model built for entertainment. We don't take bets or link to sportsbooks. Read our <a href="#model-testing">model testing and limitations</a>. If gambling stops being fun, call or text 1-800-GAMBLER. More in our <a href="/terms/">Terms</a>.</div>
   </div>
 
-  <section id="live-board" class="live-board" data-free aria-label="Live NFL scores and pregame lines"></section>
+  <div id="live-board" data-free role="status" aria-live="polite" class="credit">Updating matchup scores…</div>
 
   <div id="tops"></div>
 
@@ -221,13 +221,24 @@
 </main>
 <footer class="foot"></footer>
 
-<script src="/assets/lfi.js?v=20261030.site1"></script>
-<script src="/l4picks/live-board.js?v=20261029.score-circles1"></script>
-<script>BubbleLiveBoard.mount(document.getElementById('live-board'));</script>
+<script src="/assets/lfi.js?v=20261030.beta3"></script>
+<script src="/l4picks/live-board.js?v=20261030.inline1"></script>
+
 <script>
 (function () {
   const { $, esc, thisWeek, teamMark, fmtShort, stripHTML } = LFI;
   let sortBy = "time", M = null, rows = [], wk = null;
+  let latestLive=[];
+  function mergeLive(){
+    for(const live of latestLive){const x=rows.find(x=>String(x.g.id)===live.id);if(!x)continue;
+      x.g.status=live.state==='live'?'in':live.state==='final'?'post':live.state==='upcoming'?'pre':x.g.status;
+      x.g.detail=live.detail;if(live.hScore!=null)x.g.home.score=live.hScore;if(live.aScore!=null)x.g.away.score=live.aScore;
+      const el=document.getElementById('g'+live.id);if(!el)continue;
+      el.querySelector('.gm-top>span').innerHTML=live.state==='live'?'<span class="live">● '+esc(live.detail)+'</span>':live.state==='final'?esc(live.detail):esc(fmtShort(x.g.kickoff));
+      el.querySelector('.gm-teams').innerHTML=teamSide(x.g,'away')+'<div class="gm-at">@</div>'+teamSide(x.g,'home');
+    }
+  }
+  BubbleLiveBoard.mount(document.getElementById('live-board'),{embedded:true,onUpdate(games){latestLive=games;mergeLive();}});
 
   // Normal curve: the chance a team wins by more than x when the model says m, results spread by sd.
   const erf = (x) => { const t = 1 / (1 + .3275911 * Math.abs(x)), y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - .284496736) * t + .254829592) * t * Math.exp(-x * x); return x >= 0 ? y : -y; };
@@ -479,6 +490,7 @@
     if (sortBy === "conf") list.sort((a, b) => best(b) - best(a) || a.g.kickoff - b.g.kickoff);
     $("games").innerHTML = list.length ? list.map(card).join("") : `<p class="empty">No games this week.</p>`;
     $("tops").innerHTML = bestBets();
+    mergeLive();
   }
   const best = (x) => Math.max(0, ...Object.values(x.L || {}).map((l) => l.conf));
 

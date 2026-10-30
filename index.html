@@ -19,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/assets/lfi.css?v=20261030.site2">
-<script src="/assets/theme.js?v=20261030.daily1"></script>
+<script src="/assets/theme.js?v=20261030.motion3"></script>
 </head>
 <body>
 <style>
@@ -164,6 +164,9 @@ main.home { padding-bottom: 64px; }
  .t b{font-size:16px;line-height:1.1}
  .t .st{font-size:8.5px;letter-spacing:.07em;line-height:1.25;margin-top:6px}
 }
+
+.home-launcher{display:none}@media(min-width:701px){.home-launcher{display:block;margin:0 0 38px;padding:22px;border:1px solid #a47aff;border-radius:22px;background:linear-gradient(120deg,#6420e9,#361078);box-shadow:0 6px 0 #2b1161}.home-launcher-kicker{font-size:11px;font-weight:800;letter-spacing:.18em;color:#dfcaff;margin-bottom:16px}.home-launcher-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.home-launcher-card{position:relative;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;gap:15px;padding:24px;aspect-ratio:1;box-sizing:border-box;min-width:0;border:1px solid #cab1ff66;border-radius:17px;background:linear-gradient(135deg,#ffffff17,#16064760);color:#fff;text-decoration:none;transition:transform .18s,background .18s}.home-launcher-card img{width:clamp(70px,8vw,108px);height:auto;object-fit:contain;filter:drop-shadow(0 6px 0 #15073444)}.home-launcher-card h2{font-size:clamp(26px,3vw,38px);margin:0 0 9px;line-height:1.05}.home-launcher-card p{font-size:15px;line-height:1.35;margin:0;color:#e1d5fb}.home-launcher-card>span{position:absolute;right:20px;top:18px;font-size:30px;color:#dfcaff}.home-launcher-card:focus-visible{outline:3px solid #ffe087;outline-offset:4px}}@media(hover:hover)and(min-width:701px){.home-launcher-card:hover{transform:translateY(-4px);background:#ffffff22}}@media(prefers-reduced-motion:reduce){.home-launcher-card{transition:none}}
+
 </style>
 
 <header class="nav" data-active="home"></header>
@@ -171,6 +174,12 @@ main.home { padding-bottom: 64px; }
 
 
 <main class="hin home">
+  <section class="home-launcher" aria-label="Choose how to play"><div class="home-launcher-kicker">YOUR NEXT PLAY</div><div class="home-launcher-grid">
+  <a class="home-launcher-card" href="/play/online/"><img src="/assets/game-icons/online-ranked.svg" width="108" height="108" alt=""><div><h2 class="disp">Play online</h2><p>Find your next rival.</p></div><span aria-hidden="true">↗</span></a>
+  <a class="home-launcher-card" href="/play/trivia/"><img src="/assets/game-icons/daily-five.svg" width="108" height="108" alt=""><div><h2 class="disp">Solo games</h2><p>Your next high score starts here.</p></div><span aria-hidden="true">↗</span></a>
+  <a class="home-launcher-card" href="/play/pickem/"><img src="/assets/game-icons/pickem-pools.svg" width="108" height="108" alt=""><div><h2 class="disp">Contests</h2><p>Make your picks. Join the competition.</p></div><span aria-hidden="true">↗</span></a>
+  </div></section>
+
   <div class="sec"><small>Free, every week <span class="em" aria-hidden="true">🎉</span></small><h2 class="disp" id="secH">Everything on bubble</h2></div>
   <div class="tgrid" id="tiles"></div>
 
@@ -192,7 +201,7 @@ main.home { padding-bottom: 64px; }
 <footer class="foot"></footer>
 
 <script src="/assets/cfb-data.js"></script>
-<script src="/assets/lfi.js?v=20261030.site1"></script>
+<script src="/assets/lfi.js?v=20261030.beta3"></script>
 <script src="/assets/calendar.js"></script>
 <script src="/assets/apwindow.js"></script>
 <script src="/assets/cloud.js"></script>
@@ -331,7 +340,7 @@ main.home { padding-bottom: 64px; }
   const STE = { Open: "🔥", "New today": "✨", Draft: "📝", Closed: "🔒" };
   const name = (x) => `<span class="lg">${esc(x.t)}</span><span class="sh">${esc(x.sh || x.t.replace(/^Bubble /, ""))}</span>`;
   function tile(x) {
-    const hot = !x.off && !x.out && x.url === ph.url;
+    const hot = x.url !== "/college/" && !x.off && !x.out && x.url === ph.url;
     if (x.off || x.out) {
       const back = x.out ? CAL.backNote(x.cal, NOW) : "";
       return `<div class="t off">${gameArt(x)}<span><b>${name(x)}</b>${x.d ? `<span class="ds">${esc(x.d)}</span>` : ""}<span class="st">${LOCK}<span class="lg">${esc(back || "Coming soon")}</span><span class="sh">${esc(back.replace("Back in ", "") || "Soon")}</span></span></span></div>`;

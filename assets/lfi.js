@@ -29,11 +29,8 @@
       ["bracket", "/bracket/", "CFP Bracket Builder", "Build and share your field"],
     ] },
     { key: "multiplayerhub", href: "/play/multiplayer/", label: "Multiplayer", sub: "Online or with friends", items: [
-      ["online", "/play/online/", "Online ranked", "Find an opponent and climb the rankings"],
-      ["challenges", "/challenges/", "Challenges", "Take on your friends"],
-      ["grid", "/grid/", "Grid Race", "Race a friend for 25 squares"],
-      ["race", "/trivia/race.html", "Name Them All Race", "Race friends live, first to name it claims it"],
-      ["drafts", "/drafts/", "Draft a Friend", "Snake-draft NFL history, live"],
+      ["online", "/play/online/", "Online ranked", "Find an opponent and compete for trophies"],
+      ["friend", "/play/friend/", "Play a friend", "Choose a game and send a private invite"],
     ] },
     { key: "draftshub", href: "/play/drafts/", label: "Drafts", sub: "Every way to draft", items: [
       ["drafts", "/drafts/", "Drafts", "Draft any slice of NFL history"],
@@ -192,8 +189,6 @@
       </div>
       <div class="mmenu" id="mmenu" hidden>
           ${mmTop}
-          <a class="mm-home" href="/scores/"><b>Live scores</b><span>Every game, all six leagues</span></a>
-          <a class="mm-home" href="/coins/"><b>Coins + shop</b><span>Earn coins and customize your profile</span></a>
           ${LEAGUES.map((g) => `<div class="mm-group"><div class="mm-lbl">${em(g.label)}${g.label}</div>${g.items.map(item).join("")}</div>`).join("")}
           <a class="mm-home${active === "account" ? " on" : ""}" href="/account/"><b><span class="em" aria-hidden="true">📋</span> My picks</b><span>Everything you've submitted</span></a>
           ${me && me.onboarded ? `<a class="mm-home${active === "profile" ? " on" : ""}" href="/u/?h=${encodeURIComponent(me.username)}"><b><span class="em" aria-hidden="true">👤</span> My profile</b><span>@${esc(me.username)}</span></a>`
@@ -204,7 +199,7 @@
       </div>`;
     let lg = $("navlg");
     if (!lg) { lg = document.createElement("nav"); lg.id = "navlg"; lg.className = "nav-leagues"; lg.setAttribute("aria-label", "Leagues"); h.after(lg); }
-    lg.innerHTML = `<div class="nav-lg-in"><a class="coin-nav-link" href="/scores/">Scores</a><a class="coin-nav-link" href="/coins/">Coins + shop</a>${LEAGUES.map((g, i) => dd(g, `lg${i}`)).join("")}</div>`;
+    lg.innerHTML = `<div class="nav-lg-in">${LEAGUES.map((g, i) => dd(g, `lg${i}`)).join("")}</div>`;
     document.dispatchEvent(new CustomEvent("bubble:header"));
     if (h.dataset.bound) return;
     h.dataset.bound = "1";
@@ -562,10 +557,6 @@
   if (!document.querySelector('script[src="/assets/cloud.js"]')) {
     const s = document.createElement("script"); s.src = "/assets/cloud.js"; document.head.appendChild(s);
   }
-  for (const [part,needed] of [["rewards",true]]) {
-    if (needed && ![...document.scripts].some(s=>s.src.split("?")[0].endsWith("/assets/"+part+".js"))) {
-      const s=document.createElement("script");s.src="/assets/"+part+".js?v="+(part==="rewards"?"20261029.ready2":"20261029");document.head.appendChild(s);
-    }
-  }
+
 
 })();
