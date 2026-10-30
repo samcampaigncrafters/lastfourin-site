@@ -158,6 +158,12 @@ main.home { padding-bottom: 64px; }
 .t .home-game-art{display:block;width:80px;height:80px;object-fit:contain;flex-shrink:0;filter:drop-shadow(0 5px 7px #240b5619)}
 .t.hot .home-game-art{filter:drop-shadow(0 4px 6px #0d082045)}
 @media(max-width:700px){.t .home-game-art{width:64px;height:64px}}
+@media(max-width:700px){
+ .t{min-height:0;justify-content:flex-start;gap:10px;padding:12px}
+ .t .home-game-art{width:48px;height:48px}
+ .t b{font-size:16px;line-height:1.1}
+ .t .st{font-size:8.5px;letter-spacing:.07em;line-height:1.25;margin-top:6px}
+}
 </style>
 
 <header class="nav" data-active="home"></header>
