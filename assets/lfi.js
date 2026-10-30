@@ -175,7 +175,7 @@
     const mmTop = TOP.map((t) => t.items && !t.href ? `<div class="mm-group"><div class="mm-lbl">${em(t.label)}${t.label}</div>${t.items.map(item).join("")}</div>`
       : t.soon ? `<span class="mm-home mm-soon"><b>${t.label} <i class="mm-badge">Soon</i></b><span>${t.sub}</span></span>`
       : `<a class="mm-home${t.key === active ? " on" : ""}" href="${t.href}"><b>${em(t.key)}${t.label}</b><span>${t.sub}</span></a>`).join("");
-    h.innerHTML = `<div class="nav-in">
+    const markup = `<div class="nav-in">
         <a class="brand" href="/" aria-label="bubble home">${LOGO}${WORDMARK}</a>
         <nav class="nav-links" aria-label="Main">${top}</nav>
         <div class="nav-r">
@@ -198,9 +198,23 @@
           ${me && me.onboarded ? `<a class="mm-home${active === "challenges" ? " on" : ""}" href="/challenges/"><b><span class="em" aria-hidden="true">⚔️</span> Challenges${challengesWaiting ? ` <i class="mm-badge">${challengesWaiting}</i>` : ""}</b><span>${challengesWaiting ? `${challengesWaiting} waiting on you` : "Take on your friends"}</span></a>` : ""}
           <button type="button" class="mm-home mm-theme" data-theme-flip>${theme() === "light" ? MOON : SUN}<b>${themeLabel()}</b></button>
       </div>`;
+    if (!h.dataset.bound) h.innerHTML = markup;
+    else {
+      // Account loading must never replace the main navigation or a button under the pointer.
+      const template = document.createElement("template"); template.innerHTML = markup;
+      const incoming = [...template.content.querySelectorAll(".nav-r > a")];
+      [...h.querySelectorAll(".nav-r > a")].forEach((link, index) => {
+        const next = incoming[index]; if (!next) return;
+        for (const attribute of [...link.attributes]) if (!next.hasAttribute(attribute.name)) link.removeAttribute(attribute.name);
+        for (const attribute of [...next.attributes]) if (link.getAttribute(attribute.name) !== attribute.value) link.setAttribute(attribute.name, attribute.value);
+        if (link.innerHTML !== next.innerHTML) link.innerHTML = next.innerHTML;
+      });
+      const menu = h.querySelector("#mmenu"), nextMenu = template.content.querySelector("#mmenu");
+      if (menu.hidden && menu.innerHTML !== nextMenu.innerHTML) menu.innerHTML = nextMenu.innerHTML;
+    }
     let lg = $("navlg");
     if (!lg) { lg = document.createElement("nav"); lg.id = "navlg"; lg.className = "nav-leagues"; lg.setAttribute("aria-label", "Leagues"); h.after(lg); }
-    lg.innerHTML = `<div class="nav-lg-in">${LEAGUES.map((g, i) => dd(g, `lg${i}`)).join("")}</div>`;
+    if (!lg.firstElementChild) lg.innerHTML = `<div class="nav-lg-in">${LEAGUES.map((g, i) => dd(g, `lg${i}`)).join("")}</div>`;
     for (const id of expanded) {
       const panel = document.getElementById(id);
       const button = [...document.querySelectorAll("header.nav [aria-controls], #navlg [aria-controls]")].find(b => b.getAttribute("aria-controls") === id);
@@ -221,6 +235,7 @@
       const open = b.getAttribute("aria-expanded") !== "true";
       closeAll(b);
       b.setAttribute("aria-expanded", String(open)); $(b.getAttribute("aria-controls")).hidden = !open;
+      if (!open && b.classList.contains("mbtn")) header();
     };
     h.addEventListener("click", onClick);
     $("navlg").addEventListener("click", onClick);
