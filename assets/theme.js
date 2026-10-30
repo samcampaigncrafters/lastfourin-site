@@ -37,8 +37,12 @@
   function indicators(){
     for(const row of document.querySelectorAll('.daily-unified-tabs,.tabs.modes')){
       const active=row.querySelector('a.on,a[aria-current]');if(!active)continue;
-      const rr=row.getBoundingClientRect(),a=active.getBoundingClientRect(),marker=document.createElement('span');marker.className='daily-slider';marker.setAttribute('aria-hidden','true');
-      const end={left:a.left-rr.left,top:a.top-rr.top,width:a.width,height:a.height};Object.assign(marker.style,Object.fromEntries(Object.entries(end).map(([k,v])=>[k,v+'px'])));row.prepend(marker);row.classList.add('has-slider');
+      const marker=document.createElement('span');marker.className='daily-slider';marker.setAttribute('aria-hidden','true');
+      const align=()=>{const selected=row.querySelector('a.on,a[aria-current]');if(!selected)return null;const rr=row.getBoundingClientRect(),a=selected.getBoundingClientRect();const box={left:a.left-rr.left-row.clientLeft,top:a.top-rr.top-row.clientTop,width:a.width,height:a.height};Object.assign(marker.style,Object.fromEntries(Object.entries(box).map(([k,v])=>[k,v+'px'])));return box;};
+      row.prepend(marker);const end=align();row.classList.add('has-slider');
+      // Wrapping and web-font loading change the active tab's bounds.
+      if(typeof ResizeObserver!=='undefined'){const observer=new ResizeObserver(align);observer.observe(row);for(const link of row.querySelectorAll('a'))observer.observe(link);}
+      window.addEventListener('pageshow',align);
       if(indicatorStart&&row.matches(indicatorStart.selector)&&!reduce())marker.animate([{transform:`translate(${indicatorStart.left-end.left}px,${indicatorStart.top-end.top}px) scale(${indicatorStart.width/end.width},${indicatorStart.height/end.height})`},{transform:'none'}],{duration:280,easing:'cubic-bezier(.22,.8,.25,1)'});
     }
     indicatorStart=null;
@@ -56,7 +60,7 @@
     const direction=current>=0&&target>=0&&target<current?'back':'forward',mode=group?.classList?.contains('modes'),panel=mode||group?.classList?.contains('daily-unified-tabs')?'daily':group?.id==='playSections'&&isHub(to)?'games':null;
     const rowSelector=mode?'.tabs.modes':group?.classList?.contains('daily-unified-tabs')?'.daily-unified-tabs':null;
     const active=group?.querySelector('a.on,a[aria-current]'),gr=group?.getBoundingClientRect(),ar=active?.getBoundingClientRect();
-    remember(to,direction,panel,rowSelector?{selector:rowSelector,rowTop:gr.top,indicator:ar?{selector:rowSelector,left:ar.left-gr.left,top:ar.top-gr.top,width:ar.width,height:ar.height}:null}:panel?measureHub():null);
+    remember(to,direction,panel,rowSelector?{selector:rowSelector,rowTop:gr.top,indicator:ar?{selector:rowSelector,left:ar.left-gr.left-group.clientLeft,top:ar.top-gr.top-group.clientTop,width:ar.width,height:ar.height}:null}:panel?measureHub():null);
   },true);
   const clearMotion=()=>{delete root.dataset.tabMotion;delete root.dataset.tabPanel;pendingHub=null;};
   const settleMotion=(revision)=>{requestAnimationFrame(()=>requestAnimationFrame(()=>{if(revision===motionRevision)clearMotion();}));};

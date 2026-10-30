@@ -19,9 +19,9 @@
 .opt .k { width: 26px; height: 26px; border-radius: 5px; display: grid; place-items: center; background: var(--card-2); font-family: var(--f-display); font-weight: 800; font-size: 15px; color: var(--ink-2); }
 .opt:disabled { cursor: default; }
 .opt.ok { background: var(--win-soft); border-color: var(--win); }
-.opt.ok .k { background: var(--win); color: #14001f; }
+.opt.ok .k { background: var(--win); color: var(--accent-ink); }
 .opt.no { background: var(--loss-soft); border-color: var(--loss); }
-.opt.no .k { background: var(--loss); color: #fff; }
+.opt.no .k { background: var(--loss); color: var(--accent-ink); }
 .opt.dim { opacity: .55; }
 .opt .mark { font-weight: 800; font-size: 18px; text-align: center; }
 .reveal { margin-top: 18px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; padding: 14px 16px; border-radius: var(--r); background: var(--card-2); border-left: 4px solid var(--muted); }

@@ -4,3 +4,8 @@
 @media(prefers-reduced-motion:reduce){.rare-bar i{transition:none}}
 
 .daily-results{max-height:340px;overflow-y:auto;overscroll-behavior:contain}.search-count{margin:6px 0}.search-count:empty{display:none}
+
+/* Filled answers keep white type on a dark fill, including dark-mode selections. */
+.daily-links a[aria-current=page],.daily-mode button[aria-pressed=true],.grid-cell.solved,.rare-rounds .gem{background:var(--selection-bg);border-color:var(--selection-bg);color:var(--selection-ink)}
+.daily-results button:hover,.daily-results button:focus{background:var(--card-2)}
+.daily-search input,.rare-input{border-color:var(--field-line)}

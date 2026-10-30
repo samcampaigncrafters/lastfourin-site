@@ -6,3 +6,5 @@
 @media(max-width:420px){.play-game-icon{width:60px;height:60px}.play-card-top:has(.play-game-icon){margin-bottom:20px}}
 
 body[data-play-hub="multiplayerhub"] .play-cards{grid-template-columns:repeat(2,minmax(0,1fr))}@media(max-width:500px){body[data-play-hub="multiplayerhub"] .play-cards{grid-template-columns:1fr}}
+
+.play-sections a[aria-current=page]{background:var(--selection-bg);border-color:var(--selection-bg);color:var(--selection-ink)}

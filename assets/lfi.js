@@ -83,18 +83,19 @@
     m.content = theme() === "light" ? "#ffffff" : "#0d0820";
   }
   function setTheme(t) {
-    const go = () => {
-      const open = document.getElementById("mmenu") && !document.getElementById("mmenu").hidden; // the phone menu stays open across the swap
-      document.documentElement.dataset.theme = t; paintThemeColor(); header();
-      if (open) { $("mmenu").hidden = false; document.querySelector("header.nav .mbtn").setAttribute("aria-expanded", "true"); }
-    };
+    // A colour change must not replace the header or replay page-entry snapshots.
+    document.documentElement.dataset.theme = t;
+    paintThemeColor();
     try { localStorage.setItem("lfi-theme", t); } catch (e) {}
-    if (!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) return go();
-    const root = document.documentElement;
-    root.classList.add("theme-flip"); // a plain crossfade, not the page-change slide
-    document.startViewTransition(go).finished.finally(() => root.classList.remove("theme-flip"));
+    document.querySelectorAll("[data-theme-flip]").forEach(button => {
+      const label = themeLabel();
+      button.setAttribute("aria-label", label);
+      button.title = label;
+      button.innerHTML = (t === "light" ? MOON : SUN) + (button.classList.contains("mm-theme") ? `<b>${label}</b>` : "");
+    });
   }
   const themeLabel = () => theme() === "light" ? "Dark mode" : "Light mode";
+  const ACCOUNT = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>';
   const FRIENDS = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.4"/><path d="M2.8 20c.6-3.6 3.1-5.6 6.2-5.6s5.6 2 6.2 5.6"/><path d="M15.5 4.9a3.3 3.3 0 0 1 0 6.3M18 14.7c1.9.7 3 2.5 3.3 5.3"/></svg>';
   const SWORDS = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M14.5 6.5 18 3h3v3l-3.5 3.5M5 14l4 4M7 17l-3 3M3 19l2 2"/></svg>';
   // bubble mark: a bracket line feeding into the ball, i.e. the team "on the bubble".
@@ -158,6 +159,7 @@
   function header() {
     const h = document.querySelector("header.nav");
     if (!h) return;
+    const expanded = [...document.querySelectorAll("header.nav [aria-expanded='true'], #navlg [aria-expanded='true']")].map(b => b.getAttribute("aria-controls"));
     const pageActive = h.dataset.active || "";
     const active = TOP.find(t=>t.href&&t.items?.some(([k])=>k===pageActive))?.key || pageActive;
     const name = myName();
@@ -179,10 +181,9 @@
         <div class="nav-r">
           ${me && me.avatar_url ? `<a class="avatar" href="/account/" title="My account" aria-label="My account"><img src="${esc(me.avatar_url)}" alt="" referrerpolicy="no-referrer"></a>`
             : name ? `<a class="avatar" href="/account/" title="My predictions" aria-label="My predictions">${esc(name.trim()[0].toUpperCase())}</a>`
-                 : window.LFI_CLOUD_ON ? `<a class="btn si" href="/signin/"${active === "signin" ? ' aria-current="page"' : ""}>Sign in</a>`
-                 : `<a class="btn si" href="/account/"${active === "account" ? ' aria-current="page"' : ""}>My picks</a>`}
-          ${me && me.onboarded ? `<a class="fbtn${active === "friends" ? " on" : ""}" href="/friends/" title="Friends" aria-label="Friends${inbox() ? `, ${inbox()} new request${inbox() > 1 ? "s" : ""}` : ""}">${FRIENDS}${inbox() ? `<i>${inbox() > 9 ? "9+" : inbox()}</i>` : ""}</a>` : ""}
-          ${me && me.onboarded ? `<a class="fbtn${active === "challenges" ? " on" : ""}" href="/challenges/" title="Challenges" aria-label="Challenges${challengesWaiting ? `, ${challengesWaiting} waiting` : ""}">${SWORDS}${challengesWaiting ? `<i>${challengesWaiting > 9 ? "9+" : challengesWaiting}</i>` : ""}</a>` : ""}
+                 : `<a class="avatar account-icon" href="${window.LFI_CLOUD_ON ? "/signin/" : "/account/"}" title="${window.LFI_CLOUD_ON ? "Sign in" : "My account"}" aria-label="${window.LFI_CLOUD_ON ? "Sign in" : "My account"}">${ACCOUNT}</a>`}
+          ${`<a class="fbtn${active === "friends" ? " on" : ""}" href="/friends/" title="Friends" aria-label="Friends${inbox() ? `, ${inbox()} new request${inbox() > 1 ? "s" : ""}` : ""}">${FRIENDS}${inbox() ? `<i>${inbox() > 9 ? "9+" : inbox()}</i>` : ""}</a>`}
+          ${`<a class="fbtn${active === "challenges" ? " on" : ""}" href="/challenges/" title="Challenges" aria-label="Challenges${challengesWaiting ? `, ${challengesWaiting} waiting` : ""}">${SWORDS}${challengesWaiting ? `<i>${challengesWaiting > 9 ? "9+" : challengesWaiting}</i>` : ""}</a>`}
           <button type="button" class="tbtn" data-theme-flip aria-label="${themeLabel()}" title="${themeLabel()}">${theme() === "light" ? MOON : SUN}</button>
           <button type="button" class="mbtn" aria-expanded="false" aria-controls="mmenu" aria-label="Menu">${BURGER}</button>
         </div>
@@ -200,6 +201,11 @@
     let lg = $("navlg");
     if (!lg) { lg = document.createElement("nav"); lg.id = "navlg"; lg.className = "nav-leagues"; lg.setAttribute("aria-label", "Leagues"); h.after(lg); }
     lg.innerHTML = `<div class="nav-lg-in">${LEAGUES.map((g, i) => dd(g, `lg${i}`)).join("")}</div>`;
+    for (const id of expanded) {
+      const panel = document.getElementById(id);
+      const button = [...document.querySelectorAll("header.nav [aria-controls], #navlg [aria-controls]")].find(b => b.getAttribute("aria-controls") === id);
+      if (panel && button) { panel.hidden = false; button.setAttribute("aria-expanded", "true"); }
+    }
     document.dispatchEvent(new CustomEvent("bubble:header"));
     if (h.dataset.bound) return;
     h.dataset.bound = "1";
