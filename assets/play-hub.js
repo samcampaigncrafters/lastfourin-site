@@ -7,14 +7,15 @@
   const meta={"triviahub":{"title":"Trivia","intro":"Your whole trivia lineup. Daily challenges, deep cuts, and races with friends."},"pickemhub":{"title":"Pick\u2019em","intro":"Pick winners, predict the rankings, or build your bracket. Choose your game."},"multiplayerhub":{"title":"Multiplayer","intro":"Find a rival online, or invite a friend to your own private game."},"draftshub":{"title":"Drafts","intro":"NFL history, jersey numbers, coaches, and rookie classes. Build your board."}};
   const sections=document.getElementById('playSections'),cards=document.getElementById('gameCards'),root=document.documentElement;
   sections.innerHTML=groups.map(g=>`<a href="${g.href}" ${g.key===key?'aria-current="page"':''}>${esc(g.label)}</a>`).join('');
-  sections.dataset.localTabs='true';
+  // Every category entry uses this same document, including the desktop header and phone menu.
+  for(const nav of document.querySelectorAll('#playSections,.nav-links,#mmenu'))nav.dataset.localTabs='true';
   let active=null,revision=0;
   function paint(next,push,anchor=sections.getBoundingClientRect().top){
     const rowTop=anchor;
     key=next.key;document.body.dataset.playHub=key;
     document.querySelector('header.nav').dataset.active=key;
     for(const a of sections.querySelectorAll('a')){if(a.getAttribute('href')===next.href)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');}
-    for(const a of document.querySelectorAll('.nav-links .nav-home'))a.classList.toggle('on',a.getAttribute('href')===next.href);
+    for(const a of document.querySelectorAll('.nav-links .nav-home,#mmenu .mm-home[href]')){const selected=a.getAttribute('href')===next.href;a.classList.toggle('on',selected);if(selected)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');}
     document.querySelector('.play-heading h1').textContent=meta[key].title;
     document.querySelector('.play-heading p').textContent=meta[key].intro;
     document.getElementById('gameCount').textContent=next.items.length+' ways to play';
@@ -37,9 +38,16 @@
     const clear=()=>requestAnimationFrame(()=>requestAnimationFrame(()=>{if(ticket===revision){active=null;delete root.dataset.tabMotion;delete root.dataset.tabPanel;}}));
     transition.finished.then(clear,clear);
   }
-  sections.addEventListener('click',event=>{
-    const a=event.target.closest('a[href]');if(!a||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
-    const next=groups.find(g=>g.href===a.getAttribute('href'));if(next){event.preventDefault();choose(next);}
+  document.addEventListener('click',event=>{
+    const a=event.target.closest('a[href]');
+    if(event.defaultPrevented||!a?.closest('[data-local-tabs="true"]')||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||a.download||a.target&&a.target!=='_self')return;
+    const to=new URL(a.href,location.href);
+    if(to.origin!==location.origin||to.search||to.hash)return;
+    const next=groups.find(g=>g.href===to.pathname);if(!next)return;
+    event.preventDefault();
+    const menu=document.getElementById('mmenu');
+    if(menu&&!menu.hidden){menu.hidden=true;const button=document.querySelector('[aria-controls="mmenu"]');button?.setAttribute('aria-expanded','false');button?.focus({preventScroll:true});}
+    choose(next);
   });
   window.addEventListener('popstate',()=>choose(groups.find(g=>g.href===location.pathname),false));
   paint(group,false);

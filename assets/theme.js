@@ -51,7 +51,7 @@
 
   document.addEventListener('click',event=>{
     if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||reduce())return;
-    const a=event.target.closest?.('a[href]');if(a?.closest('#playSections')?.dataset.localTabs==='true')return;if(!a||a.download||a.target&&a.target!=='_self')return;
+    const a=event.target.closest?.('a[href]');if(a?.closest('[data-local-tabs="true"]'))return;if(!a||a.download||a.target&&a.target!=='_self')return;
     const to=new URL(a.href,location.href);if(!local(to)||path(to)===path(new URL(location.href)))return;
     const modeGroup=to.pathname===location.pathname?document.querySelector('.tabs.modes'):null;
     const group=a.closest('.bubble-tabs,.nav-links,.nav-lg-in,.daily-links,#playSections,.daily-unified-tabs,.tabs.modes')||modeGroup;

@@ -691,6 +691,8 @@ body { font-weight: 500; }
    No scroll-triggered reveals and no scroll hijacking. All of it turns off when the device asks for less motion. */
 :root { --ease: cubic-bezier(.22, .9, .24, 1); --ease-in: cubic-bezier(.45, 0, .8, .35); }
 @view-transition { navigation: auto; }
+/* Keep a theme-colored canvas behind moving page snapshots. */
+::view-transition { background: var(--bg); }
 .nav { view-transition-name: lfi-nav; }
 ::view-transition-group(lfi-nav) { animation: none; }
 ::view-transition-old(root) { animation: lfi-leave .14s var(--ease-in) both; }
@@ -872,7 +874,7 @@ html[data-tab-panel="games"] #gameCards{view-transition-name:bubble-game-cards}
 html[data-tab-panel="games"]::view-transition-old(root){display:none;animation:none}
 html[data-tab-panel="games"]::view-transition-new(root){animation:none}
 html[data-tab-panel="games"]::view-transition-group(bubble-game-cards){animation-duration:260ms;animation-timing-function:cubic-bezier(.22,.8,.25,1)}
-html[data-tab-panel="games"]::view-transition-image-pair(bubble-game-cards){overflow:clip;isolation:isolate}
+html[data-tab-panel="games"]::view-transition-image-pair(bubble-game-cards){overflow:clip;isolation:isolate;background:var(--bg)}
 html[data-tab-panel="games"]::view-transition-old(bubble-game-cards),html[data-tab-panel="games"]::view-transition-new(bubble-game-cards){animation-duration:260ms;animation-timing-function:cubic-bezier(.22,.8,.25,1);animation-fill-mode:both;mix-blend-mode:normal}
 html[data-tab-panel="games"][data-tab-motion="forward"]::view-transition-old(bubble-game-cards){animation-name:bubble-tab-out-left}
 html[data-tab-panel="games"][data-tab-motion="forward"]::view-transition-new(bubble-game-cards){animation-name:bubble-tab-in-right}
