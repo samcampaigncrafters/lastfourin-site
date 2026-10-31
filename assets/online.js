@@ -2,7 +2,7 @@
 (function(){
  'use strict';if(!window.LFI||LFI.online)return;LFI.online={};
  const css=document.createElement('link');css.rel='stylesheet';css.href='/assets/online.css?v=20261030-trophies2';document.head.appendChild(css);
- const esc=LFI.esc,details={names:['Name Them All Race','/trivia/race.html','Two players, a random list, and one shared clock. Most names wins. A tied score goes to a fresh sudden-death prompt.'],grid:['Grid Race','/grid/?opponent=friend','Twenty-five random clues, five minutes. Most squares wins. A tied score goes to one sudden-death clue.'],weekdraft:['Draft Battle','/play/draft-battle/?friend=1','Call the coin toss. Ten players per round, three picks each. Spin a completed 2026 regular-season week; non-players score zero. Pair-by-pair PPR reveal. First to two rounds wins.']};
+ const esc=LFI.esc,details={names:['Name Them All Race','/trivia/race.html','Two players, a random list, and one shared clock. Most names wins. A tied score goes to a fresh sudden-death prompt.'],grid:['Grid Race','/grid/?opponent=friend','Twenty-five random clues, five minutes. Most squares wins. A tied score goes to one sudden-death clue.'],weekdraft:['Draft Battle','/play/draft-battle/?friend=1','Call the coin toss. Ten players per round, three picks each. A random season from 2015–2026. Spin a completed regular-season week; non-players score zero. Pair-by-pair PPR reveal. First to two rounds wins.']};
  const errorText=e=>/function|schema cache|PGRST202|Something went wrong/i.test(e.message)?'Online ranked play is not available on this server yet.':e.message;
  const trophyRank=m=>m.worldRank?`${m.tied?'Tied ':''}#${Number(m.worldRank).toLocaleString()}`:'Unranked';
  let badgeGame=null,badgeTimer=null,badgeBusy=false;
