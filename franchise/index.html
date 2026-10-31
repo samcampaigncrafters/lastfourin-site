@@ -88,6 +88,15 @@
   .owners .tc { margin: 0; }
   .teams32 button:disabled { opacity: .55; cursor: default; }
   .invites { display: grid; gap: 6px; }
+  .league-invite { margin: 0 0 18px; padding: 14px; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--card); }
+  .league-invite[hidden] { display: none; }
+  .league-invite .actbar { margin: 0; }
+  .league-invite p { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+  .league-invite .field { margin: 12px 0 0; min-width: 0; }
+  .league-invite input { width: 100%; min-width: 0; box-sizing: border-box; }
+  .league-invite-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .league-invite-footer a { min-width: 0; overflow-wrap: anywhere; }
+
   .slot { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--card); }
   .slot b { display: block; font-size: 16px; }
   .slot span { color: var(--muted); font-size: 13px; }
@@ -269,6 +278,11 @@
       <p id="allF" hidden style="margin-top:6px"><a class="lnk" href="/franchise/?new">All my franchises</a></p>
     </div>
   </div>
+  <section id="leagueInvite" class="league-invite" aria-label="Invite friends to this league" hidden>
+    <div class="actbar"><button type="button" class="btn gold" id="leagueInviteCopy">Copy invite link</button><a class="lnk" id="leagueInviteOpen">Open league link</a></div>
+    <p>Send the link by text. Friends need to sign in with an account invited to this league.</p>
+    <div id="leagueInviteManual" hidden><div class="field"><label for="leagueInviteUrl">League invite link</label><input id="leagueInviteUrl" type="url" readonly spellcheck="false"></div><p role="status">Copy the selected link, then paste it into your message.</p></div>
+  </section>
   <nav id="teamTools" class="actbar" aria-label="Team tools" hidden style="margin:0 0 14px">
     <button type="button" class="btn" data-team-tool="roster">My roster</button><button type="button" class="btn" data-team-tool="depth">Depth chart</button>
     <button type="button" class="btn" data-team-tool="search">Find player</button><button type="button" class="btn" data-team-tool="money">Financials</button><button type="button" class="btn" data-team-tool="updates">League updates</button>
@@ -282,6 +296,30 @@
   <div class="dlg-h"><div><div class="kicker" id="ovK"></div><h2 class="disp" id="ovH"></h2></div><button class="dlg-x" type="button" data-x aria-label="Close">×</button></div>
   <div class="dlg-b" id="ovB"></div></div></div>
 
+<script>
+(function () {
+  let finished = false, failed = false, stage = "Loading Franchise";
+  const body = document.getElementById("body");
+  function fail(message) {
+    if (finished || failed) return;
+    failed = true; clearTimeout(timer);
+    body.innerHTML = '<section class="card" data-free role="alert"><div class="card-b"><h2 class="disp">Couldn\'t finish loading</h2><p id="franchiseLoadDetail"></p><div class="actbar"><button type="button" class="btn gold" id="franchiseLoadRetry">Try again</button><a class="btn" id="franchiseLoadSignIn">Sign in again</a></div><p class="empty">Opened this from a text? Try opening the link in Safari or Chrome.</p></div></section>';
+    document.getElementById("franchiseLoadDetail").textContent = message || stage + " is taking too long. Your league is still saved.";
+    document.getElementById("franchiseLoadRetry").onclick = () => location.reload();
+    document.getElementById("franchiseLoadSignIn").href = "/signin/?next=" + encodeURIComponent(location.pathname + location.search + location.hash);
+  }
+  const timer = setTimeout(() => fail(), 20000);
+  window.FranchiseBoot = {
+    step(message) { if (!finished && !failed) { stage = message; body.textContent = message + "…"; } },
+    done() { finished = true; clearTimeout(timer); },
+    fail,
+    get failed() { return failed; }
+  };
+  window.addEventListener("error", (event) => {
+    if (event.target && event.target.tagName === "SCRIPT" && /\/franchise\/|\/assets\/(?:lfi|cloud)\.js|supabase\.min\.js/.test(event.target.src)) fail("A game file couldn't load. Try again to reopen your league.");
+  }, true);
+})();
+</script>
 <script src="/assets/lfi.js?v=20261030.ux2"></script>
 <script src="/assets/cloud.js"></script>
 <script src="/franchise/free-agency.js?v=1"></script>
@@ -295,6 +333,10 @@
 <script src="/franchise/ratings-2026-10-28.js"></script>
 <script>
 (function () {
+  if (!window.LFI || !window.FranchiseEngine || !window.FranchiseSim || !window.FranchiseDraftClock || !window.FranchiseFreeAgency || !window.FranchiseRatingReference || !window.FranchiseCoachingControls || !window.FranchiseRosterReference || !window.FranchisePlanning) {
+    window.FranchiseBoot.fail("A game file couldn't load. Try again to reopen your league."); return;
+  }
+  if (window.FranchiseBoot.failed) return;
   const { $, esc, toast } = LFI;
   const E = window.FranchiseEngine, S = window.FranchiseSim, C = window.FranchiseDraftClock, F = window.FranchiseFreeAgency;
   const REF = window.FranchiseRatingReference;
@@ -685,7 +727,7 @@
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("ov").hidden) closeOv(); });
   // The user's team logo beside the title on every in-game screen (Sam 2026-10-28); logos come with the private pack.
   function head(kick, title, lede) { $("kick").textContent = kick; $("titleT").textContent = title;
-    const lu = lg && lg.teams[lg.user] ? E.teamLogo(lg.teams[lg.user]) : ""; $("tlogo").hidden = !lu; if (lu && $("tlogo").getAttribute("src") !== lu) $("tlogo").src = lu; $("lede").textContent = lede || ""; $("lede").hidden = !lede; $("allF").hidden = !lg && !ML; $("teamTools").hidden = !lg || !!live || !!reveal; }
+    const lu = lg && lg.teams[lg.user] ? E.teamLogo(lg.teams[lg.user]) : ""; $("tlogo").hidden = !lu; if (lu && $("tlogo").getAttribute("src") !== lu) $("tlogo").src = lu; $("lede").textContent = lede || ""; $("lede").hidden = !lede; $("allF").hidden = !lg && !ML; $("teamTools").hidden = !lg || !!live || !!reveal; syncLeagueInvite(); }
 
   // Team tools are read-only overlays: inspecting a team never rebuilds the screen underneath or applies a move.
   const Planning = window.FranchisePlanning;
@@ -2542,6 +2584,30 @@
       <p style="margin:0 0 10px;font-weight:800">👥 ${esc(whoName(x.host_team))} started a watch party: ${esc(E.teamName(team(x.game.a)))} at ${esc(E.teamName(team(x.game.h)))}.</p>
       <button class="btn gold" data-join="${esc(x.code)}" ${x.joined ? "disabled" : ""}>${x.joined ? "Someone already joined" : "Join the watch party"}</button></div></section>`).join("");
   }
+  const leagueInviteUrl = (id) => new URL(`/franchise/?league=${encodeURIComponent(id)}`, location.origin).href;
+  function syncLeagueInvite() {
+    const box = $("leagueInvite"); box.hidden = !ML;
+    if (!ML) { delete box.dataset.league; $("leagueInviteManual").hidden = true; return; }
+    const url = leagueInviteUrl(ML.id);
+    if (box.dataset.league !== ML.id) { box.dataset.league = ML.id; $("leagueInviteManual").hidden = true; }
+    $("leagueInviteOpen").href = url; $("leagueInviteUrl").value = url;
+    $("leagueInviteCopy").onclick = () => copyLeagueInvite();
+  }
+  async function copyLeagueInvite(button = $("leagueInviteCopy")) {
+    if (!ML) return;
+    const id = ML.id, url = leagueInviteUrl(id); button.disabled = true;
+    let copied = false;
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(url); copied = true; } } catch { /* Try selection-based copying below. */ }
+    if (!ML || ML.id !== id) { button.disabled = false; return; }
+    if (!copied) {
+      const input = $("leagueInviteUrl"); $("leagueInviteManual").hidden = false;
+      input.value = url; input.focus(); input.select(); input.setSelectionRange(0, url.length);
+      try { copied = document.execCommand("copy"); } catch { /* Keep the full link selected for manual copying. */ }
+      if (copied) { $("leagueInviteManual").hidden = true; button.focus(); }
+    }
+    button.disabled = false;
+    toast(copied ? "Invite link copied. Paste it into a text message." : "Copy the selected link, then paste it into your message.");
+  }
   function lobbyView() {
     const M = ML, I = M.info, meP = I.people.find((p) => p.me), taken = new Map(I.people.filter((p) => p.team != null).map((p) => [p.team, p]));
     const real = isReal(I), ts = E.TEAMS.map((t) => ({ ...t, city: real ? E.cityFor(t.code, I.settings.year) : t.city }));
@@ -2555,7 +2621,7 @@
         ${I.owner ? `<div class="field"><label for="lInv">Invite someone else</label><select id="lInv"><option value="">Pick a friend</option></select></div>` : ""}
         <div class="actbar" style="margin:14px 0 0">${I.owner ? `<button class="btn gold big" id="lStart" ${ready ? "" : "disabled"}>Start the league</button>` : ""}<button class="btn" id="lLeave">${I.owner ? "Delete the league" : "Leave"}</button></div>
         ${I.owner && !ready ? `<p class="empty" style="margin:8px 0 0">Everyone needs a team before you can start (or remove whoever isn't coming).</p>` : ""}
-        <p class="empty" style="margin:8px 0 0">League link: <span class="lnk">${esc(location.origin)}/franchise/?league=${esc(I.id)}</span></p></div></section></div></div>`;
+        <div class="league-invite-footer"><button type="button" class="btn gold" id="lCopyInvite">Copy invite link</button><a class="lnk" href="${esc(leagueInviteUrl(I.id))}">${esc(leagueInviteUrl(I.id))}</a></div></div></section></div></div>`;
     if (I.owner) rpc("franchise_people", {}).then((ps) => {
       const s = $("lInv"); if (!s) return;
       const inL = new Set(I.people.map((p) => p.id));
@@ -2566,6 +2632,7 @@
     $("body").onclick = async (e) => {
       const b = e.target.closest("button"); if (!b) return;
       try {
+        if (b.id === "lCopyInvite") return await copyLeagueInvite(b);
         if (b.dataset.claim) { await rpc("franchise_league_claim", { p_league: I.id, p_team: +b.dataset.claim }); M.last = 0; await mlTick(); }
         else if (b.dataset.kick) { await rpc("franchise_league_invite", { p_league: I.id, p_user: b.dataset.kick, p_add: false }); M.last = 0; await mlTick(); }
         else if (b.id === "lStart") { b.disabled = true; await rpc("franchise_league_start", { p_league: I.id }); mlOpen(I.id); }
@@ -2595,31 +2662,42 @@
     }
     const c = LFI.cloud;
     if (!c || !c.on) { gate("signin"); return null; }
+    window.FranchiseBoot.step("Checking your account");
     await c.ready;
+    if (window.FranchiseBoot.failed) return null;
     if (!c.user) { gate("signin"); return null; }
+    window.FranchiseBoot.step("Loading your league access");
     const { data, error } = await c.sb.rpc("franchise_pack");
+    if (window.FranchiseBoot.failed) return null;
     if (error) { console.error(error); gate("error"); return null; }
     if (!data) { gate("invite"); return null; }
     return data;
   }
   (async () => {
-    const pack = await getPack(); if (!pack) return;
-    PACK = pack; E.setPack(pack);
-    try { await loadScript("/franchise/data/players.js"); } catch (e) { gate("error"); return; }
-    DATA = window.FRANCHISE_DATA; fill(DATA.players, "players");
     try {
+      const pack = await getPack(); if (!pack || window.FranchiseBoot.failed) return;
+      PACK = pack; E.setPack(pack);
+      window.FranchiseBoot.step("Loading player data");
+      await loadScript("/franchise/data/players.js");
+      if (window.FranchiseBoot.failed) return;
+      DATA = window.FRANCHISE_DATA; fill(DATA.players, "players");
+      window.FranchiseBoot.step("Loading draft data");
       await loadScript("/franchise/data/drafts.js");
+      if (window.FranchiseBoot.failed) return;
       fill(Object.values(window.FRANCHISE_DRAFTS.years).flat(), "drafts");
       DATA = { ...DATA, drafts: window.FRANCHISE_DRAFTS };
-    } catch (e) { gate("error"); return; }
-    // Open the last franchise straight away if there is one; otherwise the start screen.
-    await syncAccount();
-    const s0 = store.read();
-    const pc = new URLSearchParams(location.search).get("party");
-    if (pc) return joinParty(pc);
-    const lc = new URLSearchParams(location.search).get("league");
-    if (lc) return mlOpen(lc);
-    if (new URLSearchParams(location.search).has("new") || s0.last == null || !s0.slots[s0.last]) home(true); else open(s0.last);
+      // Shared invites do not depend on downloading and merging solo franchises.
+      const query = new URLSearchParams(location.search), pc = query.get("party"), lc = query.get("league");
+      window.FranchiseBoot.step("Opening your league");
+      if (pc) return await joinParty(pc);
+      if (lc) return await mlOpen(lc);
+      await syncAccount();
+      if (window.FranchiseBoot.failed) return;
+      const s0 = store.read();
+      if (query.has("new") || s0.last == null || !s0.slots[s0.last]) home(true); else open(s0.last);
+    } catch (err) {
+      console.error(err); window.FranchiseBoot.fail("We couldn't finish loading Franchise. Try again; your league is still saved.");
+    } finally { window.FranchiseBoot.done(); }
   })();
 })();
 </script>
