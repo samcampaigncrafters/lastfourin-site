@@ -329,7 +329,7 @@
 <script src="/franchise/real-roster-2026-10-29.js"></script>
 <script src="/franchise/sim-tools.js"></script>
 <script src="/franchise/team-planning.js?v=20261028"></script>
-<script src="/franchise/draft-clock.js"></script>
+<script src="/franchise/draft-clock.js?v=20261101-30"></script>
 <script src="/franchise/ratings-2026-10-28.js"></script>
 <script>
 (function () {
@@ -1013,10 +1013,10 @@
     const ros = team(lg.user).roster.map((id) => lg.players[id]);
     return `<section class="card"><div class="card-h"><h2 class="disp">Your roster</h2><span class="muted">${ros.length} / ${E.ROSTER} players</span></div>
       <div class="card-b"><div class="needs">${E.GROUPS.map((g) => `<span>${g === "ED" ? "Edge" : g} ${ros.filter((p) => p.g === g).length}/${E.TARGET[g]}</span>`).join("")}</div>
-      <p class="empty" style="margin:10px 0 0">Ratings change each offseason. A player's ceiling is an estimate of potential, not a guaranteed outcome.</p></div></section>
+      <p class="empty" style="margin:10px 0 0">Ratings change each offseason. A player's future development is uncertain.</p></div></section>
       ${ros.length ? E.GROUPS.map((g) => { const ps = ros.filter((p) => p.g === g).sort((a, b) => b.grade - a.grade || a.name.localeCompare(b.name));
         return ps.length ? `<section class="card" style="margin-top:12px"><div class="card-h"><h3 class="disp" style="font-size:20px;margin:0">${E.GROUP_NAME[g]}</h3></div>
-          ${ps.map((p) => `<div class="prow">${playerBadge(p)}<div class="pn"><b>${esc(p.name)}</b><span>${plabel(p)}</span></div><span class="muted" style="font-size:12px;font-weight:700">Ceiling ${ovr(p.ceil)}</span></div>`).join("")}</section>` : ""; }).join("")
+          ${ps.map((p) => `<div class="prow">${playerBadge(p)}<div class="pn"><b>${esc(p.name)}</b><span>${plabel(p)}</span></div></div>`).join("")}</section>` : ""; }).join("")
         : `<section class="card" style="margin-top:12px"><p class="empty" style="padding:16px">No players drafted yet. Your picks will appear here, grouped by position.</p></section>`}`;
   }
   function selectDraftTab(next, focus) {
@@ -1036,14 +1036,14 @@
     const d = lg.draft, rookie = d.kind === "rookie";
     const round = Math.floor(d.n / 32) + 1, inRound = (d.n % 32) + 1;
     const realCls = rookie && [...d.pool].some((id) => lg.players[id].rk);
-    head(kick, title, !rookie ? "" : projectedYear() ? (lg.year === 2027 ? "Real 2027 college prospects with projected OVR/potential and modeled age 22; draft declarations can change. These are not actual NFL draft results. Grades develop through your league's existing rules." : `Real ESPN recruiting-class ${lg.year-3} players, projected into NFL ${lg.year}. Ratings, age 21 and roles are modeled; declarations, schools and development can change.`) : realCls ? (lg.settings.hindsight ? `The real ${lg.year} draft class. Hindsight is on: grades come from how their real careers went.` : `The real ${lg.year} draft class, graded only from where each player was really picked. Grades are what they are now; the ceiling is how good they could get.`)
-      : "This year's rookie class is made up (no real class to use). Grades are what they are now; the ceiling is how good they could get.");
+    head(kick, title, !rookie ? "" : projectedYear() ? (lg.year === 2027 ? "Real 2027 college prospects with projected OVR and modeled age 22; draft declarations can change. These are not actual NFL draft results. Grades develop through your league's existing rules." : `Real ESPN recruiting-class ${lg.year-3} players, projected into NFL ${lg.year}. Ratings, age 21 and roles are modeled; declarations, schools and development can change.`) : realCls ? (lg.settings.hindsight ? `The real ${lg.year} draft class. Hindsight is on: grades come from how their real careers went.` : `The real ${lg.year} draft class, graded only from where each player was really picked. Grades reflect current ability; future development is uncertain.`)
+      : "This year's rookie class is made up (no real class to use). Grades reflect current ability; future development is uncertain.");
     const c = E.countBy(lg, lg.user), mine = team(lg.user).roster.length;
     const needs = E.GROUPS.map((g) => `<span class="${c[g] < E.STARTERS[g] ? "need" : ""}">${g === "ED" ? "Edge" : g} ${c[g]}/${E.TARGET[g]}</span>`).join("");
     let pool = [...d.pool].map((id) => lg.players[id]);
     if (posF !== "ALL") pool = pool.filter((p) => p.g === posF);
     if (q) { const s = q.toLowerCase(); pool = pool.filter((p) => p.name.toLowerCase().includes(s)); }
-    pool.sort(boardSort === "ceil" ? (a, b) => b.ceil - a.ceil || b.grade - a.grade : boardSort === "grade" ? (a, b) => b.grade - a.grade || a.age - b.age
+    pool.sort(boardSort === "grade" ? (a, b) => b.grade - a.grade || a.age - b.age
       : (a, b) => E.boardValue(b, rookie) - E.boardValue(a, rookie));
     const onClock = E.userOnClock(lg), who = E.pickOwner(lg);
     const recent = d.picks.slice(-10).reverse();
@@ -1065,10 +1065,10 @@
           <div class="needs">${needs}</div>
           <div class="seg" style="margin-top:12px" id="posSeg">${["ALL", ...E.GROUPS].map((g) => `<button type="button" data-pos="${g}" aria-pressed="${posF === g}">${g === "ALL" ? "All" : g === "ED" ? "Edge" : g}</button>`).join("")}</div>
           <input class="search" id="q" type="search" placeholder="Search a player" value="${esc(q)}" autocomplete="off">
-          <div class="seg" style="margin-top:10px"><button type="button" data-sort="board" aria-pressed="${boardSort === "board"}">Our board</button><button type="button" data-sort="grade" aria-pressed="${boardSort === "grade"}">Best OVR now</button>${rookie ? `<button type="button" data-sort="ceil" aria-pressed="${boardSort === "ceil"}">Highest ceiling</button>` : ""}</div>
+          <div class="seg" style="margin-top:10px"><button type="button" data-sort="board" aria-pressed="${boardSort === "board"}">Our board</button><button type="button" data-sort="grade" aria-pressed="${boardSort === "grade"}">Best OVR now</button></div>
         </div>
         <div id="board">${pool.slice(0, showN).map((p) => `<div class="prow">${playerBadge(p)}
-          <div class="pn"><b>${esc(p.name)}</b><span>${plabel(p)}${rookie ? ` · ceiling ${ovr(p.ceil)}` : ""}</span>${p.line ? `<span>${esc(p.line)}</span>` : ""}</div>
+          <div class="pn"><b>${esc(p.name)}</b><span>${plabel(p)}</span>${p.line ? `<span>${esc(p.line)}</span>` : ""}</div>
           <button class="btn ${onClock ? "gold" : ""}" data-pick="${esc(p.id)}" ${onClock ? "" : "disabled"}>Draft</button></div>`).join("") || `<p class="empty" style="padding:12px">Nobody left here.</p>`}
         ${pool.length > showN ? `<div style="padding:12px"><button class="btn block" id="moreBtn">Show more (${pool.length - showN} left)</button></div>` : ""}</div></section>
       </div>
@@ -2355,7 +2355,7 @@
           <div class="field"><label for="mClock">Round-one draft clock</label><select id="mClock">${SECS.map(([v, l]) => `<option value="${v}" ${v === 120 ? "selected" : ""}>${l}</option>`).join("")}</select></div>
           <div class="field"><label for="mWeek">Each week plays within</label><select id="mWeek">${HOURS.map(([v, l]) => `<option value="${v}" ${v === 24 ? "selected" : ""}>${l}</option>`).join("")}</select></div>
         </div>
-        <p class="empty" id="mClockHint" style="margin:4px 0 12px">Each round you draft gets shorter, reaching 15 seconds a pick in your last round. The selected time is for round one.</p>
+        <p class="empty" id="mClockHint" style="margin:4px 0 12px">Each round you draft gets shorter, reaching 30 seconds a pick in your last round. The selected time is for round one.</p>
         ${mode === "real" ? `<label class="tog" style="margin-top:12px"><input type="checkbox" id="mHind"><span><b>Hindsight rookies</b><span>Off: the real draft classes are graded only from where each player was picked. On: from how their careers went.</span></span></label>` : ""}
         ${coachingToggle("mCoach", coachingSupport)}
         <h3 class="disp" style="margin:18px 0 8px">Invite</h3>

@@ -1,4 +1,4 @@
-/* Round-one clock tapers to 15 seconds across the human draft rounds. */
+/* Round-one clock tapers to 30 seconds across the human draft rounds. */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
   else root.FranchiseDraftClock = factory();
@@ -6,7 +6,8 @@
   function seconds(start, round, rounds) {
     if (!Number.isFinite(start) || start <= 0 || !Number.isInteger(round) ||
         !Number.isInteger(rounds) || rounds < 1 || round < 1 || round > rounds) throw Error("Invalid draft clock");
-    const floor = Math.min(start, 15);
+    start = Math.max(start, 30);
+    const floor = 30;
     return rounds === 1 ? start : Math.round((start - (start - floor) * (round - 1) / (rounds - 1)) * 1000) / 1000;
   }
   function context(lg) {
