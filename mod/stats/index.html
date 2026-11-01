@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Visitors · PlayBubble</title>
+<title>Traffic · PlayBubble</title>
 <meta name="description" content="Site visitor numbers.">
 <meta property="og:title" content="Visitors · PlayBubble">
 <meta property="og:image" content="https://playbubble.app/assets/og.png">
@@ -41,8 +41,8 @@
 <header class="nav"></header>
 
 <main class="page" style="max-width:760px">
-  <div class="head"><div><div class="kicker">Moderators</div><h1 class="disp">Visitors</h1>
-    <p>Franchise and identified owner/test visits are excluded throughout this report. Visitor-days estimate browsers per day; remaining visits can still include unidentified testing or bots. These are not verified people or signups.</p></div></div>
+  <div class="head"><div><div class="kicker">Moderators</div><h1 class="disp">Traffic</h1>
+    <p>Franchise and identified owner/test visits are excluded. Remaining traffic is unverified and can include crawlers, link scanners, privacy relays and unidentified testing. These totals are not an audience estimate or signup count. Browser-days count a browser once per day, not a distinct person.</p></div></div>
   <div class="vs-range" id="range">
     <button class="btn" type="button" data-d="1">Today</button>
     <button class="btn" type="button" data-d="7">7 days</button>
@@ -87,9 +87,9 @@
     const top = Math.max(1, ...s.days.map((r) => Number(r.visitors)));
     const fmtDay = (d) => new Date(d + "T12:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
     $("out").innerHTML = `<div class="vs-tot">
-        <div><b>${n(ppl)}</b><span>Visitor-days</span></div>
-        <div><b>${n(views)}</b><span>Page views</span></div>
-        <div><b>${ppl ? (views / ppl).toFixed(1) : "0"}</b><span>Views per visitor-day</span></div></div>` +
+        <div><b>${n(ppl)}</b><span>Browser-days</span></div>
+        <div><b>${n(views)}</b><span>Unverified views</span></div>
+        <div><b>${ppl ? (views / ppl).toFixed(1) : "0"}</b><span>Views per browser-day</span></div></div>` +
       sec("By day", `<div class="vs-row"><span>Day</span><span>Views</span><span>Visitor-days</span></div>` + (s.days.length ? s.days.map((r) =>
         `<div class="vs-row"><span>${fmtDay(r.day)}<div class="vs-bar" style="width:${Math.round(Number(r.visitors) / top * 100)}%"></div></span><span>${n(r.views)}</span><span>${n(r.visitors)}</span></div>`).join("")
         : `<div class="vs-row"><span class="empty" style="padding:0">Nothing yet</span><span></span><span></span></div>`)) +
