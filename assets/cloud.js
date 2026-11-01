@@ -150,9 +150,15 @@
   if (location.hostname === "playbubble.app" && !navigator.webdriver) {
     let ref = "";
     try { ref = document.referrer ? new URL(document.referrer).hostname : ""; } catch (e) { /* bad referrer */ }
-    fetch(SUPABASE_URL + "/rest/v1/rpc/log_visit", {
+    const campaignParams = new URLSearchParams(location.search), tags = {};
+    for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content"]) {
+      const value = (campaignParams.get(key) || "").toLowerCase();
+      if (/^[a-z0-9][a-z0-9_.-]{0,95}$/.test(value)) tags[key] = value;
+    }
+    const tagged = !!tags.utm_source;
+    fetch(SUPABASE_URL + "/rest/v1/rpc/" + (tagged ? "log_visit_tagged" : "log_visit"), {
       method: "POST", keepalive: true, headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
-      body: JSON.stringify({ p_path: location.pathname, p_ref: ref || null }),
+      body: JSON.stringify({ p_path: location.pathname, p_ref: ref || null, ...(tagged ? { p_tags: tags } : {}) }),
     }).catch(() => {});
   }
 
@@ -392,9 +398,9 @@
   cloud.isAdmin = async () => { if (!cloud.user) return false; const { data } = await cloud.sb.rpc("is_admin"); return !!data; };
   // Visitor numbers for /mod/stats/ (admins only; the database refuses everyone else).
   cloud.siteStats = async (days) => {
-    const [d, p, r] = await Promise.all(["site_stats", "site_top_pages", "site_top_refs"].map((f) => cloud.sb.rpc(f, { p_days: days })));
-    [d, p, r].forEach((x) => fail(x.error, "Couldn't load the visitor numbers."));
-    return { days: d.data || [], pages: p.data || [], refs: r.data || [] };
+    const [d, p, r, c, a] = await Promise.all(["site_stats", "site_top_pages", "site_top_refs", "site_campaigns", "site_arrivals"].map((f) => cloud.sb.rpc(f, { p_days: days })));
+    [d, p, r, c, a].forEach((x) => fail(x.error, "Couldn't load the visitor numbers."));
+    return { days: d.data || [], pages: p.data || [], refs: r.data || [], campaigns: c.data || [], arrivals: a.data || [] };
   };
   cloud.modQueue = async () => { const { data, error } = await cloud.sb.rpc("mod_queue"); fail(error); return data || []; };
   cloud.modBan = async (uid, banned) => { const { error } = await cloud.sb.rpc("mod_ban", { p_user: uid, p_banned: banned }); fail(error); };

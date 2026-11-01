@@ -32,6 +32,7 @@
 .vs-row > :not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
 .vs-row > :first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vs-bar { height: 6px; border-radius: 3px; background: var(--accent); margin-top: 4px; }
+.vs-note{font-size:13px;line-height:1.5;color:var(--muted)}.vs-campaign{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:16px;padding:16px 0;border-top:1px solid var(--line);font-size:13px}.vs-campaign b{overflow-wrap:anywhere}.vs-campaign small{display:block;color:var(--muted);margin-top:5px;overflow-wrap:anywhere}.vs-campaign>span{text-align:right}.vs-campaign strong{display:block;font-size:22px;color:var(--accent)}@media(max-width:560px){.vs-campaign{grid-template-columns:1fr 1fr;gap:10px}.vs-campaign>div{grid-column:1/-1}.vs-campaign>span{text-align:left}.vs-row{grid-template-columns:1fr 55px 75px}}
 .vs-sec { margin: 0 0 16px; }
 </style>
 </head>
@@ -41,7 +42,7 @@
 
 <main class="page" style="max-width:760px">
   <div class="head"><div><div class="kicker">Moderators</div><h1 class="disp">Visitors</h1>
-    <p>Our own counter: no cookies, no IPs kept. A visitor is one person on one day, so the total adds up days. Bots are left out.</p></div></div>
+    <p>Our own counter: no cookies, no IPs kept. Visitor-days estimate distinct browsers per day and can include your own visits. Recognized bots are filtered; these are not verified people or signups.</p></div></div>
   <div class="vs-range" id="range">
     <button class="btn" type="button" data-d="1">Today</button>
     <button class="btn" type="button" data-d="7">7 days</button>
@@ -59,7 +60,7 @@
   const { $, esc, cloud } = LFI;
   let days = 30;
   const n = (x) => Number(x).toLocaleString();
-  const rows = (head, list, name) => `<div class="vs-row"><span>${head}</span><span>Views</span><span>People</span></div>` +
+  const rows = (head, list, name) => `<div class="vs-row"><span>${head}</span><span>Views</span><span>Visitor-days</span></div>` +
     (list.length ? list.map((r) => `<div class="vs-row"><span>${esc(name(r))}</span><span>${n(r.views)}</span><span>${n(r.visitors)}</span></div>`).join("")
       : `<div class="vs-row"><span class="empty" style="padding:0">Nothing yet</span><span></span><span></span></div>`);
   const sec = (title, inner) => `<section class="card vs-sec"><div class="card-h"><h2>${title}</h2></div><div class="card-b">${inner}</div></section>`;
@@ -67,19 +68,29 @@
     if (!cloud.on || !cloud.user) { $("out").innerHTML = `<p class="empty">Sign in with a moderator account to see visitor numbers. <a href="/signin/?next=/mod/stats/">Sign in</a></p>`; return; }
     if (!(await cloud.isAdmin())) { $("out").innerHTML = `<p class="empty">This account isn't a moderator.</p>`; return; }
     let s;
-    try { s = await cloud.siteStats(days); } catch (e) { $("out").innerHTML = `<p class="empty">${esc(e.message)}</p>`; return; }
+    try {
+      s = await cloud.siteStats(days);
+      // Older cached account scripts still expose the original three-part report.
+      if (!Array.isArray(s.campaigns) || !Array.isArray(s.arrivals)) {
+        const [campaigns, arrivals] = await Promise.all(["site_campaigns", "site_arrivals"].map(f => cloud.sb.rpc(f, { p_days: days })));
+        if (campaigns.error || arrivals.error) throw new Error("Couldn't load the visitor numbers.");
+        s.campaigns = campaigns.data || []; s.arrivals = arrivals.data || [];
+      }
+    } catch (e) { $("out").innerHTML = `<p class="empty">${esc(e.message)}</p>`; return; }
     const views = s.days.reduce((a, r) => a + Number(r.views), 0), ppl = s.days.reduce((a, r) => a + Number(r.visitors), 0);
     const top = Math.max(1, ...s.days.map((r) => Number(r.visitors)));
     const fmtDay = (d) => new Date(d + "T12:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
     $("out").innerHTML = `<div class="vs-tot">
-        <div><b>${n(ppl)}</b><span>People (by day)</span></div>
+        <div><b>${n(ppl)}</b><span>Visitor-days</span></div>
         <div><b>${n(views)}</b><span>Page views</span></div>
-        <div><b>${ppl ? (views / ppl).toFixed(1) : "0"}</b><span>Pages per person</span></div></div>` +
-      sec("By day", `<div class="vs-row"><span>Day</span><span>Views</span><span>People</span></div>` + (s.days.length ? s.days.map((r) =>
+        <div><b>${ppl ? (views / ppl).toFixed(1) : "0"}</b><span>Views per visitor-day</span></div></div>` +
+      sec("By day", `<div class="vs-row"><span>Day</span><span>Views</span><span>Visitor-days</span></div>` + (s.days.length ? s.days.map((r) =>
         `<div class="vs-row"><span>${fmtDay(r.day)}<div class="vs-bar" style="width:${Math.round(Number(r.visitors) / top * 100)}%"></div></span><span>${n(r.views)}</span><span>${n(r.visitors)}</span></div>`).join("")
         : `<div class="vs-row"><span class="empty" style="padding:0">Nothing yet</span><span></span><span></span></div>`)) +
       sec("Top pages", rows("Page", s.pages, (r) => r.path)) +
-      sec("Where they came from", rows("Site", s.refs, (r) => r.ref_host));
+      sec("How visits start", `<p class="vs-note">First recorded page for each browser each day, including generic links. Direct / unknown includes texts, bookmarks, apps that hide their source, and visits whose original source was not captured. This is not a count of first-ever visitors.</p>` + (s.arrivals.length ? s.arrivals.map(r => `<div class="vs-campaign"><div><b>${esc(r.source)}</b><small>Arrived at ${esc(r.landing_path)}</small></div><span><strong>${n(r.visitors)}</strong> visitor-days</span></div>`).join("") : '<p class="vs-note">No arrivals in this date range yet.</p>')) +
+      sec("Reddit & campaign links", `<p class="vs-note">Tagged landing-page views by link. Reloads add views; visitor-days count a browser once per day for each link. Older visits cannot be attributed to a post.</p>` + (s.campaigns.length ? s.campaigns.map(r => `<div class="vs-campaign"><div><b>${esc(r.utm_content || r.utm_campaign || r.utm_source)}</b><small>${esc([r.utm_source,r.utm_medium,r.utm_campaign].filter(Boolean).join(" · "))}</small></div><span><strong>${n(r.views)}</strong> views</span><span><strong>${n(r.visitors)}</strong> visitor-days</span></div>`).join("") : '<p class="vs-note">No tagged visits in this date range yet.</p>')) +
+      sec("Outside referring sites", `<p class="vs-note">Sites that sent a referring address. Navigation within Bubble and Google sign-in returns are excluded. Texted links, bookmarks, and privacy-protected visits may have no identifiable source.</p>` + rows("Site", s.refs, (r) => r.ref_host));
   }
   $("range").addEventListener("click", (e) => {
     const b = e.target.closest("[data-d]"); if (!b) return;
