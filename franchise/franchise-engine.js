@@ -440,6 +440,11 @@
       }
       case "coachingUpdate":
         if(m.watchV===1) {
+          // Explicit creator-authorized restart: prior completed weeks replay first.
+          if(m.restartWeek!==undefined) {
+            if(m.version!==1||!lg.coachingPending||lg.phase!=='season'||m.restartWeek!==lg.week+1)return false;
+            lg.coachingV=1;delete lg.coachingPending;return true;
+          }
           if(m.version!==1||lg.settings.coachingV===1||lg.coachingV===1||lg.coachingPending||lg.draft?.kind==='redraft'||lg.phase==='fa-bids')return false;
           if(['season','playoffs'].includes(lg.phase))lg.coachingPending=true;else lg.coachingV=1;
           return true;

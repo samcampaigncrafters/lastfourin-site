@@ -338,7 +338,7 @@
 <script src="/assets/cloud.js"></script>
 <script src="/franchise/free-agency.js?v=1"></script>
 <script src="/franchise/trade-market.js?v=historical-market-v1"></script>
-<script src="/franchise/franchise-engine.js?v=20261101.watch2"></script>
+<script src="/franchise/franchise-engine.js?v=20261101.watch3"></script>
 <script src="/franchise/coaching-controls.js?v=20261101.moments"></script>
 <script src="/franchise/real-roster-2026-10-29.js"></script>
 <script src="/franchise/sim-tools.js"></script>
@@ -2228,7 +2228,7 @@
   const rpc = async (fn, args) => {
     const c = LFI.cloud; if (!c || !c.on) throw new Error("Watch parties need the site's accounts.");
     await c.ready; if (!c.user) throw new Error("Sign in first.");
-    if(fn==='franchise_league_move')args={...args,p_clock:'watch1/'+(args.p_clock||'')};
+    if(fn==='franchise_league_move')args={...args,p_clock:'watch2/'+(args.p_clock||'')};
     const { data, error } = await c.sb.rpc(fn, args); if (error) throw Object.assign(new Error(error.message), { code: error.code }); return data;
   };
   const leagueGet = async (args) => {
