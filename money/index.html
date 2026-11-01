@@ -164,7 +164,7 @@
         <div class="card-h"><h2 class="disp">Bet slip</h2><span class="chip" id="slipN">Empty</span></div>
         <div class="card-b" id="slip"></div>
       </section>
-      <section class="card">
+      <section class="card" hidden data-rankings-paused>
         <div class="card-h"><h2 class="disp">Leaderboard</h2>
           <div class="seg" id="scope" role="group" aria-label="Leaderboard">
             <button type="button" data-scope="all" aria-pressed="true">Everyone</button>
@@ -265,10 +265,7 @@
     return out.sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
   }
   async function loadMe() { me = signedIn() && mode === "cloud" ? await rpc("money_me").catch((e) => { console.warn(e); return null; }) : null; }
-  async function loadBoard() {
-    const args = { p_scope: scope, p_week: bweek === "last" && week ? week.prev : null };
-    board = mode === "cloud" ? await rpc("money_board", args).catch((e) => { console.warn(e); return null; }) : null;
-  }
+  async function loadBoard() { board = null; }
 
   // Keep the slip in step with the board: current numbers, and drop bets whose games have gone.
   function syncSlip() {
@@ -318,7 +315,7 @@
       html += `<p class="note">${cloud && cloud.on ? "The $1,000 Challenge opens soon. Here are this week's lines from ESPN so you can see how it works." : "The $1,000 Challenge switches on with sign-in. Here are this week's lines from ESPN."}</p>`;
     } else if (season && !season.open) {
       const over = new Date(season.ends) < now();
-      html += `<p class="note">${over ? `The ${season.season} challenge is over. Final standings are on the leaderboard. It's back next NFL season.` : `The ${season.season} challenge opens ${new Date(season.starts).toLocaleDateString(undefined, { month: "long", day: "numeric" })}.`}</p>`;
+      html += `<p class="note">${over ? `The ${season.season} challenge is over. It's back next NFL season.` : `The ${season.season} challenge opens ${new Date(season.starts).toLocaleDateString(undefined, { month: "long", day: "numeric" })}.`}</p>`;
     } else if (!signedIn()) {
       html += `<p class="note">Tap any line to try the bet slip. <a class="lnk" href="/signin/?next=/money/">Sign in free</a> to get your $1,000 and place bets.</p>`;
     }
@@ -391,7 +388,7 @@
     const ws = (me && me.weeks) || [];
     if (!ws.length) return "";
     return `<div class="past"><h3>Your past weeks</h3><ul>${ws.slice(0, 8).map((w) => `<li><span>${esc(w.label)}</span>
-      ${w.rank ? `<span>${ord(w.rank)} of ${w.players}</span>` : `<span>Started over</span>`}<b>${M.cash(Math.round(+(w.bankroll ?? 0)))}</b></li>`).join("")}</ul></div>`;
+      <span>Completed week</span><b>${M.cash(Math.round(+(w.bankroll ?? 0)))}</b></li>`).join("")}</ul></div>`;
   }
   function renderBank() {
     $("rankChip").textContent = "";
@@ -403,8 +400,7 @@
     }
     const s = me && me.stand || { cash: 1000, at_risk: 0, bankroll: 1000, won: 0, lost: 0, pushed: 0, open_bets: 0 };
     const bank = +s.bankroll, delta = bank - 1000;
-    if (me && me.rank) $("rankChip").textContent = `${ord(me.rank)} of ${me.players}`;
-    else if (me && me.run > 1) $("rankChip").textContent = `Run ${me.run}`;
+    if (me && me.run > 1) $("rankChip").textContent = `Run ${me.run}`;
     const broke = me && me.joined && +s.cash < 1 && !s.open_bets && season && season.open;
     $("bank").innerHTML = `${wkLine()}<div class="bank"><div class="big">${M.cash(bank)}</div>
         <div class="${delta > 0 ? "up" : delta < 0 ? "down" : ""}" style="font-weight:800;text-align:right">${delta === 0 ? "Even" : (delta > 0 ? "+" : "") + M.cash(delta)}<div class="lg-tag">since $1,000</div></div></div>
@@ -483,26 +479,7 @@
   }
 
   // ---- Leaderboard ----
-  function renderLeaderboard() {
-    $("scope").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.scope === scope));
-    $("bweek").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.w === bweek));
-    $("bweek").hidden = mode !== "cloud";
-    if (mode !== "cloud") { $("board").innerHTML = `<p class="empty" style="padding:0">The leaderboard starts once the challenge opens.</p>`; return; }
-    if (scope === "friends" && !signedIn()) { $("board").innerHTML = `<p class="empty" style="padding:0"><a class="lnk" href="/signin/?next=/money/">Sign in</a> to see how you stack up against your friends.</p>`; return; }
-    const rows = (board && board.rows) || [];
-    if (!rows.length) {
-      const none = bweek === "last" ? `Nobody${scope === "friends" ? " you know" : ""} played last week.`
-        : scope === "friends" ? `No friends in yet. <a class="lnk" href="/friends/">Find friends</a> or send them this page.` : "Nobody's placed a bet this week yet. Be the first.";
-      $("board").innerHTML = `<p class="empty" style="padding:0">${none}</p>`;
-      return;
-    }
-    $("board").innerHTML = `<ol class="board">${rows.map((r) => `<li class="${r.is_me ? "me" : ""}${r.rank <= 3 ? " top" : ""}">
-        <span class="rk">${r.rank}</span>${av(r)}
-        <div class="who-b"><a href="/u/?h=${encodeURIComponent(r.username)}">${esc(r.display_name || r.username)}</a>
-          <span>@${esc(r.username)} · ${r.won}-${r.lost}${r.run > 1 ? ` · run ${r.run}` : ""}</span></div>
-        <span class="val">${M.cash(Math.round(+r.bankroll))}</span></li>`).join("")}</ol>
-      <p class="empty" style="padding:8px 0 0;font-size:12.5px">${board.week ? esc(board.week.label) + ", " : ""}${board.players} ${board.players === 1 ? "player" : "players"}. ${bweek === "last" ? "Final standings." : "Bankroll counts open bets at what was staked."}</p>`;
-  }
+  function renderLeaderboard() { $("board").replaceChildren(); }
 
   function render() { renderMain(); renderBank(); renderSlip(); renderLeaderboard(); }
 
@@ -548,7 +525,7 @@
   $("bank").addEventListener("click", async (e) => {
     if (e.target.id === "shareBtn") {
       const s = me.stand, url = `${location.origin}/money/`;
-      const text = `I'm at ${M.cash(+s.bankroll)} this week in the $1,000 Challenge on PlayBubble${me.rank ? ` (${ord(me.rank)} of ${me.players})` : ""}. Pretend money, real games. Think you can beat me?`;
+      const text = `I'm at ${M.cash(+s.bankroll)} this week in the $1,000 Challenge on PlayBubble. Pretend money, real games. Think you can beat me?`;
       if (navigator.share) { try { await navigator.share({ title: "The $1,000 Challenge", text, url }); return; } catch (err) { if (err.name === "AbortError") return; } }
       toast((await copyText(`${text} ${url}`)) ? "Copied. Paste it to your friends." : "Couldn't copy the link");
     }

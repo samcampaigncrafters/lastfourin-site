@@ -175,7 +175,7 @@
     const mine = board.find((p) => p.is_me) || { stats: {} };
     const friends = board.filter((p) => !p.is_me).sort((a, b) => (a.display_name || a.username).localeCompare(b.display_name || b.username));
     $("body").innerHTML = `<div class="grid2">
-      <div class="stack">${reqs.some((r) => r.direction === "incoming") ? `<div class="req-top">${reqHTML()}</div>` : ""}${boardHTML()}
+      <div class="stack">${reqs.some((r) => r.direction === "incoming") ? `<div class="req-top">${reqHTML()}</div>` : ""}
         <h2 class="disp" style="font-size:26px;margin:10px 0 0">Your friends${friends.length ? ` <span class="chip">${friends.length}</span>` : ""}</h2>
         <div class="fl">${friends.length ? friends.map((p) => friendCard(p, mine)).join("")
           : `<section class="card"><div class="card-b"><p class="empty" style="margin:0">No friends yet. Add someone by their handle, or send them your profile link. <span class="em" aria-hidden="true">👋</span></p></div></section>`}</div>

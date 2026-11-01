@@ -35,11 +35,11 @@
   // Sam, 2026-10-28: every game needs an account. Signed out, any play control on a game page (buttons, fields,
   // anything clickable outside the nav and pop-ups) opens the pop-up instead; plain links still browse.
   const WHY = {
-    picks: ["📋", "Save your picks", "Make a free account to keep your picks on every device, get graded and climb the leaderboard."],
-    post: ["📣", "Post it to your profile", "Make a free account to post your picks, keep a record friends can follow and get on the leaderboard."],
-    contest: ["🏆", "Enter the contest", "Make a free account to enter, get graded and see where you finish on the leaderboard."],
+    picks: ["📋", "Save your picks", "Make a free account to keep your picks on every device, get graded and track your record."],
+    post: ["📣", "Post it to your profile", "Make a free account to post your picks and keep a record friends can follow."],
+    contest: ["🏆", "Enter the contest", "Make a free account to enter, get graded and track your results."],
     challenge: ["⚔️", "Challenge your friends", "Make a free account so the site can referee. Then send the link and play live."],
-    leaderboard: ["🏆", "See the leaderboard", "Make a free account to get on the leaderboard and see how you stack up against your friends."],
+    leaderboard: ["🏆", "Save your results", "Make a free account to save your results and play with your friends."],
     friends: ["👋", "Add friends", "Make a free account to add friends, follow their picks and challenge them."],
     comment: ["💬", "Join the conversation", "Make a free account to comment on picks and posts."],
     pool: ["👥", "Start a pool", "Make a free account to start a private pool with your friends. Your normal picks count."],
@@ -49,7 +49,7 @@
   const accountReady = () => !on || !!(cloud.profile && cloud.profile.onboarded);
   let pop;
   function accountPop(reason, next) {
-    const [emo, title, body] = WHY[reason] || ["🔑", "Make a free account", reason || "Make a free account to keep your picks on every device and get on the leaderboard."];
+    const [emo, title, body] = WHY[reason] || ["🔑", "Make a free account", reason || "Make a free account to keep your picks on every device and track your record."];
     const half = !!cloud.user; // signed in, handle not picked yet
     if (!pop) {
       pop = document.createElement("div");

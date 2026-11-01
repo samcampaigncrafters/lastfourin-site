@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Sign in · PlayBubble</title>
-<meta name="description" content="Sign in free to keep your picks on every device, post them to your profile and climb the leaderboards.">
+<meta name="description" content="Sign in free to keep your picks on every device, post them to your profile and track your progress.">
 <meta property="og:title" content="Sign in · PlayBubble">
 <meta property="og:image" content="https://playbubble.app/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -31,7 +31,7 @@
     <div class="head"><div>
       <div class="kicker" id="k">Free account</div>
       <h1 class="disp" id="h">Sign in</h1>
-      <p id="p">Keep your picks on every device, post them to your profile and get on the leaderboards. Free, no purchase ever.</p>
+      <p id="p">Keep your picks on every device, post them to your profile and track your progress. Free, no purchase ever.</p>
     </div></div>
     <section class="card"><div class="card-b" id="box"><p class="empty">Loading…</p></div></section>
   </div>
@@ -51,7 +51,7 @@
   const head = (k, h, p) => { $("k").textContent = k; $("h").textContent = h; $("p").textContent = p; };
 
   function showSignIn(note) {
-    head("Free account", "Sign in", "Keep your picks on every device, post them to your profile and get on the leaderboards. Free, no purchase ever.");
+    head("Free account", "Sign in", "Keep your picks on every device, post them to your profile and track your progress. Free, no purchase ever.");
     box.innerHTML = `${note ? `<p class="err">${esc(note)}</p>` : ""}
       <button class="btn google" type="button" id="g">${G}Continue with Google</button>
       <div class="or">or get a sign-in link by email</div>
