@@ -83,9 +83,10 @@
   .field select, .field input { padding: 10px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--card-2); color: var(--ink); font-weight: 700; }
   .slots { display: grid; gap: 10px; }
   .owners { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-  .owners span { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 800; padding: 3px 8px 3px 3px; border-radius: 999px; background: var(--card-2); border: 1px solid var(--line-2); }
+  .owners > span { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 800; padding: 3px 8px 3px 3px; border-radius: 999px; background: var(--card-2); border: 1px solid var(--line-2); }
+  .owners > span { color: var(--ink); }
   .owners span.ok { border-color: var(--win); }
-  .owners .tc { margin: 0; }
+  .owners .tc { margin: 0; background: #150a33; color: #fff; }
   .teams32 button:disabled { opacity: .55; cursor: default; }
   .invites { display: grid; gap: 6px; }
   .league-invite { margin: 0 0 18px; padding: 14px; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--card); }
@@ -338,7 +339,7 @@
 <script src="/franchise/free-agency.js?v=1"></script>
 <script src="/franchise/trade-market.js?v=historical-market-v1"></script>
 <script src="/franchise/franchise-engine.js?v=coaching-tiers-20261029"></script>
-<script src="/franchise/coaching-controls.js?v=20261029"></script>
+<script src="/franchise/coaching-controls.js?v=20261101.moments"></script>
 <script src="/franchise/real-roster-2026-10-29.js"></script>
 <script src="/franchise/sim-tools.js"></script>
 <script src="/franchise/team-planning.js?v=20261028"></script>
@@ -363,10 +364,10 @@
   const liveCoachLevel = () => live && live.party ? (Math.min(live.party.st.coachMax??2, CC.valid(live.party.clock.involvement) ? live.party.clock.involvement : 1)) : Math.min(coachLevel, ML ? leagueCoachMax() : 3);
   function coachingSelector() {
     const L=live, level=liveCoachLevel(), max=L.party?Math.min(leagueCoachMax(),L.party.st.coachMax??2):ML?leagueCoachMax():3;
-    return `<section class="card" style="margin-bottom:12px"><div class="card-b"><div class="field"><label for="coachLevel"><b>Coaching involvement</b></label><select id="coachLevel" ${L.committed||L.party&&!L.party.host?"disabled":""}>${CC.tiers.map((t,i)=>`<option value="${i}" ${i===level?"selected":""} ${i>max||i>=2&&!E.coachingOn(lg)?"disabled":""}>${i+1}. ${t.name}</option>`).join("")}</select></div><p id="coachDetail" style="margin:8px 0 0">${CC.tiers[level].detail}${L.party?" The host sets one shared level for both coaches.":ML&&max<3?" The league creator can enable Full Control in League updates.":" You can change this during the game."}</p></div></section>`;
+    return `<section class="card" style="margin-bottom:12px"><div class="card-b"><div class="field"><label for="coachLevel"><b>Coaching involvement</b></label><select id="coachLevel" ${L.committed||L.finished||L.party&&!L.party.host?"disabled":""}>${CC.tiers.map((t,i)=>`<option value="${i}" ${i===level?"selected":""} ${i>max||i>=2&&!E.coachingOn(lg)?"disabled":""}>${i+1}. ${t.name}</option>`).join("")}</select></div><p id="coachDetail" style="margin:8px 0 0">${CC.tiers[level].detail}${L.party?" The host sets one shared level for both coaches.":ML&&max<3?" The league creator can enable Full Control in League updates.":" You can change this during the game."}</p></div></section>`;
   }
   async function changeCoachLevel(n) {
-    const L=live;if(!L||L.committed||!CC.valid(n))return;
+    const L=live;if(!L||L.committed||L.finished||!CC.valid(n))return;
     if(L.party){
       if(!L.party.host)return;
       try { partyTake(await rpc("franchise_party_involvement",{p_code:L.party.code,p_level:n})); } catch(err){toast(err.message);}
@@ -1351,7 +1352,7 @@
     return `<section class="card"><div class="card-h"><h2 class="disp">${esc(title)}</h2></div>${scoreRow(g)}
       <div class="card-b">${matchup(g)}
       <p class="empty" style="margin:10px 0 0">Your plan: ${esc(planWords(myPlan()))}. ${injuryLine(lg.user)}</p>
-      ${now ? `<div class="actbar" style="margin:12px 0 0"><button class="btn gold" data-watch>Watch live</button><button class="btn" data-party>Watch party</button><button class="btn" data-tab="plan">Game plan &amp; scouting</button><button class="btn" data-tab="lineup">Lineup</button></div>` : ""}</div></section>`;
+      ${now && !(ML && ownerOf(ML.me) && ownerOf(ML.me).ready) ? `<div class="actbar" style="margin:12px 0 0"><button class="btn gold" data-watch>Watch live</button><button class="btn" data-party>Watch party</button><button class="btn" data-tab="plan">Game plan &amp; scouting</button><button class="btn" data-tab="lineup">Lineup</button></div>` : now ? `<p role="status">You’re ready. Waiting for the other owners to finish this week.</p>` : ""}</div></section>`;
   }
   const PLAN_UI = [
     ["lean", "Offense", "How often you throw on early downs. Third and long is a passing down whatever you pick.", [[-2, "Run heavy"], [-1, "Lean run"], [0, "Balanced"], [1, "Lean pass"], [2, "Pass heavy"]]],
@@ -1800,10 +1801,14 @@
       else if (b.dataset.hk) { const p = { ...L.h2plan, [b.dataset.hk]: +b.dataset.pv }; L.h2plan = p; b.parentNode.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b)); }
       else if (b.id === "h2Go") secondHalf(true);
       else if (b.id === "h2Keep") secondHalf(false);
-      else if (b.id === "lvLeave" && L.guest && ML) { stopLive(); mlOpen(ML.id, true); }
-      else if (b.id === "lvLeave" && L.guest) { stopLive(); location.href = "/franchise/"; }
-      else if (b.id === "lvLeave") { if (L.committed || confirm("Leave the game? The rest of it plays out instantly.")) { if (L.party) partyEnd(); commitLive(); stopLive(); tab = "week"; afterLive(L); } }
-      else if (b.id === "lvBack") { stopLive(); tab = "week"; afterLive(L); }
+      else if (b.id === "lvComplete" || b.id === "lvBack" || b.id === "lvLeave" && L.finished) return completeLive(true);
+      else if (b.id === "lvLeave" && L.guest) { stopLive(); if (ML) mlOpen(ML.id, true); else location.href = "/franchise/"; }
+      else if (b.id === "lvLeave") {
+        if (L.committed) return completeLive(true);
+        if (!confirm("Finish watching now? The remaining plays run with the current coaching choices.")) return;
+        if (L.party) return partyControl({ dataset: { skip: "" } });
+        endAsk(); L.skipping = true; L.paused = false; L.ms = L.times[L.times.length - 1];
+      }
       else if (b.dataset.g) boxScore(b.dataset.g);
     };
     $("coachLevel").onchange=e=>changeCoachLevel(Number(e.target.value));
@@ -1982,25 +1987,75 @@
     repreview(a.at, "plays before a coach decision changed");
     $("lvBox").innerHTML = ""; L.ms = L.times[a.at]; L.paused = false; L.last = performance.now();
   }
-  // Play the week for real. It plays out exactly what was shown (same league, same draws).
-  function commitLive() {
-    const L = live; if (!L || L.committed) return;
-    // A friends league plays the week when every owner is ready, so watching your game marks you ready instead.
-    if (ML) { L.committed = true; L.key = ""; mlRecord({ t: "ready", team: ML.me }); return; }
-    if (L.guest) { L.committed = true; L.key = ""; return; } // a watch party guest only watches the host's league
-    E.apply(lg, { t: "week" }); persist(); L.committed = true;
+  // A shared league finalizes its week only after every owner is ready.
+  // Keep the viewer open until the server confirms all coaching choices and this owner's readiness.
+  async function commitLive(L = live) {
+    if (!L || L.committed) return;
+    if (L.party) {
+      let receipt;
+      try { receipt = await rpc("franchise_party_complete", { p_code: L.party.code }); }
+      catch (err) {
+        if (["PGRST202", "42883"].includes(err.code)) throw new Error("Game completion is being updated. Keep this page open and try again shortly.");
+        throw err;
+      }
+      if (receipt.league) {
+        L.league = receipt.league; L.advanced = !!receipt.advanced; L.spectator = !!receipt.spectator;
+        if (ML) ML.dirty = true;
+        L.committed = true; L.key = ""; return;
+      }
+    }
+    if (ML) {
+      const pending = L.pendingMoves || [];
+      while (pending.length) {
+        if (!await mlRecord(pending[0])) throw new Error("Your coaching choices haven't saved yet. Try completing the game again.");
+        pending.shift();
+      }
+      if (!await mlRecord({ t: "ready", team: ML.me })) throw new Error("Couldn't confirm completion. Try again; your game is still here.");
+      ML.dirty = true; L.committed = true; L.key = ""; return;
+    }
+    if (L.guest) { L.committed = true; L.key = ""; return; }
+    if (!E.apply(lg, { t: "week" })) throw new Error("Couldn't complete this game. Your game is still open.");
+    persist(); L.committed = true;
+    if (L.party && L.party.host) await rpc("franchise_party_end", { p_code: L.party.code }).catch(() => {});
     const done = [...lg.games, ...(lg.playoffs ? lg.playoffs.games : [])].find((x) => x.done && x.wk === L.g.wk && x.h === L.g.h && x.a === L.g.a);
     if (done && (done.hs !== L.pv.sc[0] || done.as !== L.pv.sc[1])) console.warn("live game and result differ", done.hs, done.as, L.pv.sc);
     L.key = done ? (lg.games.includes(done) ? "s" + lg.games.indexOf(done) : "p" + lg.playoffs.games.indexOf(done)) : "";
   }
+  async function completeLive(exit) {
+    const L = live; if (!L || L.completing) return;
+    L.completing = true;
+    const buttons = [$("lvComplete"), $("lvLeave")].filter(Boolean);
+    buttons.forEach(b => { b.disabled = true; b.textContent = "Saving game…"; });
+    try {
+      await commitLive(L);
+      if (live !== L) return;
+      if (!L.committed) throw new Error("Completion wasn't confirmed. Please try again.");
+      if (exit) {
+        stopLive(); tab = "week";
+        if (L.league && !ML) { location.href = "/franchise/?league=" + encodeURIComponent(L.league); return; }
+        if (L.guest && !ML) { location.href = "/franchise/"; return; }
+        afterLive(L);
+      }
+    } catch (err) {
+      if (live === L) {
+        const el = $("lvSaveStatus"); if (el) el.textContent = err.message || "Couldn't save. Try again; your game is still here.";
+        toast(err.message || "Couldn't save the game.");
+      }
+    } finally {
+      L.completing = false;
+      if (live === L) buttons.forEach(b => { b.disabled = false; b.textContent = "Complete game"; });
+    }
+  }
   function finishLive() {
-    const L = live; if (L.finished) return; L.finished = true;
-    commitLive(); if (L.party && L.party.host) partyEnd();
+    const L = live; if (L.finished) return; L.finished = true; endAsk();
+    const level = $("coachLevel"); if (level) level.disabled = true;
+    const leave = $("lvLeave"); leave.textContent = L.committed ? "Back to league" : "Complete game"; leave.classList.add("gold");
+    document.querySelectorAll(".ctl .seg button").forEach(b => b.disabled = true);
     const g = L.g, myT = L.party ? [...L.party.mine][0] : lg.user, me = myT === g.a ? 1 : 0, won = L.pv.sc[me] > L.pv.sc[1 - me], tie = L.pv.sc[0] === L.pv.sc[1];
     const wt = L.pv.sc[0] > L.pv.sc[1] ? g.h : g.a, line = tie ? "A tie" : myT == null ? `${E.teamShort(team(wt))} wins` : won ? "You win" : "You lose";
     $("lvBox").innerHTML = `<section class="card"><div class="card-b"><p class="disp" style="font-size:30px;margin:0">${line} ${L.pv.sc[myT == null ? (wt === g.a ? 1 : 0) : me]}-${L.pv.sc[myT == null ? (wt === g.a ? 0 : 1) : 1 - me]}</p>
-      ${ML ? `<p class="empty" style="margin:6px 0 0">It counts once every owner is ready and the week is played. You're marked ready.</p>` : ""}
-      <div class="actbar" style="margin:12px 0 0">${L.key ? `<button class="btn gold" data-g="${L.key}">Box score</button>` : ""}${L.guest && !ML ? `<a class="btn" href="/franchise/">Back to my franchise</a>` : `<button class="btn" id="lvBack">Back to the ${ML ? "league" : "season"}</button>`}</div></div></section>`;
+      <p id="lvSaveStatus" role="status" style="margin:8px 0">${L.committed ? "This game is already saved." : "Complete the game to save your coaching choices and return. In a friends league, the week finalizes once every owner is ready."}</p>
+      <div class="actbar" style="margin:12px 0 0"><button class="btn gold big" id="lvComplete">${L.committed ? "Back to league" : "Complete game"}</button>${L.key ? `<button class="btn" data-g="${L.key}">Box score</button>` : ""}</div></div></section>`;
   }
   const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 
@@ -2172,6 +2227,7 @@
   const rpc = async (fn, args) => {
     const c = LFI.cloud; if (!c || !c.on) throw new Error("Watch parties need the site's accounts.");
     await c.ready; if (!c.user) throw new Error("Sign in first.");
+    if(fn==='franchise_league_move')args={...args,p_clock:'watch1/'+(args.p_clock||'')};
     const { data, error } = await c.sb.rpc(fn, args); if (error) throw Object.assign(new Error(error.message), { code: error.code }); return data;
   };
   const leagueGet = async (args) => {
@@ -2191,7 +2247,7 @@
     const opp = oppOf(g);
     $("body").onchange = null;
     $("body").innerHTML = `<section class="card" style="max-width:620px"><div class="card-h"><h2 class="disp">Watch party</h2></div><div class="card-b">
-      <p style="margin:0 0 10px">Watch ${esc(E.teamName(team(g.a)))} at ${esc(E.teamName(team(g.h)))} with a friend, in sync. You run the clock; the game stops for both of you whenever there's a coach decision.</p>
+      <p class="empty">Game settings stay locked until this week finishes.</p><p style="margin:0 0 10px">Watch ${esc(E.teamName(team(g.a)))} at ${esc(E.teamName(team(g.h)))} with a friend, in sync. You run the clock; the game stops for both of you whenever there's a coach decision.</p>
       <label class="tog" style="margin:0 0 12px"${ML && !ownerOf(opp) ? " hidden" : ""}><input type="checkbox" id="pCoach" ${!ML || ownerOf(opp) ? "checked" : ""}> <span><b>My friend coaches ${esc(E.teamName(team(opp)))}</b><span>They make that team's calls. Off: they just watch.</span></span></label>
       <div class="actbar" style="margin:0"><button class="btn gold" id="pMake">Make the party</button><button class="btn" id="pBack">Back</button></div></div></section>`;
     $("body").onclick = async (e) => {
@@ -2204,7 +2260,7 @@
         const pv = E.previewGame(lg, g), sv = E.saveOf(lg);
         const code = await rpc("franchise_party_create", { p_save: sv, p_game: { wk: g.wk, h: g.h, a: g.a, n: pv.plays.length, sc: pv.sc },
           p_host_team: lg.user, p_guest_team: $("pCoach").checked ? opp : null });
-        if (ML) await rpc("franchise_league_party", { p_league: ML.id, p_code: code });
+        if (ML) await rpc("franchise_league_party_v2", { p_league: ML.id, p_code: code });
         const st = await partyGet({ p_code: code });
         partyStart(code, true, st);
       } catch (err) { toast(err.message || "Couldn't make the party."); b.disabled = false; }
@@ -2300,7 +2356,7 @@
     const L = live, P = L && L.party; if (!P || !$("pBar")) return;
     const st = P.st, c = P.clock, start = c.paused && !c.ms0, pb = document.querySelector("[data-pause]");
     if (pb) { pb.textContent = start ? "Start" : c.paused ? "Resume" : "Pause"; pb.setAttribute("aria-pressed", !!c.paused); }
-    document.querySelectorAll(".ctl .seg button").forEach((x) => (x.disabled = !P.host));
+    document.querySelectorAll(".ctl .seg button").forEach((x) => (x.disabled = L.finished || !P.host));
     const who = st.status === "done" && !P.host ? "The host left. The game plays on." : P.host ? (st.joined ? "Your friend is here." : "Waiting for your friend to join.") : "Watching with the host. The host runs the clock.";
     const html = `${P.host && !st.joined ? `<input id="pLink" readonly value="${esc(inviteUrl())}"><button class="btn" id="pCopy">Copy invite</button>` : ""}<span>👥 ${who}${start ? (P.host ? " Press Start when you're both ready." : " Waiting for the host to start.") : ""}</span>`;
     if ($("pBar").dataset.h !== html) { $("pBar").innerHTML = html; $("pBar").dataset.h = html; }
@@ -2500,6 +2556,7 @@
   async function mlDefaults() {
     const M = ML, I = M.info; if (!lg || I.status !== "live") return;
     if (reveal || M.sendingPilot) return;
+    if(I.owner&&!I.parties?.length&&!E.coachingOn(lg)&&I.coachingPolicy===1&&(['done','resign','rookie','rookie-data','cuts'].includes(lg.phase)||lg.phase==='season'&&lg.week===0)){await mlSend({t:'coachingUpdate',version:1},{quiet:true});return;}
     const p = lg.pilot && lg.pilot[M.me];
     if (p && p.stop && p.until > lg.week && !p.left && lg.phase === "season") {
       const n = S.friendStop(E, lg), forecast = getOutlook();
@@ -2536,6 +2593,7 @@
       const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.clientProtocol >= 6 ? `client6/${clock || ""}` : M.info.clientProtocol === 5 ? `client5/${clock || ""}` : M.info.futureClassPolicy === 1 ? `client4/${clock || ""}` : (M.info.coachingPolicy === 1 || M.info.prospectPolicy === 1) ? `client3/${clock || ""}` : M.info.ratingPolicy === 1 ? `client2/${clock || ""}` : clock });
       if (ML !== M) return false;
       M.next = r.s + 1; M.info.deadline = r.deadline; M.off = r.now - Date.now();
+      if(r.resync){await mlResync(true);return true;}
       if (m.t === "pilot") M.info.people.forEach((p) => { if (p.team === m.team) p.ready = m.n > 0; });
       if (m.t === "ready") M.info.people.forEach((p) => { if (p.team === m.team) p.ready = true; });
       if (m.t === "week" || m.t === "offseason") {
@@ -2555,24 +2613,28 @@
   }
   // While a game is on screen the move is already in this browser's copy; only the league's log needs it.
   async function mlRecord(m) {
-    const M = ML; if (!M || (TEAM_MOVES.has(m.t) && m.team !== M.me)) return;
+    const M = ML; if (!M || (TEAM_MOVES.has(m.t) && m.team !== M.me)) return false;
     for (let i = 0; i < 5; i++) {
       try {
         const r = await rpc("franchise_league_move", { p_league: M.id, p_seq: M.next, p_move: m, p_clock: M.info.clientProtocol >= 6 ? "client6/" : M.info.clientProtocol === 5 ? "client5/" : M.info.futureClassPolicy === 1 ? "client4/" : (M.info.coachingPolicy === 1 || M.info.prospectPolicy === 1) ? "client3/" : M.info.ratingPolicy === 1 ? "client2/" : null });
         M.next = r.s + 1;
         if (m.t === "ready") M.info.people.forEach((p) => { if (p.team === m.team) p.ready = true; });
-        return;
+        return true;
       } catch (err) {
-        if (!/stale/.test(err.message)) { console.warn(err.message); return; }
+        if (!/stale/.test(err.message)) { console.warn(err.message); return false; }
         const info = await leagueGet({ p_league: M.id, p_since: M.next - 1 }).catch(() => null);
+        if (info && info.moves.some(x => ["week", "offseason"].includes(x.m.t))) return false;
         if (info && info.moves.length) { M.next = info.moves[info.moves.length - 1].s + 1; M.dirty = true; }
       }
     }
+    return false;
   }
   // A move made during a watched game: kept in the save (solo) or in the league's log (friends league).
   function keepMove(m) {
     if (!E.apply(lg, m)) return false;
-    if (ML) mlRecord(m); else if (!(live && live.guest)) persist();
+    if (live && live.party) return true;
+    if (ML && live) (live.pendingMoves || (live.pendingMoves = [])).push(m);
+    else if (ML) mlRecord(m); else if (!(live && live.guest)) persist();
     return true;
   }
   async function mlReady() {
