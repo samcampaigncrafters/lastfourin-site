@@ -266,6 +266,16 @@
   .draft-view-controls { padding:14px; }
   .draft-view-controls .field { margin:0; }
   .draft-view-controls select { width:100%; max-width:100%; }
+
+  .clock .draft-turn { min-width:0; flex:1 1 260px; }
+  .clock .draft-turn-label { display:flex; align-items:center; gap:9px; margin:12px 0 5px; color:#fff; font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+  .draft-turn-label::before { content:""; width:8px; height:8px; border-radius:50%; background:#ffe784; flex:none; }
+  .clock .draft-turn-name { margin:0; color:#ffe784; font-size:clamp(32px,4.4vw,48px); line-height:1.08; overflow-wrap:anywhere; }
+  .draft-turn-team { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:9px 0; color:#fff; font-size:14px; font-weight:700; }
+  .draft-your-pick { display:inline-block; padding:4px 8px; border-radius:6px; background:#ffe784; color:#24133f; font-size:11px; letter-spacing:.06em; text-transform:uppercase; }
+  .clock .draft-turn #mlClock:not(:empty) { display:inline-block; margin:2px 0 7px; padding:7px 10px; border:1px solid rgba(255,255,255,.3); border-radius:9px; background:rgba(0,0,0,.2); font-size:18px; letter-spacing:0; text-transform:none; }
+
+  .draft-turn .owners > span { background:rgba(255,255,255,.08); color:#fff; border:1px solid rgba(255,255,255,.22); }
 </style>
 </head>
 <body>
@@ -1060,7 +1070,7 @@
     const recent = d.picks.slice(-10).reverse();
     const minePicks = d.picks.filter(([tm]) => tm === lg.user).map(([, id]) => lg.players[id]);
     $("body").innerHTML = `
-      <div class="clock"><div><small>Round ${round} of ${d.rounds} · pick ${inRound} · ${ord(d.n + 1)} overall · ${rookie ? "NFL-style order" : lg.settings.straight ? "Straight draft" : "Snake draft"}</small><div class="disp">${onClock ? "You're on the clock" : ML ? `On the clock: ${esc(whoName(who))}` : "Waiting"}</div>${ML ? `<small id="mlClock"></small>${ownersBar()}` : ""}</div>
+      <div class="clock"><div class="draft-turn"><small>Round ${round} of ${d.rounds} · pick ${inRound} · ${ord(d.n + 1)} overall · ${rookie ? "NFL-style order" : lg.settings.straight ? "Straight draft" : "Snake draft"}</small><div class="draft-turn-label">On the clock</div><div class="disp draft-turn-name">${esc(ownerOf(who) ? ownerOf(who).name : onClock ? "Your pick" : E.teamName(team(who)))}</div><div class="draft-turn-team">${chip(who)}<span>${esc(E.teamName(team(who)))}</span>${onClock ? '<b class="draft-your-pick">Your pick</b>' : ""}</div>${ML ? `<small id="mlClock"></small>${ownersBar()}` : ""}</div>
         <div class="actbar" style="margin:0"><button class="btn" id="autoBtn" ${ML && !onClock ? "disabled" : ""}>Auto-pick this one</button>${simBtns()}</div>
         <div class="tabs" role="tablist" aria-label="Draft views" id="draftTabs" style="flex-basis:100%;margin:0;border-color:rgba(255,255,255,.25)">
           ${[["players", "Available players"], ["roster", `Roster (${mine})`]].map(([key, label]) => `<button type="button" role="tab" id="draftTab-${key}" data-draft-tab="${key}" aria-controls="draftPanel-${key}" aria-selected="${draftTab === key}" tabindex="${draftTab === key ? 0 : -1}" style="color:#fff">${label}</button>`).join("")}
