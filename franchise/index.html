@@ -263,6 +263,9 @@
   @media (max-width: 520px) { .page { padding: 16px 12px 72px; } .clock { top: 56px; } .prow, .chk { padding-left: 10px; padding-right: 10px; } }
   .sb .gtm .lg { --tmk-size:16px;--badge-size:34px; }
   @media(max-width:520px){.sb .gtm .lg{--tmk-size:12px;--badge-size:26px}}
+  .draft-view-controls { padding:14px; }
+  .draft-view-controls .field { margin:0; }
+  .draft-view-controls select { width:100%; max-width:100%; }
 </style>
 </head>
 <body>
@@ -330,6 +333,7 @@
 <script src="/franchise/sim-tools.js"></script>
 <script src="/franchise/team-planning.js?v=20261028"></script>
 <script src="/franchise/draft-clock.js?v=20261101-30"></script>
+<script src="/franchise/draft-needs.js?v=20261101"></script>
 <script src="/franchise/ratings-2026-10-28.js"></script>
 <script>
 (function () {
@@ -409,7 +413,7 @@
   const weeks = () => lg.weeks || 18;
   const projectedYear = () => lg && (lg.year === 2027 && lg.prospectVersion || lg.futureClassesV === 1 && E.FUTURE_CLASS_VERSIONS[lg.year]);
   let newsF = "all", newsN = 12;
-  let lg = null, slot = -1, draftTab = "players", tab = "week", posF = "ALL", q = "", showN = 60, boardSort = "board", sel = null, live = null;
+  let lg = null, slot = -1, draftTab = "players", draftRosterTeam = null, tab = "week", posF = "ALL", q = "", showN = 60, boardSort = "board", sel = null, live = null;
   let ML = null, sticky = null; // ML: the friends league open in this tab (see "Friends leagues" below)
 
   // ---- Saves: three slots per account. A save is the seed + your moves; loading replays them. ----
@@ -1010,14 +1014,15 @@
 
   // Draft views only change this tab's display; they never submit a league move or rewrite a save.
   function draftRosterHtml() {
-    const ros = team(lg.user).roster.map((id) => lg.players[id]);
-    return `<section class="card"><div class="card-h"><h2 class="disp">Your roster</h2><span class="muted">${ros.length} / ${E.ROSTER} players</span></div>
+    const selected = team(draftRosterTeam == null ? lg.user : draftRosterTeam) || team(lg.user);
+    const ros = selected.roster.map((id) => lg.players[id]);
+    return `<section class="card"><div class="draft-view-controls"><div class="field"><label for="draftRosterTeam">View roster</label><select id="draftRosterTeam">${lg.teams.map((t) => `<option value="${t.i}" ${t.i === selected.i ? "selected" : ""}>${esc(E.teamName(t))}${t.i === lg.user ? " · You" : ownerOf(t.i) ? ` · ${esc(ownerOf(t.i).name)}` : " · AI"} (${t.roster.length})</option>`).join("")}</select></div></div><div class="card-h"><h2 class="disp">${esc(E.teamName(selected))} roster</h2><span class="muted">${ros.length} players</span></div>
       <div class="card-b"><div class="needs">${E.GROUPS.map((g) => `<span>${g === "ED" ? "Edge" : g} ${ros.filter((p) => p.g === g).length}/${E.TARGET[g]}</span>`).join("")}</div>
       <p class="empty" style="margin:10px 0 0">Ratings change each offseason. A player's future development is uncertain.</p></div></section>
       ${ros.length ? E.GROUPS.map((g) => { const ps = ros.filter((p) => p.g === g).sort((a, b) => b.grade - a.grade || a.name.localeCompare(b.name));
         return ps.length ? `<section class="card" style="margin-top:12px"><div class="card-h"><h3 class="disp" style="font-size:20px;margin:0">${E.GROUP_NAME[g]}</h3></div>
           ${ps.map((p) => `<div class="prow">${playerBadge(p)}<div class="pn"><b>${esc(p.name)}</b><span>${plabel(p)}</span></div></div>`).join("")}</section>` : ""; }).join("")
-        : `<section class="card" style="margin-top:12px"><p class="empty" style="padding:16px">No players drafted yet. Your picks will appear here, grouped by position.</p></section>`}`;
+        : `<section class="card" style="margin-top:12px"><p class="empty" style="padding:16px">No players drafted yet. This team's picks will appear here, grouped by position.</p></section>`}`;
   }
   function selectDraftTab(next, focus) {
     draftTab = next === "roster" ? "roster" : "players";
@@ -1032,6 +1037,12 @@
   }
 
   // ---- Draft room ----
+  function draftNeedLabel(p) {
+    if (boardSort !== "needs") return "";
+    const fit = window.FranchiseDraftNeeds.assess(E, lg, lg.user)(p);
+    return `<span style="font-size:13px;font-weight:700">${esc(fit.label)}</span>`;
+  }
+
   function draftRoom(kick, title) {
     const d = lg.draft, rookie = d.kind === "rookie";
     const round = Math.floor(d.n / 32) + 1, inRound = (d.n % 32) + 1;
@@ -1043,13 +1054,13 @@
     let pool = [...d.pool].map((id) => lg.players[id]);
     if (posF !== "ALL") pool = pool.filter((p) => p.g === posF);
     if (q) { const s = q.toLowerCase(); pool = pool.filter((p) => p.name.toLowerCase().includes(s)); }
-    pool.sort(boardSort === "grade" ? (a, b) => b.grade - a.grade || a.age - b.age
+    pool.sort(boardSort === "needs" ? window.FranchiseDraftNeeds.compare(window.FranchiseDraftNeeds.assess(E, lg, lg.user)) : boardSort === "grade" ? (a, b) => b.grade - a.grade || a.age - b.age
       : (a, b) => E.boardValue(b, rookie) - E.boardValue(a, rookie));
     const onClock = E.userOnClock(lg), who = E.pickOwner(lg);
     const recent = d.picks.slice(-10).reverse();
     const minePicks = d.picks.filter(([tm]) => tm === lg.user).map(([, id]) => lg.players[id]);
     $("body").innerHTML = `
-      <div class="clock"><div><small>Round ${round} of ${d.rounds} · pick ${inRound} · ${ord(d.n + 1)} overall</small><div class="disp">${onClock ? "You're on the clock" : ML ? `On the clock: ${esc(whoName(who))}` : "Waiting"}</div>${ML ? `<small id="mlClock"></small>${ownersBar()}` : ""}</div>
+      <div class="clock"><div><small>Round ${round} of ${d.rounds} · pick ${inRound} · ${ord(d.n + 1)} overall · ${rookie ? "NFL-style order" : lg.settings.straight ? "Straight draft" : "Snake draft"}</small><div class="disp">${onClock ? "You're on the clock" : ML ? `On the clock: ${esc(whoName(who))}` : "Waiting"}</div>${ML ? `<small id="mlClock"></small>${ownersBar()}` : ""}</div>
         <div class="actbar" style="margin:0"><button class="btn" id="autoBtn" ${ML && !onClock ? "disabled" : ""}>Auto-pick this one</button>${simBtns()}</div>
         <div class="tabs" role="tablist" aria-label="Draft views" id="draftTabs" style="flex-basis:100%;margin:0;border-color:rgba(255,255,255,.25)">
           ${[["players", "Available players"], ["roster", `Roster (${mine})`]].map(([key, label]) => `<button type="button" role="tab" id="draftTab-${key}" data-draft-tab="${key}" aria-controls="draftPanel-${key}" aria-selected="${draftTab === key}" tabindex="${draftTab === key ? 0 : -1}" style="color:#fff">${label}</button>`).join("")}
@@ -1065,10 +1076,10 @@
           <div class="needs">${needs}</div>
           <div class="seg" style="margin-top:12px" id="posSeg">${["ALL", ...E.GROUPS].map((g) => `<button type="button" data-pos="${g}" aria-pressed="${posF === g}">${g === "ALL" ? "All" : g === "ED" ? "Edge" : g}</button>`).join("")}</div>
           <input class="search" id="q" type="search" placeholder="Search a player" value="${esc(q)}" autocomplete="off">
-          <div class="seg" style="margin-top:10px"><button type="button" data-sort="board" aria-pressed="${boardSort === "board"}">Our board</button><button type="button" data-sort="grade" aria-pressed="${boardSort === "grade"}">Best OVR now</button></div>
+          <div class="seg" style="margin-top:10px"><button type="button" data-sort="needs" aria-pressed="${boardSort === "needs"}">Best for your team</button><button type="button" data-sort="board" aria-pressed="${boardSort === "board"}">Our board</button><button type="button" data-sort="grade" aria-pressed="${boardSort === "grade"}">Best OVR now</button></div>
         </div>
         <div id="board">${pool.slice(0, showN).map((p) => `<div class="prow">${playerBadge(p)}
-          <div class="pn"><b>${esc(p.name)}</b><span>${plabel(p)}</span>${p.line ? `<span>${esc(p.line)}</span>` : ""}</div>
+          <div class="pn"><b>${esc(p.name)}</b><span>${plabel(p)}</span>${draftNeedLabel(p)}${p.line ? `<span>${esc(p.line)}</span>` : ""}</div>
           <button class="btn ${onClock ? "gold" : ""}" data-pick="${esc(p.id)}" ${onClock ? "" : "disabled"}>Draft</button></div>`).join("") || `<p class="empty" style="padding:12px">Nobody left here.</p>`}
         ${pool.length > showN ? `<div style="padding:12px"><button class="btn block" id="moreBtn">Show more (${pool.length - showN} left)</button></div>` : ""}</div></section>
       </div>
@@ -1096,6 +1107,12 @@
         if (b.id === "finBtn") setTimeout(() => move({ t: "finish" }), 20);
         else simWholeDraft();
       }
+    };
+    $("body").onchange = e => {
+      if (e.target.id !== "draftRosterTeam") return;
+      draftRosterTeam = Number(e.target.value);
+      $("draftPanel-roster").innerHTML = draftRosterHtml();
+      $("draftRosterTeam").focus({ preventScroll:true });
     };
     const qi = $("q");
     qi.oninput = () => { q = qi.value; showN = 60; const pos = qi.selectionStart; render(); const n = $("q"); n.focus(); n.setSelectionRange(pos, pos); };
