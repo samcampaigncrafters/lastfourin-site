@@ -167,7 +167,14 @@
       for (const e of evs) {
         const g = normalize(e), c = e.competitions[0];
         g.neutral = !!c.neutralSite; g.timeValid = c.timeValid !== false;
-        for (const ha of ["home", "away"]) if (!NEXT[g[ha].id]) NEXT[g[ha].id] = { g, ha };
+        for (const ha of ["home", "away"]) {
+          const id = g[ha].id;
+          if (!NEXT[id]) NEXT[id] = { g, ha };
+          // The AP feed keeps the record from poll day; a final game's feed has the updated overall record.
+          const competitor = c.competitors.find((x) => x.team.id === id);
+          const record = competitor?.records?.find((r) => r.type === "total" || r.name === "overall")?.summary;
+          if (g.status === "post" && T[id] && /^\d+-\d+(?:-\d+)?$/.test(record || "")) T[id].rec = record;
+        }
       }
       gamesLoaded = true;
     } catch (e) {}

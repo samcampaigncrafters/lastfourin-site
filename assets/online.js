@@ -67,7 +67,7 @@
   $('onlineKind').value=kind;const alternatives=Object.keys(details).filter(key=>key!==kind);app.querySelectorAll('[data-online-kind]').forEach((b,i)=>{const key=i<2?alternatives[i]:'all',label=key==='all'?'All games':copy[key][0];b.dataset.onlineKind=key;b.removeAttribute('aria-pressed');b.querySelector('img').src='/assets/game-icons/'+(key==='all'?'online-ranked':art[key])+'.svg';b.querySelector('span').textContent=label;if(key==='all'){b.setAttribute('aria-haspopup','dialog');b.setAttribute('aria-controls','onlineGamePicker');}else{b.removeAttribute('aria-haspopup');b.removeAttribute('aria-controls');}});$('onlineChosen').hidden=true;$('onlineRules').textContent=details[kind][2];$('onlineFriend').href=details[kind][1];board();}
  async function handle(s){
   if(stopped)return;
-  if(s.state==='matched'){if(s.ai&&cancelRequested){const c=await LFI.games.onlineCancel(search,kind);if(c.state==='matched'){enter(c);return;}stopSearch();status('Search cancelled.');return;}enter(s);return;}
+  if(s.state==='matched'){if(s.ai&&cancelRequested){const c=await LFI.games.onlineCancel(search||s.id,kind);if(c.state==='matched'){enter(c);return;}stopSearch();status('Search cancelled.');return;}enter(s);return;}
   if(s.state==='waiting'){
    search=s.id;fallbackAt=s.retryAfterMs?Date.now()+s.retryAfterMs:fallbackAt||Date.now()+15000;
    if(cancelRequested){const c=await LFI.games.onlineCancel(search,kind);if(c.state==='matched'){enter(c);return;}stopSearch();status('Search cancelled.');return;}
