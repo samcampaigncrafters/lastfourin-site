@@ -439,6 +439,11 @@
         return true;
       }
       case "coachingUpdate":
+        if(m.watchV===1) {
+          if(m.version!==1||lg.settings.coachingV===1||lg.coachingV===1||lg.coachingPending||lg.draft?.kind==='redraft'||lg.phase==='fa-bids')return false;
+          if(['season','playoffs'].includes(lg.phase))lg.coachingPending=true;else lg.coachingV=1;
+          return true;
+        }
         if (m.version !== 1 || coachingOn(lg) || !["done","resign","rookie","rookie-data","cuts"].includes(lg.phase) && !(lg.phase==="season" && lg.week===0)) return false;
         lg.coachingV = 1; return true;
       case "pick": { // the user drafts a player
@@ -468,6 +473,7 @@
       case "week": {
         const ok = lg.phase === "season" ? simWeek(lg) : lg.phase === "playoffs" ? simPlayoffRound(lg) : false;
         if (ok !== false && lg.pilot) for (const p of Object.values(lg.pilot)) p.left = Math.max(0, p.left - 1);
+        if (ok !== false && lg.coachingPending) { lg.coachingV=1;delete lg.coachingPending; }
         if (ok !== false && lg.inj2p) { lg.inj2 = true; delete lg.inj2p; }
         return ok;
       }

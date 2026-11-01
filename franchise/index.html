@@ -338,7 +338,7 @@
 <script src="/assets/cloud.js"></script>
 <script src="/franchise/free-agency.js?v=1"></script>
 <script src="/franchise/trade-market.js?v=historical-market-v1"></script>
-<script src="/franchise/franchise-engine.js?v=coaching-tiers-20261029"></script>
+<script src="/franchise/franchise-engine.js?v=20261101.watch2"></script>
 <script src="/franchise/coaching-controls.js?v=20261101.moments"></script>
 <script src="/franchise/real-roster-2026-10-29.js"></script>
 <script src="/franchise/sim-tools.js"></script>
@@ -452,7 +452,7 @@
         try {
           if (v !== true) { await rpc("franchise_save_delete", { p_seed: seed, p_at: v }); continue; }
           const sv = store.read().slots.find((x) => x && x.seed === seed);
-          if (sv && await rpc("franchise_save_put", { p_save: { ...sv, client: 6 } }) === "full") toast("Your account already holds six franchises, so this one is saved in this browser only. Delete one to make room.");
+          if (sv && await rpc("franchise_save_put", { p_save: { ...sv, client: 6, watchClient:1 } }) === "full") toast("Your account already holds six franchises, so this one is saved in this browser only. Delete one to make room.");
         } catch (err) { console.error(err); if (!(seed in sync.q)) sync.q[seed] = v; }
       }
     })();
@@ -465,6 +465,7 @@
   // is lost the first time a browser signs in. Each keeps its slot here where it can; new arrivals take empty slots.
   // Returns true when this browser's slots changed.
   async function savesGet() {
+    try{return await rpc("franchise_saves_get_watch",{});}catch(err){if(!["PGRST202","42883"].includes(err.code))throw err;}
     try { return await rpc("franchise_saves_get_v6", {}); }
     catch (err) { if (!/PGRST202|could not find.*function|function.*does not exist/i.test(String(err.message || err))) throw err; try{return await rpc("franchise_saves_get_v4", {});}catch(old){if(!["PGRST202","42883"].includes(old.code))throw old;return rpc("franchise_saves_get", {});} }
   }
@@ -513,7 +514,7 @@
     const s = store.read(), old = s.slots[slot], sv = E.saveOf(lg);
     // Opening a save rewrites it but changes nothing, so it keeps its time (an old copy mustn't look new to the merge).
     const same = old && old.seed === sv.seed && old.v === sv.v && old.moves && old.moves.length === sv.moves.length;
-    s.slots[slot] = { ...sv, client: 6, meta: { ...summary(), updated: same ? savedAt(old) || Date.now() : Date.now() } };
+    s.slots[slot] = { ...sv, client: 6, watchClient:1, meta: { ...summary(), updated: same ? savedAt(old) || Date.now() : Date.now() } };
     s.last = slot;
     if (!store.write(s)) toast("Couldn't save in this browser. Download your save to keep it.");
     if (!same) queueSync(sv.seed);
@@ -742,7 +743,7 @@
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("ov").hidden) closeOv(); });
   // The user's team logo beside the title on every in-game screen (Sam 2026-10-28); logos come with the private pack.
   function head(kick, title, lede) { $("kick").textContent = kick; $("titleT").textContent = title;
-    const lu = lg && lg.teams[lg.user] ? E.teamLogo(lg.teams[lg.user]) : ""; $("tlogo").hidden = !lu; if (lu && $("tlogo").getAttribute("src") !== lu) $("tlogo").src = lu; $("lede").textContent = lede || ""; $("lede").hidden = !lede; $("allF").hidden = !lg && !ML; $("teamTools").hidden = !lg || !!live || !!reveal; syncLeagueInvite(); }
+    const lu = lg && lg.teams[lg.user] ? E.teamLogo(lg.teams[lg.user]) : ""; $("tlogo").hidden = !lu; if (lu && $("tlogo").getAttribute("src") !== lu) $("tlogo").src = lu; $("lede").textContent = (lede || "")+(lg?.coachingPending?" Expanded coaching begins after this week’s games finish.":""); $("lede").hidden = !$("lede").textContent; $("allF").hidden = !lg && !ML; $("teamTools").hidden = !lg || !!live || !!reveal; syncLeagueInvite(); }
 
   // Team tools are read-only overlays: inspecting a team never rebuilds the screen underneath or applies a move.
   const Planning = window.FranchisePlanning;
@@ -2231,13 +2232,14 @@
     const { data, error } = await c.sb.rpc(fn, args); if (error) throw Object.assign(new Error(error.message), { code: error.code }); return data;
   };
   const leagueGet = async (args) => {
+    try{return await rpc("franchise_league_get_watch",args);}catch(err){if(!["PGRST202","42883"].includes(err.code))throw err;}
     for (const name of ["franchise_league_get_v6", "franchise_league_get_v5", "franchise_league_get_v4", "franchise_league_get_v3", "franchise_league_get_v2", "franchise_league_get"]) {
       try { return await rpc(name, args); }
       catch (err) { if (!["PGRST202", "42883"].includes(err.code) || name === "franchise_league_get") throw err; }
     }
   };
   const versionedParty = async (kind,args) => {
-    const names=["franchise_party_"+kind+"_v5","franchise_party_"+kind+"_v4","franchise_party_"+kind+"_v3","franchise_party_"+kind+"_v2","franchise_party_"+kind];
+    const names=["franchise_party_"+kind+"_watch","franchise_party_"+kind+"_v5","franchise_party_"+kind+"_v4","franchise_party_"+kind+"_v3","franchise_party_"+kind+"_v2","franchise_party_"+kind];
     for(const name of names) {try{return await rpc(name,args);}catch(err){if(!["PGRST202","42883"].includes(err.code)||name===names[names.length-1])throw err;}}
   };
   const partyGet = (args) => versionedParty("get",args);
@@ -2556,7 +2558,7 @@
   async function mlDefaults() {
     const M = ML, I = M.info; if (!lg || I.status !== "live") return;
     if (reveal || M.sendingPilot) return;
-    if(I.owner&&!I.parties?.length&&!E.coachingOn(lg)&&I.coachingPolicy===1&&(['done','resign','rookie','rookie-data','cuts'].includes(lg.phase)||lg.phase==='season'&&lg.week===0)){await mlSend({t:'coachingUpdate',version:1},{quiet:true});return;}
+    if(I.owner&&I.watchCoachingPolicy===1&&!E.coachingOn(lg)&&!lg.coachingPending&&!lg.draft&&lg.phase!=='fa-bids'){await mlSend({t:'coachingUpdate',version:1,watchV:1},{quiet:true});return;}
     const p = lg.pilot && lg.pilot[M.me];
     if (p && p.stop && p.until > lg.week && !p.left && lg.phase === "season") {
       const n = S.friendStop(E, lg), forecast = getOutlook();
