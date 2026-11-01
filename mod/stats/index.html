@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="/assets/lfi.css?v=20261030.ux3">
 <script src="/assets/theme.js?v=20261030.ux3"></script>
 <style>
-.vs-range { display: flex; gap: 8px; margin: 0 0 16px; }
+.vs-range { display: flex; flex-wrap:wrap; gap: 8px; margin: 0 0 16px; }
 .vs-range .btn[aria-pressed="true"] { background: var(--navy); color: #fff; border-color: var(--navy); }
 .vs-tot { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 0 16px; }
 .vs-tot div { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }
@@ -42,13 +42,15 @@
 
 <main class="page" style="max-width:760px">
   <div class="head"><div><div class="kicker">Moderators</div><h1 class="disp">Visitors</h1>
-    <p>Our own counter: no cookies, no IPs kept. Visitor-days estimate distinct browsers per day and can include your own visits. Recognized bots are filtered; these are not verified people or signups.</p></div></div>
+    <p>Franchise and identified owner/test visits are excluded throughout this report. Visitor-days estimate browsers per day; remaining visits can still include unidentified testing or bots. These are not verified people or signups.</p></div></div>
   <div class="vs-range" id="range">
     <button class="btn" type="button" data-d="1">Today</button>
     <button class="btn" type="button" data-d="7">7 days</button>
     <button class="btn" type="button" data-d="30" aria-pressed="true">30 days</button>
     <button class="btn" type="button" data-d="90">90 days</button>
+    <button class="btn" type="button" id="refresh">↻ Refresh</button>
   </div>
+  <p class="vs-note" id="updated" aria-live="polite"></p>
   <div id="out"><p class="empty">Loading…</p></div>
 </main>
 <footer class="foot"></footer>
@@ -58,7 +60,7 @@
 <script>
 (function () {
   const { $, esc, cloud } = LFI;
-  let days = 30;
+  let days = 30, loadId = 0;
   const n = (x) => Number(x).toLocaleString();
   const rows = (head, list, name) => `<div class="vs-row"><span>${head}</span><span>Views</span><span>Visitor-days</span></div>` +
     (list.length ? list.map((r) => `<div class="vs-row"><span>${esc(name(r))}</span><span>${n(r.views)}</span><span>${n(r.visitors)}</span></div>`).join("")
@@ -67,16 +69,20 @@
   async function load() {
     if (!cloud.on || !cloud.user) { $("out").innerHTML = `<p class="empty">Sign in with a moderator account to see visitor numbers. <a href="/signin/?next=/mod/stats/">Sign in</a></p>`; return; }
     if (!(await cloud.isAdmin())) { $("out").innerHTML = `<p class="empty">This account isn't a moderator.</p>`; return; }
-    let s;
+    const request = ++loadId;
+    let s, locations;
     try {
-      s = await cloud.siteStats(days);
+      const result = await Promise.all([cloud.siteStats(days), cloud.sb.rpc("site_locations", {p_days:days})]);
+      s=result[0]; if(result[1].error) throw new Error("Couldn’t load visitor locations. Try Refresh."); locations=result[1].data || [];
       // Older cached account scripts still expose the original three-part report.
       if (!Array.isArray(s.campaigns) || !Array.isArray(s.arrivals)) {
         const [campaigns, arrivals] = await Promise.all(["site_campaigns", "site_arrivals"].map(f => cloud.sb.rpc(f, { p_days: days })));
         if (campaigns.error || arrivals.error) throw new Error("Couldn't load the visitor numbers.");
         s.campaigns = campaigns.data || []; s.arrivals = arrivals.data || [];
       }
-    } catch (e) { $("out").innerHTML = `<p class="empty">${esc(e.message)}</p>`; return; }
+    } catch (e) { if(request!==loadId)return; $("out").innerHTML = `<p class="empty">${esc(e.message)}</p>`; return; }
+    if(request!==loadId)return;
+    $("updated").textContent="Updated "+new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})+" · Franchise + owner/test visits excluded";
     const views = s.days.reduce((a, r) => a + Number(r.views), 0), ppl = s.days.reduce((a, r) => a + Number(r.visitors), 0);
     const top = Math.max(1, ...s.days.map((r) => Number(r.visitors)));
     const fmtDay = (d) => new Date(d + "T12:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
@@ -87,8 +93,9 @@
       sec("By day", `<div class="vs-row"><span>Day</span><span>Views</span><span>Visitor-days</span></div>` + (s.days.length ? s.days.map((r) =>
         `<div class="vs-row"><span>${fmtDay(r.day)}<div class="vs-bar" style="width:${Math.round(Number(r.visitors) / top * 100)}%"></div></span><span>${n(r.views)}</span><span>${n(r.visitors)}</span></div>`).join("")
         : `<div class="vs-row"><span class="empty" style="padding:0">Nothing yet</span><span></span><span></span></div>`)) +
+      sec("Top states", `<p class="vs-note">Approximate connection locations, not GPS or proof of who visited. Franchise and identified owner/test visits are excluded.</p>` + rows("State / region", locations, r => r.country === "US" ? (r.region || "US · state unknown") : r.country ? `${r.region ? r.region + ", " : ""}${r.country}` : "Unknown") + `<p class="vs-note">${n(locations.filter(r=>r.country).reduce((a,r)=>a+Number(r.views),0))} of ${n(views)} views have a location estimate. Locations are checked against retained server logs; new or unmatched connections stay Unknown until checked.${locations.some(r=>r.checked_at) ? " Last location check: " + esc(new Date(Math.max(...locations.filter(r=>r.checked_at).map(r=>Date.parse(r.checked_at)))).toLocaleString()) + "." : ""}</p>`) +
       sec("Top pages", rows("Page", s.pages, (r) => r.path)) +
-      sec("How visits start", `<p class="vs-note">First recorded page for each browser each day, including generic links. Direct / unknown includes texts, bookmarks, apps that hide their source, and visits whose original source was not captured. This is not a count of first-ever visitors.</p>` + (s.arrivals.length ? s.arrivals.map(r => `<div class="vs-campaign"><div><b>${esc(r.source)}</b><small>Arrived at ${esc(r.landing_path)}</small></div><span><strong>${n(r.visitors)}</strong> visitor-days</span></div>`).join("") : '<p class="vs-note">No arrivals in this date range yet.</p>')) +
+      sec("How visits start", `<p class="vs-note">First included page for each browser each day, including generic links. Direct / unknown includes texts, bookmarks, apps that hide their source, and visits whose original source was not captured. This is not a count of first-ever visitors.</p>` + (s.arrivals.length ? s.arrivals.map(r => `<div class="vs-campaign"><div><b>${esc(r.source)}</b><small>Arrived at ${esc(r.landing_path)}</small></div><span><strong>${n(r.visitors)}</strong> visitor-days</span></div>`).join("") : '<p class="vs-note">No arrivals in this date range yet.</p>')) +
       sec("Reddit & campaign links", `<p class="vs-note">Tagged landing-page views by link. Reloads add views; visitor-days count a browser once per day for each link. Older visits cannot be attributed to a post.</p>` + (s.campaigns.length ? s.campaigns.map(r => `<div class="vs-campaign"><div><b>${esc(r.utm_content || r.utm_campaign || r.utm_source)}</b><small>${esc([r.utm_source,r.utm_medium,r.utm_campaign].filter(Boolean).join(" · "))}</small></div><span><strong>${n(r.views)}</strong> views</span><span><strong>${n(r.visitors)}</strong> visitor-days</span></div>`).join("") : '<p class="vs-note">No tagged visits in this date range yet.</p>')) +
       sec("Outside referring sites", `<p class="vs-note">Sites that sent a referring address. Navigation within Bubble and Google sign-in returns are excluded. Texted links, bookmarks, and privacy-protected visits may have no identifiable source.</p>` + rows("Site", s.refs, (r) => r.ref_host));
   }
@@ -98,6 +105,7 @@
     $("range").querySelectorAll("[data-d]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
     load();
   });
+  $("refresh").addEventListener("click", load);
   cloud.ready.then(() => cloud.onChange((c, what) => { if (what !== "entries") load(); }));
 })();
 </script>
